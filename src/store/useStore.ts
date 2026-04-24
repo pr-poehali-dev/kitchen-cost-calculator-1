@@ -122,21 +122,53 @@ function migrateProjects(projects: AppState['projects']): AppState['projects'] {
   }));
 }
 
+function isValidMaterialTypes(arr: unknown[]): boolean {
+  return arr.length > 0 &&
+    typeof arr[0] === 'object' &&
+    arr[0] !== null &&
+    'id' in (arr[0] as object);
+}
+
 function loadState(): AppState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved) as Partial<AppState>;
+
+      const validTypes = parsed.settings?.materialTypes?.length &&
+        isValidMaterialTypes(parsed.settings.materialTypes as unknown[])
+        ? parsed.settings.materialTypes
+        : DEFAULT_MATERIAL_TYPES;
+
+      // Migrate materials: if typeId is a string-name (old format), map to new id
+      const typeNameToId = (name: string) => DEFAULT_MATERIAL_TYPES.find(t => t.name === name)?.id || name;
+      const migratedMaterials = (parsed.materials || initialState.materials).map(m => ({
+        ...m,
+        typeId: (m.typeId && typeof m.typeId === 'string' && !m.typeId.startsWith('mt'))
+          ? typeNameToId(m.typeId)
+          : (m.typeId || ''),
+      }));
+
+      // Migrate suppliers: materialTypeIds may be names or missing
+      const migratedSuppliers = (parsed.suppliers || initialState.suppliers).map(s => ({
+        ...s,
+        materialTypeIds: Array.isArray(s.materialTypeIds)
+          ? s.materialTypeIds.map((tid: string) =>
+              (!tid.startsWith('mt') ? typeNameToId(tid) : tid)
+            )
+          : [],
+      }));
+
       return {
         ...initialState,
         ...parsed,
+        suppliers: migratedSuppliers,
+        materials: migratedMaterials,
         projects: parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
         settings: {
           ...defaultSettings,
           ...(parsed.settings || {}),
-          materialTypes: parsed.settings?.materialTypes?.length
-            ? parsed.settings.materialTypes
-            : DEFAULT_MATERIAL_TYPES,
+          materialTypes: validTypes,
         },
       };
     }
