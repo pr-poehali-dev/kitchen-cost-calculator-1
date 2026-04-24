@@ -15,15 +15,15 @@ export const COLUMN_LABELS: Record<CalcColumnKey, string> = {
 };
 
 export const COLUMN_WIDTHS: Record<CalcColumnKey, string> = {
-  material: '2fr',
-  manufacturer: '1fr',
-  vendor: '1fr',
-  article: '0.8fr',
-  color: '1fr',
-  thickness: '0.6fr',
-  unit: '0.6fr',
-  qty: '0.7fr',
-  price: '1fr',
+  material: 'minmax(140px, 2fr)',
+  manufacturer: 'minmax(80px, 1fr)',
+  vendor: 'minmax(80px, 1fr)',
+  article: 'minmax(60px, 0.7fr)',
+  color: 'minmax(80px, 1fr)',
+  thickness: '60px',
+  unit: '56px',
+  qty: '96px',
+  price: 'minmax(100px, 1.2fr)',
 };
 
 export const fmt = (n: number) =>

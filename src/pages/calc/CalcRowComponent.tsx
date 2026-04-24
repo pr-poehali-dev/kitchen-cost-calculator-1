@@ -141,9 +141,11 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
             );
           case 'price':
             return (
-              <div key={col} className="text-right pr-1">
-                <div className="text-sm font-mono text-foreground">{row.price > 0 ? row.price.toLocaleString() : '—'}</div>
-                <div className="text-xs text-gold font-mono mt-0.5">{row.price > 0 && row.qty > 0 ? fmt(rowTotal) + ' ' + currency : ''}</div>
+              <div key={col} className="text-right">
+                <div className="text-sm font-mono text-foreground leading-tight">{row.price > 0 ? fmt(row.price) : '—'}</div>
+                {row.price > 0 && row.qty > 0 && (
+                  <div className="text-xs text-gold font-mono leading-tight">{fmt(rowTotal)} {currency}</div>
+                )}
               </div>
             );
           default:

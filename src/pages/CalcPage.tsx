@@ -2,6 +2,13 @@ import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
 import { fmt } from './calc/constants';
+
+// Ключи видимых строк сводки
+type SummaryVisKey = 'blocks' | 'services' | 'blockMarkups' | 'totalMarkup' | 'percent' | 'fixed';
+const SUMMARY_VIS_DEFAULT: Record<SummaryVisKey, boolean> = {
+  blocks: true, services: true, blockMarkups: true,
+  totalMarkup: true, percent: true, fixed: true,
+};
 import CalcHeader from './calc/CalcHeader';
 import CalcBlock from './calc/CalcBlock';
 import CalcBlockSettings from './calc/CalcBlockSettings';
@@ -19,6 +26,8 @@ export default function CalcPage() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showClientView, setShowClientView] = useState(false);
   const [confirmDeleteProject, setConfirmDeleteProject] = useState<string | null>(null);
+  const [summaryVis, setSummaryVis] = useState<Record<SummaryVisKey, boolean>>(SUMMARY_VIS_DEFAULT);
+  const [showSummarySettings, setShowSummarySettings] = useState(false);
 
   if (!project) {
     return (
@@ -108,10 +117,46 @@ export default function CalcPage() {
 
         {/* Summary */}
         <div className="bg-[hsl(220,14%,11%)] rounded border border-border p-4">
-          <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))] mb-3">Итоговая сводка</div>
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))]">Итоговая сводка</span>
+            <button
+              onClick={() => setShowSummarySettings(v => !v)}
+              className={`flex items-center gap-1 text-xs transition-colors ${showSummarySettings ? 'text-gold' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+              title="Настроить видимость строк"
+            >
+              <Icon name="SlidersHorizontal" size={12} />
+              <span>Настроить</span>
+            </button>
+          </div>
+
+          {/* Настройки видимости */}
+          {showSummarySettings && (
+            <div className="mb-3 p-3 bg-[hsl(220,12%,14%)] rounded border border-border space-y-2">
+              <div className="text-xs text-[hsl(var(--text-muted))] mb-1">Показывать строки:</div>
+              {([
+                { key: 'blocks',      label: 'Блоки материалов' },
+                { key: 'services',    label: 'Услуги' },
+                { key: 'blockMarkups',label: 'Наценки на блоки' },
+                { key: 'totalMarkup', label: 'Наценка на итог' },
+                { key: 'percent',     label: 'Процентные расходы' },
+                { key: 'fixed',       label: 'Постоянные расходы' },
+              ] as { key: SummaryVisKey; label: string }[]).map(({ key, label }) => (
+                <button
+                  key={key}
+                  onClick={() => setSummaryVis(v => ({ ...v, [key]: !v[key] }))}
+                  className="flex items-center gap-2 w-full text-left text-xs hover:text-foreground transition-colors"
+                >
+                  <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${summaryVis[key] ? 'bg-gold border-gold' : 'border-border'}`}>
+                    {summaryVis[key] && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
+                  </span>
+                  <span className={summaryVis[key] ? 'text-foreground' : 'text-[hsl(var(--text-muted))]'}>{label}</span>
+                </button>
+              ))}
+            </div>
+          )}
+
           <div className="space-y-2">
-            {/* Блоки материалов с доп. наценками */}
-            {totals.blockExtras.map(b => {
+            {summaryVis.blocks && totals.blockExtras.map(b => {
               if (b.base <= 0) return null;
               return (
                 <div key={b.blockId}>
@@ -119,7 +164,7 @@ export default function CalcPage() {
                     <span>{b.blockName}</span>
                     <span className="font-mono">{fmt(b.base)} {store.settings.currency}</span>
                   </div>
-                  {b.extra > 0 && (
+                  {summaryVis.blockMarkups && b.extra > 0 && (
                     <div className="flex justify-between text-xs text-gold pl-3">
                       <span>+ наценка на блок</span>
                       <span className="font-mono">+{fmt(b.extra)} {store.settings.currency}</span>
@@ -128,23 +173,25 @@ export default function CalcPage() {
                 </div>
               );
             })}
-            <div className="flex justify-between text-sm text-[hsl(var(--text-dim))] border-t border-border pt-2">
-              <span>Услуги</span>
-              <span className="font-mono">{fmt(totalServices)} {store.settings.currency}</span>
-            </div>
-            {totals.totalMarkupAmount > 0 && (
+            {summaryVis.services && (
+              <div className="flex justify-between text-sm text-[hsl(var(--text-dim))] border-t border-border pt-2">
+                <span>Услуги</span>
+                <span className="font-mono">{fmt(totalServices)} {store.settings.currency}</span>
+              </div>
+            )}
+            {summaryVis.totalMarkup && totals.totalMarkupAmount > 0 && (
               <div className="flex justify-between text-sm text-gold">
-                <span>Наценка на итого</span>
+                <span>Наценка на итог ({totals.totalMarkupPct}%)</span>
                 <span className="font-mono">+{fmt(totals.totalMarkupAmount)} {store.settings.currency}</span>
               </div>
             )}
-            {totals.percentAmount > 0 && (
+            {summaryVis.percent && totals.percentAmount > 0 && (
               <div className="flex justify-between text-sm text-[hsl(200,60%,70%)]">
                 <span>Процентные расходы</span>
                 <span className="font-mono">+{fmt(totals.percentAmount)} {store.settings.currency}</span>
               </div>
             )}
-            {totals.fixedAmount > 0 && (
+            {summaryVis.fixed && totals.fixedAmount > 0 && (
               <div className="flex justify-between text-sm text-[hsl(var(--text-dim))]">
                 <span>Постоянные расходы</span>
                 <span className="font-mono">+{fmt(totals.fixedAmount)} {store.settings.currency}</span>

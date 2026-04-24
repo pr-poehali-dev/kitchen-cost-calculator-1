@@ -60,6 +60,12 @@ export interface Service {
   note?: string;
 }
 
+export interface ExpenseGroup {
+  id: string;
+  name: string;      // Персонал, Налоги, Накладные расходы…
+  collapsed?: boolean;
+}
+
 export interface ExpenseItem {
   id: string;
   name: string;
@@ -67,6 +73,7 @@ export interface ExpenseItem {
   value: number;
   applyTo?: 'materials' | 'services' | 'total' | 'block';
   blockIds?: string[];  // если applyTo === 'block' — к каким блокам применяется
+  groupId?: string;     // к какой группе расходов принадлежит
   enabled?: boolean;    // включена ли статья в расчёт (по умолчанию true)
   note?: string;
 }
@@ -181,6 +188,7 @@ export interface AppState {
   vendors: Vendor[];
   materials: Material[];
   services: Service[];
+  expenseGroups: ExpenseGroup[];
   expenses: ExpenseItem[];
   settings: Settings;
   projects: Project[];

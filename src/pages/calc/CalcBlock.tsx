@@ -117,7 +117,10 @@ export default function CalcBlock({
         style={{ display: 'grid', gridTemplateColumns: gridCols }}
       >
         {visibleCols.map(col => (
-          <span key={col} className={col === 'qty' || col === 'price' ? 'text-right' : ''}>
+          <span key={col} className={
+            col === 'qty' || col === 'price' ? 'text-right' :
+            col === 'thickness' || col === 'unit' ? 'text-center' : ''
+          }>
             {COLUMN_LABELS[col]}
           </span>
         ))}

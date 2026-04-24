@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import type {
-  AppState, Manufacturer, Vendor, Material, Service, ExpenseItem,
+  AppState, Manufacturer, Vendor, Material, Service, ExpenseItem, ExpenseGroup,
   CalcBlock, CalcRow, ServiceBlock, ServiceRow, Project, Settings,
   MaterialType, MaterialCategory, CalcColumnKey, CalcTemplate
 } from './types';
@@ -66,14 +66,19 @@ const initialState: AppState = {
     { id: 'sv4', name: 'Установка столешницы', category: 'Установка', unit: 'м.п.', basePrice: 1200 },
     { id: 'sv5', name: 'Врезка мойки', category: 'Дополнительные работы', unit: 'шт', basePrice: 1500 },
   ],
+  expenseGroups: [
+    { id: 'eg1', name: 'Наценки' },
+    { id: 'eg2', name: 'Постоянные расходы' },
+    { id: 'eg3', name: 'Налоги' },
+  ],
   expenses: [
-    { id: 'e1', name: 'Аренда производства', type: 'fixed', value: 50000, note: 'В месяц' },
-    { id: 'e2', name: 'Зарплата сотрудников', type: 'fixed', value: 120000, note: 'В месяц' },
-    { id: 'e3', name: 'Налоги (УСН)', type: 'percent', value: 6, note: 'От оборота' },
-    { id: 'e4', name: 'Расходные материалы', type: 'percent', value: 3, note: 'От стоимости заказа' },
-    { id: 'e5', name: 'Реклама и маркетинг', type: 'percent', value: 5, note: 'От оборота' },
-    { id: 'e6', name: 'Наценка на материалы', type: 'markup', value: 20, applyTo: 'materials', note: 'Применяется при подборе из Базы' },
-    { id: 'e7', name: 'Наценка на услуги', type: 'markup', value: 15, applyTo: 'services', note: 'Применяется при подборе из Базы' },
+    { id: 'e6', name: 'Наценка на материалы', type: 'markup', value: 20, applyTo: 'materials', groupId: 'eg1', enabled: true, note: 'Применяется при подборе из Базы' },
+    { id: 'e7', name: 'Наценка на услуги', type: 'markup', value: 15, applyTo: 'services', groupId: 'eg1', enabled: true, note: 'Применяется при подборе из Базы' },
+    { id: 'e1', name: 'Аренда производства', type: 'fixed', value: 50000, groupId: 'eg2', enabled: true, note: 'В месяц' },
+    { id: 'e2', name: 'Зарплата сотрудников', type: 'fixed', value: 120000, groupId: 'eg2', enabled: true, note: 'В месяц' },
+    { id: 'e3', name: 'Налоги (УСН)', type: 'percent', value: 6, groupId: 'eg3', enabled: true, note: 'От оборота' },
+    { id: 'e4', name: 'Расходные материалы', type: 'percent', value: 3, enabled: true, note: 'От стоимости заказа' },
+    { id: 'e5', name: 'Реклама и маркетинг', type: 'percent', value: 5, enabled: true, note: 'От оборота' },
   ],
   settings: defaultSettings,
   projects: [
@@ -177,6 +182,7 @@ function loadState(): AppState {
         vendors: parsed.vendors?.length ? parsed.vendors : initialState.vendors,
         templates: parsed.templates ?? initialState.templates,
         projects: parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
+        expenseGroups: parsed.expenseGroups?.length ? parsed.expenseGroups : initialState.expenseGroups,
         settings: {
           ...defaultSettings,
           ...(parsed.settings || {}),
@@ -226,47 +232,52 @@ export function useStore() {
 
   const state = globalState;
 
+  // Суммирует все активные наценки нужного типа
   const calcPriceWithMarkup = (basePrice: number, applyTo: 'materials' | 'services' = 'materials') => {
-    const markupItem = state.expenses.find(e =>
+    const markupItems = state.expenses.filter(e =>
       e.type === 'markup' && e.applyTo === applyTo && (e.enabled !== false)
     );
-    const markup = markupItem
-      ? markupItem.value
-      : (applyTo === 'materials' ? state.settings.markupMaterial : state.settings.markupService);
-    return Math.round(basePrice * (1 + markup / 100));
+    if (markupItems.length > 0) {
+      const totalMarkupPct = markupItems.reduce((s, e) => s + e.value, 0);
+      return Math.round(basePrice * (1 + totalMarkupPct / 100));
+    }
+    const fallback = applyTo === 'materials' ? state.settings.markupMaterial : state.settings.markupService;
+    return Math.round(basePrice * (1 + fallback / 100));
   };
 
   // Считает полный итог проекта с учётом всех включённых расходов
   const calcProjectTotals = (project: Project) => {
+    const activeExpenses = state.expenses.filter(e => e.enabled !== false);
+
+    // Наценки «на материалы» и «на услуги» уже заложены в цены строк через calcPriceWithMarkup
     const rawMaterials = project.blocks.reduce((sum, b) =>
       sum + b.rows.reduce((s, r) => s + r.qty * r.price, 0), 0);
     const rawServices = project.serviceBlocks.reduce((sum, b) =>
       sum + b.rows.reduce((s, r) => s + r.qty * r.price, 0), 0);
 
-    const activeExpenses = state.expenses.filter(e => e.enabled !== false);
+    const base = rawMaterials + rawServices;
 
-    // Наценка на итого (markup / total)
-    const totalMarkup = activeExpenses.find(e => e.type === 'markup' && e.applyTo === 'total');
-    const totalMarkupVal = totalMarkup ? totalMarkup.value : 0;
+    // Наценка на итог (markup / total) — суммируем все
+    const totalMarkupItems = activeExpenses.filter(e => e.type === 'markup' && e.applyTo === 'total');
+    const totalMarkupPct = totalMarkupItems.reduce((s, e) => s + e.value, 0);
+    const totalMarkupAmount = Math.round(base * totalMarkupPct / 100);
 
-    // Расчёт по блокам (markup / block)
+    // Наценки на конкретные блоки (markup / block)
     const blockExtras = project.blocks.map(b => {
       const blockBase = b.rows.reduce((s, r) => s + r.qty * r.price, 0);
       const blockMarkups = activeExpenses.filter(e =>
         e.type === 'markup' && e.applyTo === 'block' && (e.blockIds || []).includes(b.id)
       );
-      const extra = blockMarkups.reduce((s, e) => s + blockBase * e.value / 100, 0);
+      const extraPct = blockMarkups.reduce((s, e) => s + e.value, 0);
+      const extra = Math.round(blockBase * extraPct / 100);
       return { blockId: b.id, blockName: b.name, base: blockBase, extra };
     });
 
-    const base = rawMaterials + rawServices;
-    const totalMarkupAmount = Math.round(base * totalMarkupVal / 100);
-
-    // Процентные расходы (percent — от итоговой суммы)
+    // Процентные расходы (percent — от базы материалы+услуги)
     const percentExpenses = activeExpenses.filter(e => e.type === 'percent');
     const percentAmount = percentExpenses.reduce((s, e) => s + Math.round(base * e.value / 100), 0);
 
-    // Фиксированные расходы (fixed — в абсолютной сумме)
+    // Фиксированные расходы
     const fixedExpenses = activeExpenses.filter(e => e.type === 'fixed');
     const fixedAmount = fixedExpenses.reduce((s, e) => s + e.value, 0);
 
@@ -278,6 +289,7 @@ export function useStore() {
       rawServices,
       base,
       totalMarkupAmount,
+      totalMarkupPct,
       percentAmount,
       fixedAmount,
       blockExtraTotal,
@@ -665,6 +677,22 @@ export function useStore() {
     setState(s => ({ ...s, templates: s.templates.map(t => t.id === templateId ? updated : t) }));
   };
 
+  const addExpenseGroup = (name: string) => {
+    const id = `eg${Date.now()}`;
+    setState(s => ({ ...s, expenseGroups: [...(s.expenseGroups || []), { id, name }] }));
+    return id;
+  };
+  const updateExpenseGroup = (id: string, data: Partial<ExpenseGroup>) => {
+    setState(s => ({ ...s, expenseGroups: (s.expenseGroups || []).map(g => g.id === id ? { ...g, ...data } : g) }));
+  };
+  const deleteExpenseGroup = (id: string) => {
+    setState(s => ({
+      ...s,
+      expenseGroups: (s.expenseGroups || []).filter(g => g.id !== id),
+      expenses: s.expenses.map(e => e.groupId === id ? { ...e, groupId: undefined } : e),
+    }));
+  };
+
   const addUnit = (unit: string) => {
     if (!unit.trim() || state.settings.units.includes(unit.trim())) return;
     setState(s => ({ ...s, settings: { ...s.settings, units: [...s.settings.units, unit.trim()] } }));
@@ -712,6 +740,7 @@ export function useStore() {
     addMaterial, updateMaterial, deleteMaterial,
     addService, updateService, deleteService,
     addExpense, updateExpense, deleteExpense,
+    addExpenseGroup, updateExpenseGroup, deleteExpenseGroup,
     updateSettings,
     addMaterialType, updateMaterialType, deleteMaterialType,
     addMaterialCategory, updateMaterialCategory, deleteMaterialCategory,
