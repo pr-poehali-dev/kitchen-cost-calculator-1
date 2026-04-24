@@ -13,15 +13,31 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
   const store = useStore();
   const [editingMfr, setEditingMfr] = useState<Partial<Manufacturer> | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Partial<Material> | null>(null);
+  const [catFilter, setCatFilter] = useState<string>('all');
 
   const manufacturer = store.manufacturers.find(m => m.id === selectedId);
   const mfrMaterials = store.materials.filter(m => m.manufacturerId === selectedId);
   const allTypes = store.settings.materialTypes;
+  const allCategories = store.settings.materialCategories || [];
+
+  const filteredMfrMaterials = catFilter === 'all'
+    ? mfrMaterials
+    : catFilter === 'none'
+      ? mfrMaterials.filter(m => !m.categoryId)
+      : mfrMaterials.filter(m => m.categoryId === catFilter);
 
   const groupedByType = allTypes
-    .filter(t => mfrMaterials.some(m => m.typeId === t.id))
-    .map(t => ({ type: t, materials: mfrMaterials.filter(m => m.typeId === t.id) }));
-  const ungrouped = mfrMaterials.filter(m => !allTypes.find(t => t.id === m.typeId));
+    .filter(t => filteredMfrMaterials.some(m => m.typeId === t.id))
+    .map(t => {
+      const typeMaterials = filteredMfrMaterials.filter(m => m.typeId === t.id);
+      const typeCategories = allCategories.filter(c => c.typeId === t.id || !c.typeId);
+      const groupedByCat = typeCategories
+        .filter(c => typeMaterials.some(m => m.categoryId === c.id))
+        .map(c => ({ category: c, materials: typeMaterials.filter(m => m.categoryId === c.id) }));
+      const uncategorized = typeMaterials.filter(m => !m.categoryId);
+      return { type: t, groupedByCat, uncategorized };
+    });
+  const ungrouped = filteredMfrMaterials.filter(m => !allTypes.find(t => t.id === m.typeId));
 
   return (
     <>
@@ -108,24 +124,78 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
                   <Icon name="Plus" size={12} /> Добавить материал
                 </button>
               </div>
+
+              {/* Category filter */}
+              {mfrMaterials.length > 0 && (
+                <div className="px-4 py-2 border-b border-border flex flex-wrap gap-1.5">
+                  <button onClick={() => setCatFilter('all')}
+                    className={`px-2.5 py-1 rounded text-xs transition-colors ${catFilter === 'all' ? 'bg-gold text-[hsl(220,16%,8%)] font-medium' : 'bg-[hsl(220,12%,18%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}>
+                    Все
+                  </button>
+                  {allCategories.filter(c => mfrMaterials.some(m => m.categoryId === c.id)).map(c => {
+                    const ct = c.typeId ? store.getTypeById(c.typeId) : null;
+                    return (
+                      <button key={c.id} onClick={() => setCatFilter(c.id)}
+                        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${catFilter === c.id ? 'text-[hsl(220,16%,8%)]' : 'bg-[hsl(220,12%,18%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
+                        style={catFilter === c.id ? { backgroundColor: ct?.color || '#c8a96e' } : {}}>
+                        {c.name}
+                      </button>
+                    );
+                  })}
+                  {mfrMaterials.some(m => !m.categoryId) && (
+                    <button onClick={() => setCatFilter('none')}
+                      className={`px-2.5 py-1 rounded text-xs transition-colors ${catFilter === 'none' ? 'bg-[hsl(220,12%,30%)] text-foreground font-medium' : 'bg-[hsl(220,12%,18%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}>
+                      Без категории
+                    </button>
+                  )}
+                </div>
+              )}
+
               {mfrMaterials.length === 0 && (
                 <div className="px-4 py-8 text-center text-[hsl(var(--text-muted))] text-sm">Материалы не добавлены</div>
               )}
-              {groupedByType.map(({ type, materials: mats }) => (
+              {filteredMfrMaterials.length === 0 && mfrMaterials.length > 0 && (
+                <div className="px-4 py-6 text-center text-[hsl(var(--text-muted))] text-sm">Нет материалов в выбранной категории</div>
+              )}
+
+              {groupedByType.map(({ type, groupedByCat, uncategorized }) => (
                 <div key={type.id} className="border-b border-border last:border-0">
                   <div className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,13%)]">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: type.color || '#888' }} />
                     <span className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--text-dim))]">{type.name}</span>
-                    <span className="text-xs text-[hsl(var(--text-muted))]">· {mats.length} позиций</span>
+                    <span className="text-xs text-[hsl(var(--text-muted))]">· {groupedByCat.reduce((s, g) => s + g.materials.length, 0) + uncategorized.length} позиций</span>
                   </div>
-                  <div>
-                    {mats.map(m => (
-                      <MaterialRow key={m.id} material={m} currency={store.settings.currency}
-                        onEdit={() => setEditingMaterial(m)}
-                        onDelete={() => store.deleteMaterial(m.id)}
-                      />
-                    ))}
-                  </div>
+                  {groupedByCat.map(({ category, materials: catMats }) => (
+                    <div key={category.id}>
+                      <div className="flex items-center gap-2 px-6 py-1.5 bg-[hsl(220,12%,15%)] border-b border-[hsl(220,12%,17%)]">
+                        <span className="text-xs text-gold font-medium">{category.name}</span>
+                        {category.note && <span className="text-xs text-[hsl(var(--text-muted))]">— {category.note}</span>}
+                        <span className="text-xs text-[hsl(var(--text-muted))] ml-auto">{catMats.length} поз.</span>
+                      </div>
+                      {catMats.map(m => (
+                        <MaterialRow key={m.id} material={m} currency={store.settings.currency}
+                          onEdit={() => setEditingMaterial(m)}
+                          onDelete={() => store.deleteMaterial(m.id)}
+                        />
+                      ))}
+                    </div>
+                  ))}
+                  {uncategorized.length > 0 && (
+                    <div>
+                      {groupedByCat.length > 0 && (
+                        <div className="flex items-center gap-2 px-6 py-1.5 bg-[hsl(220,12%,15%)] border-b border-[hsl(220,12%,17%)]">
+                          <span className="text-xs text-[hsl(var(--text-muted))]">Без категории</span>
+                          <span className="text-xs text-[hsl(var(--text-muted))] ml-auto">{uncategorized.length} поз.</span>
+                        </div>
+                      )}
+                      {uncategorized.map(m => (
+                        <MaterialRow key={m.id} material={m} currency={store.settings.currency}
+                          onEdit={() => setEditingMaterial(m)}
+                          onDelete={() => store.deleteMaterial(m.id)}
+                        />
+                      ))}
+                    </div>
+                  )}
                 </div>
               ))}
               {ungrouped.length > 0 && (
@@ -227,12 +297,24 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Тип материала <span className="text-gold">*</span></label>
-                <select value={editingMaterial.typeId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, typeId: e.target.value }))}
+                <select value={editingMaterial.typeId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, typeId: e.target.value, categoryId: undefined }))}
                   className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
                   <option value="">— выбрать —</option>
                   {allTypes.map(t => <option key={t.id} value={t.id} className="bg-[hsl(220,14%,11%)]">{t.name}</option>)}
                 </select>
               </div>
+              <div>
+                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Категория</label>
+                <select value={editingMaterial.categoryId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, categoryId: e.target.value || undefined }))}
+                  className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
+                  <option value="">— не указана —</option>
+                  {store.getCategoriesForType(editingMaterial.typeId).map(c => (
+                    <option key={c.id} value={c.id} className="bg-[hsl(220,14%,11%)]">{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Ед. изм.</label>
                 <select value={editingMaterial.unit || 'м²'} onChange={e => setEditingMaterial(p => ({ ...p!, unit: e.target.value }))}

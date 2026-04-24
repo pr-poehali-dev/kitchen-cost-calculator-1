@@ -12,12 +12,20 @@ interface Props {
 export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
   const store = useStore();
   const [editingMaterial, setEditingMaterial] = useState<Partial<Material> | null>(null);
+  const [catFilter, setCatFilter] = useState<string>('all');
 
   const allTypes = store.settings.materialTypes;
+  const allCategories = store.settings.materialCategories || [];
 
-  const filteredMaterials = matTypeFilter === 'all'
+  const typeFiltered = matTypeFilter === 'all'
     ? store.materials
     : store.materials.filter(m => m.typeId === matTypeFilter);
+
+  const filteredMaterials = catFilter === 'all'
+    ? typeFiltered
+    : catFilter === 'none'
+      ? typeFiltered.filter(m => !m.categoryId)
+      : typeFiltered.filter(m => m.categoryId === catFilter);
 
   return (
     <>
@@ -49,11 +57,38 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
           </button>
         </div>
 
+        {/* Category filter row */}
+        {allCategories.filter(c => typeFiltered.some(m => m.categoryId === c.id)).length > 0 && (
+          <div className="flex gap-1.5 flex-wrap mb-3">
+            <span className="text-xs text-[hsl(var(--text-muted))] self-center mr-1">Категория:</span>
+            <button onClick={() => setCatFilter('all')}
+              className={`px-2.5 py-1 rounded text-xs transition-colors ${catFilter === 'all' ? 'bg-gold text-[hsl(220,16%,8%)] font-medium' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}>
+              Все
+            </button>
+            {allCategories.filter(c => typeFiltered.some(m => m.categoryId === c.id)).map(c => {
+              const ct = c.typeId ? store.getTypeById(c.typeId) : null;
+              return (
+                <button key={c.id} onClick={() => setCatFilter(c.id)}
+                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${catFilter === c.id ? 'text-[hsl(220,16%,8%)]' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
+                  style={catFilter === c.id ? { backgroundColor: ct?.color || '#c8a96e' } : {}}>
+                  {c.name}
+                </button>
+              );
+            })}
+            {typeFiltered.some(m => !m.categoryId) && (
+              <button onClick={() => setCatFilter('none')}
+                className={`px-2.5 py-1 rounded text-xs transition-colors ${catFilter === 'none' ? 'bg-[hsl(220,12%,30%)] text-foreground font-medium' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}>
+                Без категории
+              </button>
+            )}
+          </div>
+        )}
+
         <div className="bg-[hsl(220,14%,11%)] rounded border border-border">
           <div className="grid text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider px-4 py-2.5 border-b border-border"
-            style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
+            style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 0.8fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
             <span>Наименование</span><span>Производитель</span><span>Поставщик</span><span>Тип</span>
-            <span>Толщ.</span><span>Цвет</span><span>Артикул</span><span className="text-right">Цена</span><span></span>
+            <span>Категория</span><span>Толщ.</span><span>Цвет</span><span>Артикул</span><span className="text-right">Цена</span><span></span>
           </div>
           {filteredMaterials.length === 0 && (
             <div className="px-4 py-8 text-center text-[hsl(var(--text-muted))] text-sm">Нет материалов</div>
@@ -62,9 +97,10 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
             const mfr = store.getManufacturerById(m.manufacturerId);
             const vendor = store.getVendorById(m.vendorId);
             const t = store.getTypeById(m.typeId);
+            const cat = store.getCategoryById(m.categoryId);
             return (
               <div key={m.id} className="grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,14%)] hover:bg-[hsl(220,12%,12%)] group transition-colors text-sm"
-                style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
+                style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 0.8fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
                 <div className="flex items-center gap-2 truncate">
                   {t && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color || '#888' }} />}
                   <span className="truncate text-foreground">{m.name}</span>
@@ -72,6 +108,10 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
                 <span className="text-xs text-[hsl(var(--text-dim))]">{mfr?.name || '—'}</span>
                 <span className="text-xs text-[hsl(var(--text-dim))]">{vendor?.name || '—'}</span>
                 <span className="text-xs text-[hsl(var(--text-dim))]">{t?.name || '—'}</span>
+                {cat
+                  ? <span className="text-xs font-medium text-gold">{cat.name}</span>
+                  : <span className="text-xs text-[hsl(var(--text-muted))]">—</span>
+                }
                 <span className="text-xs text-[hsl(var(--text-dim))]">{m.thickness ? `${m.thickness}мм` : '—'}</span>
                 <span className="text-xs text-[hsl(var(--text-dim))] truncate">{m.color || '—'}</span>
                 <span className="text-xs text-[hsl(var(--text-dim))]">{m.article || '—'}</span>
@@ -112,12 +152,24 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Тип материала <span className="text-gold">*</span></label>
-                <select value={editingMaterial.typeId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, typeId: e.target.value }))}
+                <select value={editingMaterial.typeId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, typeId: e.target.value, categoryId: undefined }))}
                   className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
                   <option value="">— выбрать —</option>
                   {allTypes.map(t => <option key={t.id} value={t.id} className="bg-[hsl(220,14%,11%)]">{t.name}</option>)}
                 </select>
               </div>
+              <div>
+                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Категория</label>
+                <select value={editingMaterial.categoryId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, categoryId: e.target.value || undefined }))}
+                  className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
+                  <option value="">— не указана —</option>
+                  {store.getCategoriesForType(editingMaterial.typeId).map(c => (
+                    <option key={c.id} value={c.id} className="bg-[hsl(220,14%,11%)]">{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Ед. изм.</label>
                 <select value={editingMaterial.unit || 'м²'} onChange={e => setEditingMaterial(p => ({ ...p!, unit: e.target.value }))}

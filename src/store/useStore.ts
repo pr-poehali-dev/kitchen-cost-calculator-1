@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import type {
   AppState, Manufacturer, Vendor, Material, Service, ExpenseItem,
   CalcBlock, CalcRow, ServiceBlock, ServiceRow, Project, Settings,
-  MaterialType, CalcColumnKey
+  MaterialType, MaterialCategory, CalcColumnKey
 } from './types';
 
 const DEFAULT_MATERIAL_TYPES: MaterialType[] = [
@@ -23,12 +23,20 @@ const DEFAULT_MATERIAL_TYPES: MaterialType[] = [
 
 const ALL_COLUMNS: CalcColumnKey[] = ['material', 'manufacturer', 'vendor', 'article', 'color', 'thickness', 'unit', 'qty', 'price'];
 
+const DEFAULT_MATERIAL_CATEGORIES: MaterialCategory[] = [
+  { id: 'mc1', name: 'Е1', typeId: 'mt1', note: 'Эмиссия формальдегида класс Е1' },
+  { id: 'mc2', name: 'Е2', typeId: 'mt1', note: 'Эмиссия формальдегида класс Е2' },
+  { id: 'mc3', name: 'Стандарт', note: 'Стандартная категория' },
+  { id: 'mc4', name: 'Премиум', note: 'Премиальная категория' },
+];
+
 const defaultSettings: Settings = {
   currency: '₽',
   markupMaterial: 20,
   markupService: 15,
   units: ['м²', 'м.п.', 'шт', 'компл', 'л', 'кг'],
   materialTypes: DEFAULT_MATERIAL_TYPES,
+  materialCategories: DEFAULT_MATERIAL_CATEGORIES,
 };
 
 const initialState: AppState = {
@@ -156,6 +164,9 @@ function loadState(): AppState {
           ...defaultSettings,
           ...(parsed.settings || {}),
           materialTypes: validTypes,
+          materialCategories: parsed.settings?.materialCategories?.length
+            ? parsed.settings.materialCategories
+            : DEFAULT_MATERIAL_CATEGORIES,
         },
       };
     }
@@ -443,12 +454,30 @@ export function useStore() {
     setState(s => ({ ...s, settings: { ...s.settings, units: s.settings.units.filter(u => u !== unit) } }));
   };
 
+  const getCategoryById = (id?: string) =>
+    (state.settings.materialCategories || []).find(c => c.id === id);
+
+  const getCategoriesForType = (typeId?: string) =>
+    (state.settings.materialCategories || []).filter(c => !c.typeId || c.typeId === typeId);
+
+  const addMaterialCategory = (cat: Omit<MaterialCategory, 'id'>) => {
+    const id = `mc${Date.now()}`;
+    setState(s => ({ ...s, settings: { ...s.settings, materialCategories: [...(s.settings.materialCategories || []), { ...cat, id }] } }));
+  };
+  const updateMaterialCategory = (id: string, data: Partial<MaterialCategory>) => {
+    setState(s => ({ ...s, settings: { ...s.settings, materialCategories: (s.settings.materialCategories || []).map(c => c.id === id ? { ...c, ...data } : c) } }));
+  };
+  const deleteMaterialCategory = (id: string) => {
+    setState(s => ({ ...s, settings: { ...s.settings, materialCategories: (s.settings.materialCategories || []).filter(c => c.id !== id) } }));
+  };
+
   return {
     ...state,
     getActiveProject,
     calcPriceWithMarkup,
     getTypeName, getTypeById,
     getManufacturerById, getVendorById,
+    getCategoryById, getCategoriesForType,
     addBlock, updateBlock, deleteBlock,
     addRow, updateRow, deleteRow,
     addServiceBlock, updateServiceBlock, deleteServiceBlock,
@@ -462,6 +491,7 @@ export function useStore() {
     addExpense, updateExpense, deleteExpense,
     updateSettings,
     addMaterialType, updateMaterialType, deleteMaterialType,
+    addMaterialCategory, updateMaterialCategory, deleteMaterialCategory,
     addUnit, deleteUnit,
     setState: (updater: (s: AppState) => AppState) => setState(updater),
   };

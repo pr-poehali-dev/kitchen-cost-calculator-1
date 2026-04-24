@@ -6,6 +6,13 @@ export interface MaterialType {
   color?: string;
 }
 
+export interface MaterialCategory {
+  id: string;
+  name: string;
+  typeId?: string; // к какому типу относится (опционально, может быть общей)
+  note?: string;
+}
+
 // Производитель — бренд (Lamarty, Kronospan, Egger, Boyard)
 export interface Manufacturer {
   id: string;
@@ -35,6 +42,7 @@ export interface Material {
   vendorId?: string;       // поставщик (дистрибьютор, опционально)
   name: string;
   typeId: string;
+  categoryId?: string;     // категория (Е1, Е2, Kapso...)
   thickness?: number;
   color?: string;
   article?: string;
@@ -119,6 +127,7 @@ export interface Settings {
   markupService: number;
   units: Unit[];
   materialTypes: MaterialType[];
+  materialCategories: MaterialCategory[];
 }
 
 export interface AppState {
