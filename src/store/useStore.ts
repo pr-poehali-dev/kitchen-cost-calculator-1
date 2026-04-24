@@ -109,6 +109,19 @@ const initialState: AppState = {
 
 const STORAGE_KEY = 'kuhni-pro-state-v2';
 
+const DEFAULT_VISIBLE_COLUMNS: CalcColumnKey[] = ['material', 'supplier', 'article', 'color', 'thickness', 'unit', 'qty', 'price'];
+
+function migrateProjects(projects: AppState['projects']): AppState['projects'] {
+  return projects.map(p => ({
+    ...p,
+    blocks: p.blocks.map(b => ({
+      ...b,
+      allowedTypeIds: b.allowedTypeIds ?? [],
+      visibleColumns: b.visibleColumns?.length ? b.visibleColumns : DEFAULT_VISIBLE_COLUMNS,
+    })),
+  }));
+}
+
 function loadState(): AppState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -117,6 +130,7 @@ function loadState(): AppState {
       return {
         ...initialState,
         ...parsed,
+        projects: parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
         settings: {
           ...defaultSettings,
           ...(parsed.settings || {}),
