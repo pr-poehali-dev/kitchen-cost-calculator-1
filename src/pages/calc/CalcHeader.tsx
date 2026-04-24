@@ -8,12 +8,14 @@ interface Props {
   totalMaterials: number;
   totalServices: number;
   total: number;
+  grandTotal: number;
   showProjects: boolean;
   confirmDeleteProject: string | null;
   onToggleProjects: () => void;
   onStopPropagation: (e: React.MouseEvent) => void;
   onOpenTemplates: () => void;
   onExportPdf: () => void;
+  onOpenClientView: () => void;
   onRequestDeleteProject: (id: string) => void;
   onConfirmDeleteProject: (id: string) => void;
   onCancelDeleteProject: () => void;
@@ -33,10 +35,10 @@ function InlineEdit({ value, onChange, placeholder = '', className = '' }: {
 }
 
 export default function CalcHeader({
-  project, totalMaterials, totalServices, total,
+  project, totalMaterials, totalServices, total, grandTotal,
   showProjects, confirmDeleteProject,
   onToggleProjects, onStopPropagation,
-  onOpenTemplates, onExportPdf,
+  onOpenTemplates, onExportPdf, onOpenClientView,
   onRequestDeleteProject, onConfirmDeleteProject, onCancelDeleteProject,
 }: Props) {
   const store = useStore();
@@ -126,6 +128,14 @@ export default function CalcHeader({
               )}
             </button>
             <button
+              onClick={onOpenClientView}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[hsl(var(--text-dim))] hover:text-foreground border border-border rounded hover:border-[hsl(var(--text-dim))] transition-colors"
+              title="Настройки PDF для клиента"
+            >
+              <Icon name="Eye" size={13} />
+              <span>Клиенту</span>
+            </button>
+            <button
               onClick={onExportPdf}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[hsl(var(--text-dim))] hover:text-foreground border border-border rounded hover:border-[hsl(var(--text-dim))] transition-colors"
               title="Выгрузить PDF для клиента"
@@ -143,8 +153,13 @@ export default function CalcHeader({
             <span className="text-[hsl(var(--text-muted))]">Услуги: <span className="font-mono text-foreground">{fmt(totalServices)}</span></span>
           </div>
           <div className="text-right">
+            {grandTotal !== total && (
+              <div className="text-[hsl(var(--text-muted))] text-xs font-mono mb-0.5">
+                до расходов: {fmt(total)} {store.settings.currency}
+              </div>
+            )}
             <div className="text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider">Итого</div>
-            <div className="text-gold font-mono font-semibold text-lg">{fmt(total)} {store.settings.currency}</div>
+            <div className="text-gold font-mono font-semibold text-lg">{fmt(grandTotal)} {store.settings.currency}</div>
           </div>
         </div>
       </div>

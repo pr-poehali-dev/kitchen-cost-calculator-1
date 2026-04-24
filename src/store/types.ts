@@ -112,6 +112,20 @@ export interface ServiceBlock {
   rows: ServiceRow[];
 }
 
+export interface ClientView {
+  showPrices: boolean;         // показывать цены за единицу
+  showManufacturer: boolean;   // показывать производителя
+  showVendor: boolean;         // показывать поставщика
+  showArticle: boolean;        // показывать артикул
+  showThickness: boolean;      // показывать толщину
+  showBlockTotals: boolean;    // показывать итог по каждому блоку
+  showMaterialsTotal: boolean; // показывать строку "Материалы" в итоге
+  showServicesTotal: boolean;  // показывать строку "Услуги" в итоге
+  showExpenses: boolean;       // показывать расходы/наценки в итоге
+  showGrandTotal: boolean;     // показывать итоговую сумму
+  note: string;                // примечание для клиента в PDF
+}
+
 export interface Project {
   id: string;
   client: string;
@@ -122,6 +136,7 @@ export interface Project {
   createdAt: string;
   blocks: CalcBlock[];
   serviceBlocks: ServiceBlock[];
+  clientView?: ClientView;
 }
 
 export interface Settings {

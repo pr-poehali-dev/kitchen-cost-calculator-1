@@ -6,6 +6,7 @@ import CalcHeader from './calc/CalcHeader';
 import CalcBlock from './calc/CalcBlock';
 import CalcBlockSettings from './calc/CalcBlockSettings';
 import TemplatesPanel from './calc/TemplatesPanel';
+import ClientViewPanel from './calc/ClientViewPanel';
 import { exportProjectPdf } from './calc/exportPdf';
 
 export default function CalcPage() {
@@ -16,6 +17,7 @@ export default function CalcPage() {
   const [blockSettingsId, setBlockSettingsId] = useState<string | null>(null);
   const [showProjects, setShowProjects] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [showClientView, setShowClientView] = useState(false);
   const [confirmDeleteProject, setConfirmDeleteProject] = useState<string | null>(null);
 
   if (!project) {
@@ -33,7 +35,7 @@ export default function CalcPage() {
   }
 
   const totals = store.calcProjectTotals(project);
-  const { rawMaterials: totalMaterials, rawServices: totalServices, grandTotal: total } = totals;
+  const { rawMaterials: totalMaterials, rawServices: totalServices, base: baseTotal, grandTotal } = totals;
 
   const handleFinishEditName = (blockId: string, blockName: string) => {
     store.updateBlock(project.id, blockId, { name: editingBlockName || blockName });
@@ -44,6 +46,7 @@ export default function CalcPage() {
     exportProjectPdf({
       project,
       currency: store.settings.currency,
+      totals,
       getManufacturerName: (id) => store.getManufacturerById(id)?.name || '',
       getVendorName: (id) => store.getVendorById(id)?.name || '',
       getTypeName: (id) => store.getTypeName(id),
@@ -62,13 +65,15 @@ export default function CalcPage() {
         project={project}
         totalMaterials={totalMaterials}
         totalServices={totalServices}
-        total={total}
+        total={baseTotal}
+        grandTotal={grandTotal}
         showProjects={showProjects}
         confirmDeleteProject={confirmDeleteProject}
         onToggleProjects={() => setShowProjects(v => !v)}
         onStopPropagation={e => e.stopPropagation()}
         onOpenTemplates={() => setShowTemplates(true)}
         onExportPdf={handleExportPdf}
+        onOpenClientView={() => setShowClientView(true)}
         onRequestDeleteProject={setConfirmDeleteProject}
         onConfirmDeleteProject={handleDeleteProject}
         onCancelDeleteProject={() => setConfirmDeleteProject(null)}
@@ -147,7 +152,7 @@ export default function CalcPage() {
             )}
             <div className="flex justify-between text-base font-semibold border-t border-border pt-2">
               <span>Итого</span>
-              <span className="font-mono text-gold">{fmt(total)} {store.settings.currency}</span>
+              <span className="font-mono text-gold">{fmt(grandTotal)} {store.settings.currency}</span>
             </div>
           </div>
         </div>
@@ -165,6 +170,14 @@ export default function CalcPage() {
         <TemplatesPanel
           projectId={project.id}
           onClose={() => setShowTemplates(false)}
+        />
+      )}
+
+      {showClientView && (
+        <ClientViewPanel
+          projectId={project.id}
+          onClose={() => setShowClientView(false)}
+          onExportPdf={handleExportPdf}
         />
       )}
     </div>
