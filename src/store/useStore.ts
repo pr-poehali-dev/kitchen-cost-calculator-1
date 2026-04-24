@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import type {
   AppState, Manufacturer, Vendor, Material, Service, ExpenseItem,
   CalcBlock, CalcRow, ServiceBlock, ServiceRow, Project, Settings,
-  MaterialType, MaterialCategory, CalcColumnKey
+  MaterialType, MaterialCategory, CalcColumnKey, CalcTemplate
 } from './types';
 
 const DEFAULT_MATERIAL_TYPES: MaterialType[] = [
@@ -120,6 +120,22 @@ const initialState: AppState = {
     }
   ],
   activeProjectId: 'p1',
+  templates: [
+    {
+      id: 'tpl1',
+      name: 'Кухня стандарт',
+      description: 'Корпус + Фасады + Монтаж',
+      createdAt: '2026-04-24',
+      blocks: [
+        { name: 'Корпус', allowedTypeIds: ['mt1', 'mt3', 'mt2'], visibleColumns: ALL_COLUMNS, rows: [] },
+        { name: 'Фасады', allowedTypeIds: ['mt2', 'mt9'], visibleColumns: ALL_COLUMNS, rows: [] },
+        { name: 'Столешница', allowedTypeIds: ['mt8'], visibleColumns: ALL_COLUMNS, rows: [] },
+      ],
+      serviceBlocks: [
+        { name: 'Монтаж и доставка', rows: [] },
+      ],
+    },
+  ],
 };
 
 const STORAGE_KEY = 'kuhni-pro-state-v3';
@@ -159,6 +175,7 @@ function loadState(): AppState {
         ...parsed,
         manufacturers: parsed.manufacturers?.length ? parsed.manufacturers : initialState.manufacturers,
         vendors: parsed.vendors?.length ? parsed.vendors : initialState.vendors,
+        templates: parsed.templates ?? initialState.templates,
         projects: parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
         settings: {
           ...defaultSettings,
@@ -446,6 +463,108 @@ export function useStore() {
     setState(s => ({ ...s, settings: { ...s.settings, materialTypes: s.settings.materialTypes.filter(t => t.id !== id) } }));
   };
 
+  // ===== TEMPLATES =====
+  const saveTemplate = (projectId: string, name: string, description?: string) => {
+    const project = state.projects.find(p => p.id === projectId);
+    if (!project) return;
+    const id = `tpl${Date.now()}`;
+    const template: CalcTemplate = {
+      id,
+      name,
+      description,
+      createdAt: new Date().toISOString().split('T')[0],
+      blocks: project.blocks.map(b => ({
+        name: b.name,
+        allowedTypeIds: b.allowedTypeIds,
+        visibleColumns: b.visibleColumns,
+        rows: b.rows.map(r => ({
+          name: r.name,
+          materialId: r.materialId,
+          unit: r.unit,
+          qty: r.qty,
+        })),
+      })),
+      serviceBlocks: project.serviceBlocks.map(sb => ({
+        name: sb.name,
+        rows: sb.rows.map(r => ({
+          name: r.name,
+          serviceId: r.serviceId,
+          unit: r.unit,
+          qty: r.qty,
+        })),
+      })),
+    };
+    setState(s => ({ ...s, templates: [...s.templates, template] }));
+    return id;
+  };
+
+  const loadTemplate = (projectId: string, templateId: string) => {
+    const template = state.templates.find(t => t.id === templateId);
+    if (!template) return;
+    const newBlocks: CalcBlock[] = template.blocks.map(tb => {
+      const blockId = `b${Date.now()}${Math.random().toString(36).slice(2, 6)}`;
+      return {
+        id: blockId,
+        name: tb.name,
+        allowedTypeIds: tb.allowedTypeIds,
+        visibleColumns: tb.visibleColumns,
+        rows: tb.rows.map(tr => {
+          const mat = tr.materialId ? state.materials.find(m => m.id === tr.materialId) : undefined;
+          const price = mat ? Math.round(mat.basePrice * (1 + (state.expenses.find(e => e.type === 'markup' && e.applyTo === 'materials')?.value ?? state.settings.markupMaterial) / 100)) : 0;
+          return {
+            id: `r${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
+            name: tr.name,
+            materialId: tr.materialId,
+            manufacturerId: mat?.manufacturerId,
+            vendorId: mat?.vendorId,
+            typeId: mat?.typeId,
+            color: mat?.color,
+            article: mat?.article,
+            thickness: mat?.thickness,
+            unit: tr.unit,
+            qty: tr.qty,
+            price,
+          } as CalcRow;
+        }),
+      };
+    });
+    const newServiceBlocks = template.serviceBlocks.map(tsb => {
+      const sv = tsb.rows[0]?.serviceId ? state.services.find(s => s.id === tsb.rows[0].serviceId) : undefined;
+      void sv;
+      return {
+        id: `sb${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
+        name: tsb.name,
+        rows: tsb.rows.map(tr => {
+          const service = tr.serviceId ? state.services.find(s => s.id === tr.serviceId) : undefined;
+          const price = service ? Math.round(service.basePrice * (1 + (state.expenses.find(e => e.type === 'markup' && e.applyTo === 'services')?.value ?? state.settings.markupService) / 100)) : 0;
+          return {
+            id: `sr${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
+            name: tr.name,
+            serviceId: tr.serviceId,
+            unit: tr.unit,
+            qty: tr.qty,
+            price,
+          };
+        }),
+      };
+    });
+    setState(s => ({
+      ...s,
+      projects: s.projects.map(p => p.id === projectId
+        ? { ...p, blocks: newBlocks, serviceBlocks: newServiceBlocks }
+        : p
+      ),
+    }));
+  };
+
+  const deleteTemplate = (templateId: string) => {
+    setState(s => ({ ...s, templates: s.templates.filter(t => t.id !== templateId) }));
+  };
+
+  const updateTemplate = (templateId: string, data: Partial<Pick<CalcTemplate, 'name' | 'description'>>) => {
+    setState(s => ({ ...s, templates: s.templates.map(t => t.id === templateId ? { ...t, ...data } : t) }));
+  };
+
   const addUnit = (unit: string) => {
     if (!unit.trim() || state.settings.units.includes(unit.trim())) return;
     setState(s => ({ ...s, settings: { ...s.settings, units: [...s.settings.units, unit.trim()] } }));
@@ -493,6 +612,7 @@ export function useStore() {
     addMaterialType, updateMaterialType, deleteMaterialType,
     addMaterialCategory, updateMaterialCategory, deleteMaterialCategory,
     addUnit, deleteUnit,
+    saveTemplate, loadTemplate, deleteTemplate, updateTemplate,
     setState: (updater: (s: AppState) => AppState) => setState(updater),
   };
 }

@@ -11,6 +11,8 @@ interface Props {
   showProjects: boolean;
   onToggleProjects: () => void;
   onStopPropagation: (e: React.MouseEvent) => void;
+  onOpenTemplates: () => void;
+  onExportPdf: () => void;
 }
 
 function InlineEdit({ value, onChange, placeholder = '', className = '' }: {
@@ -26,43 +28,68 @@ function InlineEdit({ value, onChange, placeholder = '', className = '' }: {
   );
 }
 
-export default function CalcHeader({ project, totalMaterials, totalServices, total, showProjects, onToggleProjects, onStopPropagation }: Props) {
+export default function CalcHeader({ project, totalMaterials, totalServices, total, showProjects, onToggleProjects, onStopPropagation, onOpenTemplates, onExportPdf }: Props) {
   const store = useStore();
 
   return (
     <div className="border-b border-border bg-[hsl(220,14%,11%)] px-6 py-4">
       <div className="flex items-center justify-between mb-4">
-        <div className="relative" onClick={onStopPropagation}>
-          <button
-            onClick={onToggleProjects}
-            className="flex items-center gap-2 text-[hsl(var(--text-dim))] hover:text-foreground transition-colors text-sm"
-          >
-            <Icon name="FolderOpen" size={14} />
-            <span className="font-medium">{project.object || 'Проект'}</span>
-            <Icon name="ChevronDown" size={12} />
-          </button>
-          {showProjects && (
-            <div className="absolute top-8 left-0 z-50 bg-[hsl(220,14%,11%)] border border-border rounded shadow-xl min-w-64">
-              {store.projects.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => { store.setState(s => ({ ...s, activeProjectId: p.id })); onToggleProjects(); }}
-                  className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[hsl(220,12%,16%)] flex items-center justify-between ${p.id === project.id ? 'text-gold' : 'text-foreground'}`}
-                >
-                  <span>{p.object || 'Без названия'}</span>
-                  <span className="text-[hsl(var(--text-muted))] text-xs ml-4">{p.client}</span>
-                </button>
-              ))}
-              <div className="border-t border-border">
-                <button
-                  onClick={() => { store.createProject(); onToggleProjects(); }}
-                  className="w-full text-left px-4 py-2.5 text-sm text-gold hover:bg-[hsl(220,12%,16%)] flex items-center gap-2"
-                >
-                  <Icon name="Plus" size={13} /> Новый проект
-                </button>
+        <div className="flex items-center gap-3">
+          <div className="relative" onClick={onStopPropagation}>
+            <button
+              onClick={onToggleProjects}
+              className="flex items-center gap-2 text-[hsl(var(--text-dim))] hover:text-foreground transition-colors text-sm"
+            >
+              <Icon name="FolderOpen" size={14} />
+              <span className="font-medium">{project.object || 'Проект'}</span>
+              <Icon name="ChevronDown" size={12} />
+            </button>
+            {showProjects && (
+              <div className="absolute top-8 left-0 z-50 bg-[hsl(220,14%,11%)] border border-border rounded shadow-xl min-w-64">
+                {store.projects.map(p => (
+                  <button
+                    key={p.id}
+                    onClick={() => { store.setState(s => ({ ...s, activeProjectId: p.id })); onToggleProjects(); }}
+                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[hsl(220,12%,16%)] flex items-center justify-between ${p.id === project.id ? 'text-gold' : 'text-foreground'}`}
+                  >
+                    <span>{p.object || 'Без названия'}</span>
+                    <span className="text-[hsl(var(--text-muted))] text-xs ml-4">{p.client}</span>
+                  </button>
+                ))}
+                <div className="border-t border-border">
+                  <button
+                    onClick={() => { store.createProject(); onToggleProjects(); }}
+                    className="w-full text-left px-4 py-2.5 text-sm text-gold hover:bg-[hsl(220,12%,16%)] flex items-center gap-2"
+                  >
+                    <Icon name="Plus" size={13} /> Новый проект
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
+
+          {/* Templates & PDF buttons */}
+          <div className="flex items-center gap-2 ml-2">
+            <button
+              onClick={onOpenTemplates}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[hsl(var(--text-dim))] hover:text-foreground border border-border rounded hover:border-[hsl(var(--text-dim))] transition-colors"
+              title="Шаблоны расчётов"
+            >
+              <Icon name="LayoutTemplate" size={13} />
+              <span>Шаблоны</span>
+              {store.templates.length > 0 && (
+                <span className="bg-[hsl(220,12%,20%)] text-[hsl(var(--text-muted))] text-xs px-1.5 py-0.5 rounded-full">{store.templates.length}</span>
+              )}
+            </button>
+            <button
+              onClick={onExportPdf}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[hsl(var(--text-dim))] hover:text-foreground border border-border rounded hover:border-[hsl(var(--text-dim))] transition-colors"
+              title="Выгрузить PDF для клиента"
+            >
+              <Icon name="FileDown" size={13} />
+              <span>PDF</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-6">

@@ -5,6 +5,8 @@ import { fmt } from './calc/constants';
 import CalcHeader from './calc/CalcHeader';
 import CalcBlock from './calc/CalcBlock';
 import CalcBlockSettings from './calc/CalcBlockSettings';
+import TemplatesPanel from './calc/TemplatesPanel';
+import { exportProjectPdf } from './calc/exportPdf';
 
 export default function CalcPage() {
   const store = useStore();
@@ -13,6 +15,7 @@ export default function CalcPage() {
   const [editingBlockName, setEditingBlockName] = useState('');
   const [blockSettingsId, setBlockSettingsId] = useState<string | null>(null);
   const [showProjects, setShowProjects] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
 
   if (!project) {
     return (
@@ -41,6 +44,16 @@ export default function CalcPage() {
     setEditingBlockId(null);
   };
 
+  const handleExportPdf = () => {
+    exportProjectPdf({
+      project,
+      currency: store.settings.currency,
+      getManufacturerName: (id) => store.getManufacturerById(id)?.name || '',
+      getVendorName: (id) => store.getVendorById(id)?.name || '',
+      getTypeName: (id) => store.getTypeName(id),
+    });
+  };
+
   return (
     <div className="flex flex-col h-full animate-fade-in" onClick={() => setShowProjects(false)}>
       <CalcHeader
@@ -51,6 +64,8 @@ export default function CalcPage() {
         showProjects={showProjects}
         onToggleProjects={() => setShowProjects(v => !v)}
         onStopPropagation={e => e.stopPropagation()}
+        onOpenTemplates={() => setShowTemplates(true)}
+        onExportPdf={handleExportPdf}
       />
 
       <div className="flex-1 overflow-auto scrollbar-thin p-6 space-y-4">
@@ -106,6 +121,13 @@ export default function CalcPage() {
           blockId={blockSettingsId}
           projectId={project.id}
           onClose={() => setBlockSettingsId(null)}
+        />
+      )}
+
+      {showTemplates && (
+        <TemplatesPanel
+          projectId={project.id}
+          onClose={() => setShowTemplates(false)}
         />
       )}
     </div>

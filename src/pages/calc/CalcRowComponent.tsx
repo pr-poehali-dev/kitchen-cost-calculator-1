@@ -108,14 +108,7 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
           }
           case 'article':
             return (
-              <div key={col} className="pr-1">
-                <input
-                  value={row.article || ''}
-                  onChange={e => store.updateRow(projectId, blockId, row.id, { article: e.target.value })}
-                  placeholder="—"
-                  className="bg-transparent text-xs text-[hsl(var(--text-dim))] w-full outline-none border-b border-transparent focus:border-[hsl(var(--gold))] placeholder:text-[hsl(var(--text-muted))]"
-                />
-              </div>
+              <div key={col} className="text-xs text-[hsl(var(--text-dim))] truncate pr-2">{row.article || '—'}</div>
             );
           case 'color':
             return <div key={col} className="text-xs text-[hsl(var(--text-dim))] truncate pr-2">{row.color || '—'}</div>;
@@ -123,16 +116,7 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
             return <div key={col} className="text-xs text-[hsl(var(--text-dim))] text-center">{row.thickness ? `${row.thickness}` : '—'}</div>;
           case 'unit':
             return (
-              <select
-                key={col}
-                value={row.unit}
-                onChange={e => store.updateRow(projectId, blockId, row.id, { unit: e.target.value })}
-                className="bg-transparent text-xs text-[hsl(var(--text-dim))] border-0 outline-none w-full"
-              >
-                {store.settings.units.map(u => (
-                  <option key={u} value={u} className="bg-[hsl(220,14%,11%)]">{u}</option>
-                ))}
-              </select>
+              <div key={col} className="text-xs text-[hsl(var(--text-dim))] text-center">{row.unit || '—'}</div>
             );
           case 'qty':
             return (

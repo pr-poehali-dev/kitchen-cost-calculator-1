@@ -130,6 +130,34 @@ export interface Settings {
   materialCategories: MaterialCategory[];
 }
 
+// Шаблон расчёта — структура блоков без данных клиента и цен
+export interface CalcTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  createdAt: string;
+  blocks: Array<{
+    name: string;
+    allowedTypeIds: string[];
+    visibleColumns: CalcColumnKey[];
+    rows: Array<{
+      name: string;
+      materialId?: string;
+      unit: Unit;
+      qty: number;
+    }>;
+  }>;
+  serviceBlocks: Array<{
+    name: string;
+    rows: Array<{
+      name: string;
+      serviceId?: string;
+      unit: Unit;
+      qty: number;
+    }>;
+  }>;
+}
+
 export interface AppState {
   manufacturers: Manufacturer[];
   vendors: Vendor[];
@@ -139,4 +167,5 @@ export interface AppState {
   settings: Settings;
   projects: Project[];
   activeProjectId: string | null;
+  templates: CalcTemplate[];
 }
