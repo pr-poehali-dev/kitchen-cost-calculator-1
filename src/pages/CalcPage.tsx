@@ -32,13 +32,8 @@ export default function CalcPage() {
     );
   }
 
-  const totalMaterials = project.blocks.reduce((sum, b) =>
-    sum + b.rows.reduce((s, r) => s + r.qty * r.price, 0), 0
-  );
-  const totalServices = project.serviceBlocks.reduce((sum, b) =>
-    sum + b.rows.reduce((s, r) => s + r.qty * r.price, 0), 0
-  );
-  const total = totalMaterials + totalServices;
+  const totals = store.calcProjectTotals(project);
+  const { rawMaterials: totalMaterials, rawServices: totalServices, grandTotal: total } = totals;
 
   const handleFinishEditName = (blockId: string, blockName: string) => {
     store.updateBlock(project.id, blockId, { name: editingBlockName || blockName });
@@ -110,19 +105,46 @@ export default function CalcPage() {
         <div className="bg-[hsl(220,14%,11%)] rounded border border-border p-4">
           <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))] mb-3">Итоговая сводка</div>
           <div className="space-y-2">
-            {project.blocks.map(b => {
-              const bt = b.rows.reduce((s, r) => s + r.qty * r.price, 0);
-              return bt > 0 ? (
-                <div key={b.id} className="flex justify-between text-sm text-[hsl(var(--text-dim))]">
-                  <span>{b.name}</span>
-                  <span className="font-mono">{fmt(bt)} {store.settings.currency}</span>
+            {/* Блоки материалов с доп. наценками */}
+            {totals.blockExtras.map(b => {
+              if (b.base <= 0) return null;
+              return (
+                <div key={b.blockId}>
+                  <div className="flex justify-between text-sm text-[hsl(var(--text-dim))]">
+                    <span>{b.blockName}</span>
+                    <span className="font-mono">{fmt(b.base)} {store.settings.currency}</span>
+                  </div>
+                  {b.extra > 0 && (
+                    <div className="flex justify-between text-xs text-gold pl-3">
+                      <span>+ наценка на блок</span>
+                      <span className="font-mono">+{fmt(b.extra)} {store.settings.currency}</span>
+                    </div>
+                  )}
                 </div>
-              ) : null;
+              );
             })}
             <div className="flex justify-between text-sm text-[hsl(var(--text-dim))] border-t border-border pt-2">
               <span>Услуги</span>
               <span className="font-mono">{fmt(totalServices)} {store.settings.currency}</span>
             </div>
+            {totals.totalMarkupAmount > 0 && (
+              <div className="flex justify-between text-sm text-gold">
+                <span>Наценка на итого</span>
+                <span className="font-mono">+{fmt(totals.totalMarkupAmount)} {store.settings.currency}</span>
+              </div>
+            )}
+            {totals.percentAmount > 0 && (
+              <div className="flex justify-between text-sm text-[hsl(200,60%,70%)]">
+                <span>Процентные расходы</span>
+                <span className="font-mono">+{fmt(totals.percentAmount)} {store.settings.currency}</span>
+              </div>
+            )}
+            {totals.fixedAmount > 0 && (
+              <div className="flex justify-between text-sm text-[hsl(var(--text-dim))]">
+                <span>Постоянные расходы</span>
+                <span className="font-mono">+{fmt(totals.fixedAmount)} {store.settings.currency}</span>
+              </div>
+            )}
             <div className="flex justify-between text-base font-semibold border-t border-border pt-2">
               <span>Итого</span>
               <span className="font-mono text-gold">{fmt(total)} {store.settings.currency}</span>

@@ -227,9 +227,64 @@ export function useStore() {
   const state = globalState;
 
   const calcPriceWithMarkup = (basePrice: number, applyTo: 'materials' | 'services' = 'materials') => {
-    const markupItem = state.expenses.find(e => e.type === 'markup' && e.applyTo === applyTo);
-    const markup = markupItem ? markupItem.value : (applyTo === 'materials' ? state.settings.markupMaterial : state.settings.markupService);
+    const markupItem = state.expenses.find(e =>
+      e.type === 'markup' && e.applyTo === applyTo && (e.enabled !== false)
+    );
+    const markup = markupItem
+      ? markupItem.value
+      : (applyTo === 'materials' ? state.settings.markupMaterial : state.settings.markupService);
     return Math.round(basePrice * (1 + markup / 100));
+  };
+
+  // Считает полный итог проекта с учётом всех включённых расходов
+  const calcProjectTotals = (project: Project) => {
+    const rawMaterials = project.blocks.reduce((sum, b) =>
+      sum + b.rows.reduce((s, r) => s + r.qty * r.price, 0), 0);
+    const rawServices = project.serviceBlocks.reduce((sum, b) =>
+      sum + b.rows.reduce((s, r) => s + r.qty * r.price, 0), 0);
+
+    const activeExpenses = state.expenses.filter(e => e.enabled !== false);
+
+    // Наценка на итого (markup / total)
+    const totalMarkup = activeExpenses.find(e => e.type === 'markup' && e.applyTo === 'total');
+    const totalMarkupVal = totalMarkup ? totalMarkup.value : 0;
+
+    // Расчёт по блокам (markup / block)
+    const blockExtras = project.blocks.map(b => {
+      const blockBase = b.rows.reduce((s, r) => s + r.qty * r.price, 0);
+      const blockMarkups = activeExpenses.filter(e =>
+        e.type === 'markup' && e.applyTo === 'block' && (e.blockIds || []).includes(b.id)
+      );
+      const extra = blockMarkups.reduce((s, e) => s + blockBase * e.value / 100, 0);
+      return { blockId: b.id, blockName: b.name, base: blockBase, extra };
+    });
+
+    const base = rawMaterials + rawServices;
+    const totalMarkupAmount = Math.round(base * totalMarkupVal / 100);
+
+    // Процентные расходы (percent — от итоговой суммы)
+    const percentExpenses = activeExpenses.filter(e => e.type === 'percent');
+    const percentAmount = percentExpenses.reduce((s, e) => s + Math.round(base * e.value / 100), 0);
+
+    // Фиксированные расходы (fixed — в абсолютной сумме)
+    const fixedExpenses = activeExpenses.filter(e => e.type === 'fixed');
+    const fixedAmount = fixedExpenses.reduce((s, e) => s + e.value, 0);
+
+    const blockExtraTotal = blockExtras.reduce((s, b) => s + b.extra, 0);
+    const grandTotal = base + totalMarkupAmount + percentAmount + fixedAmount + blockExtraTotal;
+
+    return {
+      rawMaterials,
+      rawServices,
+      base,
+      totalMarkupAmount,
+      percentAmount,
+      fixedAmount,
+      blockExtraTotal,
+      blockExtras,
+      grandTotal,
+      activeExpenses,
+    };
   };
 
   const getTypeName = (typeId?: string) =>
@@ -642,6 +697,7 @@ export function useStore() {
     ...state,
     getActiveProject,
     calcPriceWithMarkup,
+    calcProjectTotals,
     getTypeName, getTypeById,
     getManufacturerById, getVendorById,
     getCategoryById, getCategoriesForType,

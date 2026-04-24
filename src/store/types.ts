@@ -65,7 +65,9 @@ export interface ExpenseItem {
   name: string;
   type: 'fixed' | 'percent' | 'markup';
   value: number;
-  applyTo?: 'materials' | 'services' | 'total';
+  applyTo?: 'materials' | 'services' | 'total' | 'block';
+  blockIds?: string[];  // если applyTo === 'block' — к каким блокам применяется
+  enabled?: boolean;    // включена ли статья в расчёт (по умолчанию true)
   note?: string;
 }
 
