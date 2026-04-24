@@ -140,7 +140,7 @@ export default function SuppliersTab({ selectedSupplier, onSelectSupplier }: Pro
                 </div>
               ))}
               {ungrouped.length > 0 && (
-                <div key="ungrouped">
+                <div>
                   <div className="px-4 py-2 bg-[hsl(220,12%,13%)] border-b border-border">
                     <span className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--text-muted))]">Без типа</span>
                   </div>
