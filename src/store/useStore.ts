@@ -145,21 +145,26 @@ const initialState: AppState = {
 
 const STORAGE_KEY = 'kuhni-pro-state-v3';
 
-const DEFAULT_VISIBLE_COLUMNS: CalcColumnKey[] = ['material', 'manufacturer', 'vendor', 'article', 'color', 'thickness', 'unit', 'qty', 'price', 'total'];
+const DEFAULT_VISIBLE_COLUMNS: CalcColumnKey[] = ['material', 'manufacturer', 'vendor', 'article', 'color', 'thickness', 'unit', 'qty', 'baseprice', 'price', 'total'];
 
 function migrateProjects(projects: AppState['projects']): AppState['projects'] {
   return projects.map(p => ({
     ...p,
     blocks: p.blocks.map(b => {
       let cols = b.visibleColumns?.length ? b.visibleColumns : DEFAULT_VISIBLE_COLUMNS;
-      // Добавляем колонку total если её нет, после price
+      // Добавляем total после price если нет
       if (!cols.includes('total')) {
         const priceIdx = cols.indexOf('price');
-        if (priceIdx >= 0) {
-          cols = [...cols.slice(0, priceIdx + 1), 'total', ...cols.slice(priceIdx + 1)];
-        } else {
-          cols = [...cols, 'total'];
-        }
+        cols = priceIdx >= 0
+          ? [...cols.slice(0, priceIdx + 1), 'total', ...cols.slice(priceIdx + 1)]
+          : [...cols, 'total'];
+      }
+      // Добавляем baseprice после qty если нет
+      if (!cols.includes('baseprice')) {
+        const qtyIdx = cols.indexOf('qty');
+        cols = qtyIdx >= 0
+          ? [...cols.slice(0, qtyIdx + 1), 'baseprice', ...cols.slice(qtyIdx + 1)]
+          : [...cols, 'baseprice'];
       }
       return { ...b, allowedTypeIds: b.allowedTypeIds ?? [], visibleColumns: cols };
     }),

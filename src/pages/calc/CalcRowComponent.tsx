@@ -36,7 +36,7 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
   const applyMaterial = (matId: string) => {
     const mat = store.materials.find(m => m.id === matId);
     if (!mat) return;
-    const price = store.calcPriceWithMarkup(mat.basePrice, 'materials');
+    const retailPrice = store.calcPriceWithMarkup(mat.basePrice, 'materials');
     store.updateRow(projectId, blockId, row.id, {
       materialId: mat.id,
       name: mat.name,
@@ -47,7 +47,8 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
       article: mat.article,
       thickness: mat.thickness,
       unit: mat.unit,
-      price,
+      basePrice: mat.basePrice,  // закупочная из карточки
+      price: retailPrice,        // розничная = зак. × наценка
     });
     setNameFilter(mat.name);
     setShowSuggest(false);
@@ -90,7 +91,8 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
                           <span className="flex-1 text-foreground truncate">{m.name}</span>
                           {mfr && <span className="text-[hsl(var(--text-dim))] text-xs shrink-0">{mfr.name}</span>}
                           {vendor && <span className="text-[hsl(var(--text-muted))] text-xs shrink-0">/ {vendor.name}</span>}
-                          <span className="text-gold text-xs font-mono shrink-0">{store.calcPriceWithMarkup(m.basePrice, 'materials').toLocaleString()}</span>
+                          <span className="text-[hsl(var(--text-dim))] text-xs font-mono shrink-0">{fmt(m.basePrice)}</span>
+                          <span className="text-gold text-xs font-mono shrink-0">→ {fmt(store.calcPriceWithMarkup(m.basePrice, 'materials'))}</span>
                         </button>
                       );
                     })}
@@ -139,10 +141,24 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
                 >+</button>
               </div>
             );
+          case 'baseprice':
+            return (
+              <div key={col} className="text-right">
+                <div className="text-sm font-mono text-[hsl(var(--text-dim))]">
+                  {row.basePrice != null && row.basePrice > 0 ? fmt(row.basePrice) : '—'}
+                </div>
+              </div>
+            );
           case 'price':
             return (
               <div key={col} className="text-right">
-                <div className="text-sm font-mono text-foreground">{row.price > 0 ? fmt(row.price) : '—'}</div>
+                <input
+                  type="number"
+                  value={row.price || ''}
+                  onChange={e => store.updateRow(projectId, blockId, row.id, { price: parseFloat(e.target.value) || 0 })}
+                  placeholder="—"
+                  className="bg-transparent text-sm font-mono text-right text-foreground w-full outline-none border-b border-transparent focus:border-[hsl(var(--gold))] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-[hsl(var(--text-muted))]"
+                />
               </div>
             );
           case 'total':
@@ -151,9 +167,6 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
                 <div className={`text-sm font-mono font-semibold ${row.price > 0 && row.qty > 0 ? 'text-gold' : 'text-[hsl(var(--text-muted))]'}`}>
                   {row.price > 0 && row.qty > 0 ? fmt(rowTotal) : '—'}
                 </div>
-                {row.price > 0 && row.qty > 0 && (
-                  <div className="text-xs text-[hsl(var(--text-muted))]">{currency}</div>
-                )}
               </div>
             );
           default:

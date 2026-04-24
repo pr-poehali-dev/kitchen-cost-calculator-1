@@ -78,7 +78,7 @@ export interface ExpenseItem {
   note?: string;
 }
 
-export type CalcColumnKey = 'material' | 'manufacturer' | 'vendor' | 'article' | 'color' | 'thickness' | 'unit' | 'qty' | 'price' | 'total';
+export type CalcColumnKey = 'material' | 'manufacturer' | 'vendor' | 'article' | 'color' | 'thickness' | 'unit' | 'qty' | 'baseprice' | 'price' | 'total';
 
 export interface CalcBlock {
   id: string;
@@ -100,7 +100,8 @@ export interface CalcRow {
   thickness?: number;
   unit: Unit;
   qty: number;
-  price: number;
+  basePrice?: number; // закупочная цена из карточки материала
+  price: number;      // розничная цена (с наценкой)
 }
 
 export interface ServiceRow {

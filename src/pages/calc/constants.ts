@@ -11,8 +11,9 @@ export const COLUMN_LABELS: Record<CalcColumnKey, string> = {
   thickness:    'Толщ.',
   unit:         'Ед.',
   qty:          'Кол-во',
-  price:        'Цена/ед.',
-  total:        'Стоимость',
+  baseprice:    'Зак. цена',
+  price:        'Роз. цена',
+  total:        'Сумма',
 };
 
 export const COLUMN_WIDTHS: Record<CalcColumnKey, string> = {
@@ -24,6 +25,7 @@ export const COLUMN_WIDTHS: Record<CalcColumnKey, string> = {
   thickness:    '58px',
   unit:         '52px',
   qty:          '100px',
+  baseprice:    'minmax(90px, 1fr)',
   price:        'minmax(90px, 1fr)',
   total:        'minmax(100px, 1fr)',
 };
