@@ -6,7 +6,8 @@ export interface MaterialType {
   color?: string;
 }
 
-export interface Supplier {
+// Производитель — бренд (Lamarty, Kronospan, Egger, Boyard)
+export interface Manufacturer {
   id: string;
   name: string;
   contact?: string;
@@ -15,9 +16,23 @@ export interface Supplier {
   materialTypeIds: string[];
 }
 
+// Поставщик — дистрибьютор (МАРШАЛ, Специалист, КДМ)
+export interface Vendor {
+  id: string;
+  name: string;
+  contact?: string;
+  phone?: string;
+  note?: string;
+  materialTypeIds: string[];
+}
+
+// Supplier остаётся как алиас для обратной совместимости
+export type Supplier = Manufacturer;
+
 export interface Material {
   id: string;
-  supplierId: string;
+  manufacturerId: string;  // производитель (бренд)
+  vendorId?: string;       // поставщик (дистрибьютор, опционально)
   name: string;
   typeId: string;
   thickness?: number;
@@ -45,7 +60,7 @@ export interface ExpenseItem {
   note?: string;
 }
 
-export type CalcColumnKey = 'material' | 'supplier' | 'article' | 'color' | 'thickness' | 'unit' | 'qty' | 'price';
+export type CalcColumnKey = 'material' | 'manufacturer' | 'vendor' | 'article' | 'color' | 'thickness' | 'unit' | 'qty' | 'price';
 
 export interface CalcBlock {
   id: string;
@@ -59,7 +74,8 @@ export interface CalcRow {
   id: string;
   materialId?: string;
   name: string;
-  supplierId?: string;
+  manufacturerId?: string;
+  vendorId?: string;
   typeId?: string;
   color?: string;
   article?: string;
@@ -106,7 +122,8 @@ export interface Settings {
 }
 
 export interface AppState {
-  suppliers: Supplier[];
+  manufacturers: Manufacturer[];
+  vendors: Vendor[];
   materials: Material[];
   services: Service[];
   expenses: ExpenseItem[];

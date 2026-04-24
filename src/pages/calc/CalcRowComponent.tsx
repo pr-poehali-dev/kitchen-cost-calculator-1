@@ -40,7 +40,8 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
     store.updateRow(projectId, blockId, row.id, {
       materialId: mat.id,
       name: mat.name,
-      supplierId: mat.supplierId,
+      manufacturerId: mat.manufacturerId,
+      vendorId: mat.vendorId,
       typeId: mat.typeId,
       color: mat.color,
       article: mat.article,
@@ -74,19 +75,21 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
                   className="bg-transparent text-sm text-foreground w-full outline-none placeholder:text-[hsl(var(--text-muted))] border-b border-transparent focus:border-[hsl(var(--gold))]"
                 />
                 {showSuggest && filteredMaterials.length > 0 && (
-                  <div className="absolute left-0 top-full z-50 bg-[hsl(220,16%,10%)] border border-border rounded shadow-xl w-80 max-h-52 overflow-auto scrollbar-thin">
+                  <div className="absolute left-0 top-full z-50 bg-[hsl(220,16%,10%)] border border-border rounded shadow-xl w-96 max-h-52 overflow-auto scrollbar-thin">
                     {filteredMaterials.slice(0, 10).map(m => {
                       const t = store.getTypeById(m.typeId);
-                      const sup = store.suppliers.find(s => s.id === m.supplierId);
+                      const mfr = store.getManufacturerById(m.manufacturerId);
+                      const vendor = store.getVendorById(m.vendorId);
                       return (
                         <button
                           key={m.id}
                           onMouseDown={() => applyMaterial(m.id)}
-                          className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,16%)] flex items-center gap-3"
+                          className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,16%)] flex items-center gap-2"
                         >
                           <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t?.color || '#888' }} />
                           <span className="flex-1 text-foreground truncate">{m.name}</span>
-                          <span className="text-[hsl(var(--text-muted))] text-xs shrink-0">{sup?.name}</span>
+                          {mfr && <span className="text-[hsl(var(--text-dim))] text-xs shrink-0">{mfr.name}</span>}
+                          {vendor && <span className="text-[hsl(var(--text-muted))] text-xs shrink-0">/ {vendor.name}</span>}
                           <span className="text-gold text-xs font-mono shrink-0">{store.calcPriceWithMarkup(m.basePrice, 'materials').toLocaleString()}</span>
                         </button>
                       );
@@ -95,9 +98,13 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
                 )}
               </div>
             );
-          case 'supplier': {
-            const sup = store.suppliers.find(s => s.id === row.supplierId);
-            return <div key={col} className="text-xs text-[hsl(var(--text-dim))] truncate pr-2">{sup?.name || '—'}</div>;
+          case 'manufacturer': {
+            const mfr = store.getManufacturerById(row.manufacturerId);
+            return <div key={col} className="text-xs text-[hsl(var(--text-dim))] truncate pr-2">{mfr?.name || '—'}</div>;
+          }
+          case 'vendor': {
+            const vendor = store.getVendorById(row.vendorId);
+            return <div key={col} className="text-xs text-[hsl(var(--text-dim))] truncate pr-2">{vendor?.name || '—'}</div>;
           }
           case 'article':
             return (

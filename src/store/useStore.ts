@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import type {
-  AppState, Supplier, Material, Service, ExpenseItem,
+  AppState, Manufacturer, Vendor, Material, Service, ExpenseItem,
   CalcBlock, CalcRow, ServiceBlock, ServiceRow, Project, Settings,
   MaterialType, CalcColumnKey
 } from './types';
@@ -21,7 +21,7 @@ const DEFAULT_MATERIAL_TYPES: MaterialType[] = [
   { id: 'mt13', name: 'Другое', color: '#787878' },
 ];
 
-const ALL_COLUMNS: CalcColumnKey[] = ['material', 'supplier', 'article', 'color', 'thickness', 'unit', 'qty', 'price'];
+const ALL_COLUMNS: CalcColumnKey[] = ['material', 'manufacturer', 'vendor', 'article', 'color', 'thickness', 'unit', 'qty', 'price'];
 
 const defaultSettings: Settings = {
   currency: '₽',
@@ -32,17 +32,24 @@ const defaultSettings: Settings = {
 };
 
 const initialState: AppState = {
-  suppliers: [
-    { id: 's1', name: 'Lamarty', contact: 'Менеджер Игорь', phone: '+7 900 000-00-01', materialTypeIds: ['mt1', 'mt2', 'mt3'] },
-    { id: 's2', name: 'Kronospan', contact: 'Менеджер Анна', phone: '+7 900 000-00-02', materialTypeIds: ['mt1', 'mt4'] },
-    { id: 's3', name: 'Egger', contact: 'Менеджер Павел', phone: '+7 900 000-00-03', materialTypeIds: ['mt1', 'mt2', 'mt9'] },
+  manufacturers: [
+    { id: 'mfr1', name: 'Lamarty', contact: 'Менеджер Игорь', phone: '+7 900 000-00-01', materialTypeIds: ['mt1', 'mt2', 'mt3'] },
+    { id: 'mfr2', name: 'Kronospan', contact: 'Менеджер Анна', phone: '+7 900 000-00-02', materialTypeIds: ['mt1', 'mt4'] },
+    { id: 'mfr3', name: 'Egger', contact: 'Менеджер Павел', phone: '+7 900 000-00-03', materialTypeIds: ['mt1', 'mt2', 'mt9'] },
+    { id: 'mfr4', name: 'Boyard', contact: '', phone: '', materialTypeIds: ['mt10'] },
+  ],
+  vendors: [
+    { id: 'v1', name: 'МАРШАЛ', contact: 'Менеджер Сергей', phone: '+7 900 100-00-01', materialTypeIds: ['mt1', 'mt2', 'mt3'] },
+    { id: 'v2', name: 'Специалист', contact: 'Менеджер Ольга', phone: '+7 900 100-00-02', materialTypeIds: ['mt10', 'mt11'] },
+    { id: 'v3', name: 'КДМ', contact: 'Менеджер Дмитрий', phone: '+7 900 100-00-03', materialTypeIds: ['mt1', 'mt4', 'mt5'] },
   ],
   materials: [
-    { id: 'm1', supplierId: 's1', name: 'ЛДСП 16мм Белый', typeId: 'mt1', thickness: 16, color: 'Белый', unit: 'м²', basePrice: 5083 },
-    { id: 'm2', supplierId: 's1', name: 'ЛДСП 16мм Серый', typeId: 'mt1', thickness: 16, color: 'Серый', unit: 'м²', basePrice: 5750 },
-    { id: 'm3', supplierId: 's2', name: 'ХДФ 3мм Белый', typeId: 'mt3', thickness: 3, color: 'Белый', unit: 'м²', basePrice: 917 },
-    { id: 'm4', supplierId: 's3', name: 'ЛДСП 16мм Дуб натуральный', typeId: 'mt1', thickness: 16, color: 'Дуб натуральный', unit: 'м²', basePrice: 6417 },
-    { id: 'm5', supplierId: 's1', name: 'МДФ фасад 18мм', typeId: 'mt2', thickness: 18, color: 'Белый матовый', unit: 'м²', basePrice: 8333 },
+    { id: 'm1', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП 16мм Белый', typeId: 'mt1', thickness: 16, color: 'Белый', unit: 'м²', basePrice: 5083 },
+    { id: 'm2', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП 16мм Серый', typeId: 'mt1', thickness: 16, color: 'Серый', unit: 'м²', basePrice: 5750 },
+    { id: 'm3', manufacturerId: 'mfr2', vendorId: 'v1', name: 'ХДФ 3мм Белый', typeId: 'mt3', thickness: 3, color: 'Белый', unit: 'м²', basePrice: 917 },
+    { id: 'm4', manufacturerId: 'mfr3', vendorId: 'v3', name: 'ЛДСП 16мм Дуб натуральный', typeId: 'mt1', thickness: 16, color: 'Дуб натуральный', unit: 'м²', basePrice: 6417 },
+    { id: 'm5', manufacturerId: 'mfr1', vendorId: 'v1', name: 'МДФ фасад 18мм', typeId: 'mt2', thickness: 18, color: 'Белый матовый', unit: 'м²', basePrice: 8333 },
+    { id: 'm6', manufacturerId: 'mfr4', vendorId: 'v2', name: 'Петля Boyard 35мм', typeId: 'mt10', unit: 'шт', basePrice: 120 },
   ],
   services: [
     { id: 'sv1', name: 'Сборка кухни', category: 'Сборка', unit: 'компл', basePrice: 15000 },
@@ -57,8 +64,8 @@ const initialState: AppState = {
     { id: 'e3', name: 'Налоги (УСН)', type: 'percent', value: 6, note: 'От оборота' },
     { id: 'e4', name: 'Расходные материалы', type: 'percent', value: 3, note: 'От стоимости заказа' },
     { id: 'e5', name: 'Реклама и маркетинг', type: 'percent', value: 5, note: 'От оборота' },
-    { id: 'e6', name: 'Наценка на материалы', type: 'markup', value: 20, applyTo: 'materials', note: 'Автоматически применяется при подборе из Базы' },
-    { id: 'e7', name: 'Наценка на услуги', type: 'markup', value: 15, applyTo: 'services', note: 'Автоматически применяется при подборе из Базы' },
+    { id: 'e6', name: 'Наценка на материалы', type: 'markup', value: 20, applyTo: 'materials', note: 'Применяется при подборе из Базы' },
+    { id: 'e7', name: 'Наценка на услуги', type: 'markup', value: 15, applyTo: 'services', note: 'Применяется при подборе из Базы' },
   ],
   settings: defaultSettings,
   projects: [
@@ -77,9 +84,9 @@ const initialState: AppState = {
           allowedTypeIds: ['mt1', 'mt3', 'mt2'],
           visibleColumns: ALL_COLUMNS,
           rows: [
-            { id: 'r1', name: 'ЛДСП 16мм Белый', materialId: 'm1', supplierId: 's1', typeId: 'mt1', thickness: 16, color: 'Белый', unit: 'м²', qty: 25, price: 6100 },
-            { id: 'r2', name: 'ЛДСП 16мм Серый', materialId: 'm2', supplierId: 's1', typeId: 'mt1', thickness: 16, color: 'Серый', unit: 'м²', qty: 10, price: 6900 },
-            { id: 'r3', name: 'ХДФ 3мм Белый', materialId: 'm3', supplierId: 's2', typeId: 'mt3', thickness: 3, color: 'Белый', unit: 'м²', qty: 5, price: 1100 },
+            { id: 'r1', name: 'ЛДСП 16мм Белый', materialId: 'm1', manufacturerId: 'mfr1', vendorId: 'v1', typeId: 'mt1', thickness: 16, color: 'Белый', unit: 'м²', qty: 25, price: 6100 },
+            { id: 'r2', name: 'ЛДСП 16мм Серый', materialId: 'm2', manufacturerId: 'mfr1', vendorId: 'v1', typeId: 'mt1', thickness: 16, color: 'Серый', unit: 'м²', qty: 10, price: 6900 },
+            { id: 'r3', name: 'ХДФ 3мм Белый', materialId: 'm3', manufacturerId: 'mfr2', vendorId: 'v1', typeId: 'mt3', thickness: 3, color: 'Белый', unit: 'м²', qty: 5, price: 1100 },
           ]
         },
         {
@@ -88,7 +95,7 @@ const initialState: AppState = {
           allowedTypeIds: ['mt2', 'mt9'],
           visibleColumns: ALL_COLUMNS,
           rows: [
-            { id: 'r4', name: 'МДФ фасад 18мм', materialId: 'm5', supplierId: 's1', typeId: 'mt2', thickness: 18, color: 'Белый матовый', unit: 'м²', qty: 8, price: 10000 },
+            { id: 'r4', name: 'МДФ фасад 18мм', materialId: 'm5', manufacturerId: 'mfr1', vendorId: 'v1', typeId: 'mt2', thickness: 18, color: 'Белый матовый', unit: 'м²', qty: 8, price: 10000 },
           ]
         },
       ],
@@ -107,9 +114,9 @@ const initialState: AppState = {
   activeProjectId: 'p1',
 };
 
-const STORAGE_KEY = 'kuhni-pro-state-v2';
+const STORAGE_KEY = 'kuhni-pro-state-v3';
 
-const DEFAULT_VISIBLE_COLUMNS: CalcColumnKey[] = ['material', 'supplier', 'article', 'color', 'thickness', 'unit', 'qty', 'price'];
+const DEFAULT_VISIBLE_COLUMNS: CalcColumnKey[] = ['material', 'manufacturer', 'vendor', 'article', 'color', 'thickness', 'unit', 'qty', 'price'];
 
 function migrateProjects(projects: AppState['projects']): AppState['projects'] {
   return projects.map(p => ({
@@ -134,36 +141,16 @@ function loadState(): AppState {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) {
       const parsed = JSON.parse(saved) as Partial<AppState>;
-
       const validTypes = parsed.settings?.materialTypes?.length &&
         isValidMaterialTypes(parsed.settings.materialTypes as unknown[])
         ? parsed.settings.materialTypes
         : DEFAULT_MATERIAL_TYPES;
 
-      // Migrate materials: if typeId is a string-name (old format), map to new id
-      const typeNameToId = (name: string) => DEFAULT_MATERIAL_TYPES.find(t => t.name === name)?.id || name;
-      const migratedMaterials = (parsed.materials || initialState.materials).map(m => ({
-        ...m,
-        typeId: (m.typeId && typeof m.typeId === 'string' && !m.typeId.startsWith('mt'))
-          ? typeNameToId(m.typeId)
-          : (m.typeId || ''),
-      }));
-
-      // Migrate suppliers: materialTypeIds may be names or missing
-      const migratedSuppliers = (parsed.suppliers || initialState.suppliers).map(s => ({
-        ...s,
-        materialTypeIds: Array.isArray(s.materialTypeIds)
-          ? s.materialTypeIds.map((tid: string) =>
-              (!tid.startsWith('mt') ? typeNameToId(tid) : tid)
-            )
-          : [],
-      }));
-
       return {
         ...initialState,
         ...parsed,
-        suppliers: migratedSuppliers,
-        materials: migratedMaterials,
+        manufacturers: parsed.manufacturers?.length ? parsed.manufacturers : initialState.manufacturers,
+        vendors: parsed.vendors?.length ? parsed.vendors : initialState.vendors,
         projects: parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
         settings: {
           ...defaultSettings,
@@ -223,6 +210,12 @@ export function useStore() {
   const getTypeById = (typeId?: string) =>
     state.settings.materialTypes.find(t => t.id === typeId);
 
+  const getManufacturerById = (id?: string) =>
+    state.manufacturers.find(m => m.id === id);
+
+  const getVendorById = (id?: string) =>
+    state.vendors.find(v => v.id === id);
+
   const getActiveProject = () =>
     state.projects.find(p => p.id === state.activeProjectId) || null;
 
@@ -241,7 +234,7 @@ export function useStore() {
         id,
         name: 'Новый блок',
         allowedTypeIds: [],
-        visibleColumns: ['material', 'supplier', 'article', 'color', 'thickness', 'unit', 'qty', 'price'] as CalcColumnKey[],
+        visibleColumns: DEFAULT_VISIBLE_COLUMNS,
         rows: []
       }]
     }));
@@ -353,69 +346,54 @@ export function useStore() {
   const createProject = () => {
     const id = `p${Date.now()}`;
     const newProject: Project = {
-      id,
-      client: '',
-      object: 'Новый проект',
-      address: '',
-      phone: '',
+      id, client: '', object: 'Новый проект', address: '', phone: '',
       messenger: 'WhatsApp',
       createdAt: new Date().toISOString().split('T')[0],
-      blocks: [{
-        id: `b${Date.now()}`,
-        name: 'Корпус',
-        allowedTypeIds: [],
-        visibleColumns: ['material', 'supplier', 'article', 'color', 'thickness', 'unit', 'qty', 'price'] as CalcColumnKey[],
-        rows: []
-      }],
+      blocks: [{ id: `b${Date.now()}`, name: 'Корпус', allowedTypeIds: [], visibleColumns: DEFAULT_VISIBLE_COLUMNS, rows: [] }],
       serviceBlocks: [],
     };
-    setState(s => ({
-      ...s,
-      projects: [...s.projects, newProject],
-      activeProjectId: id,
-    }));
+    setState(s => ({ ...s, projects: [...s.projects, newProject], activeProjectId: id }));
     return id;
   };
 
   const deleteProject = (projectId: string) => {
     setState(s => {
       const remaining = s.projects.filter(p => p.id !== projectId);
-      return {
-        ...s,
-        projects: remaining,
-        activeProjectId: remaining.length > 0 ? remaining[remaining.length - 1].id : null,
-      };
+      return { ...s, projects: remaining, activeProjectId: remaining.length > 0 ? remaining[remaining.length - 1].id : null };
     });
   };
 
-  const addSupplier = (supplier: Omit<Supplier, 'id'>) => {
-    const id = `s${Date.now()}`;
-    setState(s => ({ ...s, suppliers: [...s.suppliers, { ...supplier, id }] }));
+  // ===== MANUFACTURERS =====
+  const addManufacturer = (m: Omit<Manufacturer, 'id'>) => {
+    const id = `mfr${Date.now()}`;
+    setState(s => ({ ...s, manufacturers: [...s.manufacturers, { ...m, id }] }));
+  };
+  const updateManufacturer = (id: string, data: Partial<Manufacturer>) => {
+    setState(s => ({ ...s, manufacturers: s.manufacturers.map(m => m.id === id ? { ...m, ...data } : m) }));
+  };
+  const deleteManufacturer = (id: string) => {
+    setState(s => ({ ...s, manufacturers: s.manufacturers.filter(m => m.id !== id) }));
   };
 
-  const updateSupplier = (id: string, data: Partial<Supplier>) => {
-    setState(s => ({
-      ...s,
-      suppliers: s.suppliers.map(sup => sup.id === id ? { ...sup, ...data } : sup)
-    }));
+  // ===== VENDORS =====
+  const addVendor = (v: Omit<Vendor, 'id'>) => {
+    const id = `v${Date.now()}`;
+    setState(s => ({ ...s, vendors: [...s.vendors, { ...v, id }] }));
   };
-
-  const deleteSupplier = (id: string) => {
-    setState(s => ({ ...s, suppliers: s.suppliers.filter(sup => sup.id !== id) }));
+  const updateVendor = (id: string, data: Partial<Vendor>) => {
+    setState(s => ({ ...s, vendors: s.vendors.map(v => v.id === id ? { ...v, ...data } : v) }));
+  };
+  const deleteVendor = (id: string) => {
+    setState(s => ({ ...s, vendors: s.vendors.filter(v => v.id !== id) }));
   };
 
   const addMaterial = (material: Omit<Material, 'id'>) => {
     const id = `m${Date.now()}`;
     setState(s => ({ ...s, materials: [...s.materials, { ...material, id }] }));
   };
-
   const updateMaterial = (id: string, data: Partial<Material>) => {
-    setState(s => ({
-      ...s,
-      materials: s.materials.map(m => m.id === id ? { ...m, ...data } : m)
-    }));
+    setState(s => ({ ...s, materials: s.materials.map(m => m.id === id ? { ...m, ...data } : m) }));
   };
-
   const deleteMaterial = (id: string) => {
     setState(s => ({ ...s, materials: s.materials.filter(m => m.id !== id) }));
   };
@@ -424,14 +402,9 @@ export function useStore() {
     const id = `sv${Date.now()}`;
     setState(s => ({ ...s, services: [...s.services, { ...service, id }] }));
   };
-
   const updateService = (id: string, data: Partial<Service>) => {
-    setState(s => ({
-      ...s,
-      services: s.services.map(sv => sv.id === id ? { ...sv, ...data } : sv)
-    }));
+    setState(s => ({ ...s, services: s.services.map(sv => sv.id === id ? { ...sv, ...data } : sv) }));
   };
-
   const deleteService = (id: string) => {
     setState(s => ({ ...s, services: s.services.filter(sv => sv.id !== id) }));
   };
@@ -440,14 +413,9 @@ export function useStore() {
     const id = `e${Date.now()}`;
     setState(s => ({ ...s, expenses: [...s.expenses, { ...expense, id }] }));
   };
-
   const updateExpense = (id: string, data: Partial<ExpenseItem>) => {
-    setState(s => ({
-      ...s,
-      expenses: s.expenses.map(e => e.id === id ? { ...e, ...data } : e)
-    }));
+    setState(s => ({ ...s, expenses: s.expenses.map(e => e.id === id ? { ...e, ...data } : e) }));
   };
-
   const deleteExpense = (id: string) => {
     setState(s => ({ ...s, expenses: s.expenses.filter(e => e.id !== id) }));
   };
@@ -458,63 +426,37 @@ export function useStore() {
 
   const addMaterialType = (mt: Omit<MaterialType, 'id'>) => {
     const id = `mt${Date.now()}`;
-    setState(s => ({
-      ...s,
-      settings: {
-        ...s.settings,
-        materialTypes: [...s.settings.materialTypes, { ...mt, id }]
-      }
-    }));
+    setState(s => ({ ...s, settings: { ...s.settings, materialTypes: [...s.settings.materialTypes, { ...mt, id }] } }));
   };
-
   const updateMaterialType = (id: string, data: Partial<MaterialType>) => {
-    setState(s => ({
-      ...s,
-      settings: {
-        ...s.settings,
-        materialTypes: s.settings.materialTypes.map(t => t.id === id ? { ...t, ...data } : t)
-      }
-    }));
+    setState(s => ({ ...s, settings: { ...s.settings, materialTypes: s.settings.materialTypes.map(t => t.id === id ? { ...t, ...data } : t) } }));
   };
-
   const deleteMaterialType = (id: string) => {
-    setState(s => ({
-      ...s,
-      settings: {
-        ...s.settings,
-        materialTypes: s.settings.materialTypes.filter(t => t.id !== id)
-      }
-    }));
+    setState(s => ({ ...s, settings: { ...s.settings, materialTypes: s.settings.materialTypes.filter(t => t.id !== id) } }));
   };
 
   const addUnit = (unit: string) => {
     if (!unit.trim() || state.settings.units.includes(unit.trim())) return;
-    setState(s => ({
-      ...s,
-      settings: { ...s.settings, units: [...s.settings.units, unit.trim()] }
-    }));
+    setState(s => ({ ...s, settings: { ...s.settings, units: [...s.settings.units, unit.trim()] } }));
   };
-
   const deleteUnit = (unit: string) => {
-    setState(s => ({
-      ...s,
-      settings: { ...s.settings, units: s.settings.units.filter(u => u !== unit) }
-    }));
+    setState(s => ({ ...s, settings: { ...s.settings, units: s.settings.units.filter(u => u !== unit) } }));
   };
 
   return {
     ...state,
     getActiveProject,
     calcPriceWithMarkup,
-    getTypeName,
-    getTypeById,
+    getTypeName, getTypeById,
+    getManufacturerById, getVendorById,
     addBlock, updateBlock, deleteBlock,
     addRow, updateRow, deleteRow,
     addServiceBlock, updateServiceBlock, deleteServiceBlock,
     addServiceRow, updateServiceRow, deleteServiceRow,
     updateProjectInfo,
     createProject, deleteProject,
-    addSupplier, updateSupplier, deleteSupplier,
+    addManufacturer, updateManufacturer, deleteManufacturer,
+    addVendor, updateVendor, deleteVendor,
     addMaterial, updateMaterial, deleteMaterial,
     addService, updateService, deleteService,
     addExpense, updateExpense, deleteExpense,

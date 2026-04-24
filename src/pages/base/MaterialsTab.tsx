@@ -23,7 +23,6 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
     <>
       <div>
         <div className="flex items-center justify-between mb-4 gap-4">
-          {/* Type filter tabs */}
           <div className="flex gap-1 flex-wrap">
             <button
               onClick={() => onFilterChange('all')}
@@ -52,24 +51,26 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
 
         <div className="bg-[hsl(220,14%,11%)] rounded border border-border">
           <div className="grid text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider px-4 py-2.5 border-b border-border"
-            style={{ gridTemplateColumns: '2fr 1fr 1fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
-            <span>Наименование</span><span>Поставщик</span><span>Тип</span><span>Толщ.</span>
-            <span>Цвет</span><span>Артикул</span><span className="text-right">Цена</span><span></span>
+            style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
+            <span>Наименование</span><span>Производитель</span><span>Поставщик</span><span>Тип</span>
+            <span>Толщ.</span><span>Цвет</span><span>Артикул</span><span className="text-right">Цена</span><span></span>
           </div>
           {filteredMaterials.length === 0 && (
             <div className="px-4 py-8 text-center text-[hsl(var(--text-muted))] text-sm">Нет материалов</div>
           )}
           {filteredMaterials.map(m => {
-            const sup = store.suppliers.find(s => s.id === m.supplierId);
+            const mfr = store.getManufacturerById(m.manufacturerId);
+            const vendor = store.getVendorById(m.vendorId);
             const t = store.getTypeById(m.typeId);
             return (
               <div key={m.id} className="grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,14%)] hover:bg-[hsl(220,12%,12%)] group transition-colors text-sm"
-                style={{ gridTemplateColumns: '2fr 1fr 1fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
+                style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
                 <div className="flex items-center gap-2 truncate">
                   {t && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color || '#888' }} />}
                   <span className="truncate text-foreground">{m.name}</span>
                 </div>
-                <span className="text-xs text-[hsl(var(--text-dim))]">{sup?.name || '—'}</span>
+                <span className="text-xs text-[hsl(var(--text-dim))]">{mfr?.name || '—'}</span>
+                <span className="text-xs text-[hsl(var(--text-dim))]">{vendor?.name || '—'}</span>
                 <span className="text-xs text-[hsl(var(--text-dim))]">{t?.name || '—'}</span>
                 <span className="text-xs text-[hsl(var(--text-dim))]">{m.thickness ? `${m.thickness}мм` : '—'}</span>
                 <span className="text-xs text-[hsl(var(--text-dim))] truncate">{m.color || '—'}</span>
@@ -92,13 +93,23 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
             <Field label="Наименование" value={editingMaterial.name || ''} onChange={v => setEditingMaterial(p => ({ ...p!, name: v }))} required />
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Поставщик</label>
-                <select value={editingMaterial.supplierId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, supplierId: e.target.value }))}
+                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Производитель</label>
+                <select value={editingMaterial.manufacturerId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, manufacturerId: e.target.value }))}
                   className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
                   <option value="">— выбрать —</option>
-                  {store.suppliers.map(s => <option key={s.id} value={s.id} className="bg-[hsl(220,14%,11%)]">{s.name}</option>)}
+                  {store.manufacturers.map(m => <option key={m.id} value={m.id} className="bg-[hsl(220,14%,11%)]">{m.name}</option>)}
                 </select>
               </div>
+              <div>
+                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Поставщик</label>
+                <select value={editingMaterial.vendorId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, vendorId: e.target.value || undefined }))}
+                  className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
+                  <option value="">— не указан —</option>
+                  {store.vendors.map(v => <option key={v.id} value={v.id} className="bg-[hsl(220,14%,11%)]">{v.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Тип материала <span className="text-gold">*</span></label>
                 <select value={editingMaterial.typeId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, typeId: e.target.value }))}
@@ -107,13 +118,6 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
                   {allTypes.map(t => <option key={t.id} value={t.id} className="bg-[hsl(220,14%,11%)]">{t.name}</option>)}
                 </select>
               </div>
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <Field label="Толщина, мм" value={String(editingMaterial.thickness || '')} onChange={v => setEditingMaterial(p => ({ ...p!, thickness: parseFloat(v) || undefined }))} type="number" />
-              <Field label="Цвет" value={editingMaterial.color || ''} onChange={v => setEditingMaterial(p => ({ ...p!, color: v }))} />
-              <Field label="Артикул" value={editingMaterial.article || ''} onChange={v => setEditingMaterial(p => ({ ...p!, article: v }))} />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Ед. изм.</label>
                 <select value={editingMaterial.unit || 'м²'} onChange={e => setEditingMaterial(p => ({ ...p!, unit: e.target.value }))}
@@ -121,8 +125,13 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
                   {store.settings.units.map(u => <option key={u} value={u} className="bg-[hsl(220,14%,11%)]">{u}</option>)}
                 </select>
               </div>
-              <Field label="Цена (без наценки)" value={String(editingMaterial.basePrice || '')} onChange={v => setEditingMaterial(p => ({ ...p!, basePrice: parseFloat(v) || 0 }))} type="number" required />
             </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Толщина, мм" value={String(editingMaterial.thickness || '')} onChange={v => setEditingMaterial(p => ({ ...p!, thickness: parseFloat(v) || undefined }))} type="number" />
+              <Field label="Цвет" value={editingMaterial.color || ''} onChange={v => setEditingMaterial(p => ({ ...p!, color: v }))} />
+              <Field label="Артикул" value={editingMaterial.article || ''} onChange={v => setEditingMaterial(p => ({ ...p!, article: v }))} />
+            </div>
+            <Field label="Цена (без наценки)" value={String(editingMaterial.basePrice || '')} onChange={v => setEditingMaterial(p => ({ ...p!, basePrice: parseFloat(v) || 0 }))} type="number" required />
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => {

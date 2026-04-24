@@ -4,7 +4,8 @@ export const MESSENGERS = ['WhatsApp', 'Telegram', 'Viber', 'Звонок'] as c
 
 export const COLUMN_LABELS: Record<CalcColumnKey, string> = {
   material: 'Материал',
-  supplier: 'Производитель',
+  manufacturer: 'Производитель',
+  vendor: 'Поставщик',
   article: 'Артикул',
   color: 'Цвет',
   thickness: 'Толщина',
@@ -15,7 +16,8 @@ export const COLUMN_LABELS: Record<CalcColumnKey, string> = {
 
 export const COLUMN_WIDTHS: Record<CalcColumnKey, string> = {
   material: '2fr',
-  supplier: '1fr',
+  manufacturer: '1fr',
+  vendor: '1fr',
   article: '0.8fr',
   color: '1fr',
   thickness: '0.6fr',
