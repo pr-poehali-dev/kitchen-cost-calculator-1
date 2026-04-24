@@ -164,19 +164,35 @@ export default function ExpensesPage() {
             <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))] mb-3">Влияние на расчёт</div>
             <div className="space-y-1.5 text-sm">
               <div className="flex justify-between text-[hsl(var(--text-dim))]">
-                <span>Материалы + Услуги</span>
-                <span className="font-mono">{fmt(totals.base)} {store.settings.currency}</span>
+                <span>Материалы</span>
+                <span className="font-mono">{fmt(totals.rawMaterials)} {store.settings.currency}</span>
               </div>
-              {totals.totalMarkupAmount > 0 && (
+              {totals.matMarkupAmount > 0 && (
                 <div className="flex justify-between text-gold">
-                  <span>Наценка на итог ({totals.totalMarkupPct}%)</span>
-                  <span className="font-mono">+{fmt(totals.totalMarkupAmount)} {store.settings.currency}</span>
+                  <span>Наценка на материалы ({totals.matMarkupPct}%)</span>
+                  <span className="font-mono">+{fmt(totals.matMarkupAmount)} {store.settings.currency}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-[hsl(var(--text-dim))]">
+                <span>Услуги</span>
+                <span className="font-mono">{fmt(totals.rawServices)} {store.settings.currency}</span>
+              </div>
+              {totals.svcMarkupAmount > 0 && (
+                <div className="flex justify-between text-gold">
+                  <span>Наценка на услуги ({totals.svcMarkupPct}%)</span>
+                  <span className="font-mono">+{fmt(totals.svcMarkupAmount)} {store.settings.currency}</span>
                 </div>
               )}
               {totals.blockExtraTotal > 0 && (
                 <div className="flex justify-between text-gold">
                   <span>Наценки на блоки</span>
                   <span className="font-mono">+{fmt(totals.blockExtraTotal)} {store.settings.currency}</span>
+                </div>
+              )}
+              {totals.totalMarkupAmount > 0 && (
+                <div className="flex justify-between text-gold">
+                  <span>Наценка на итог ({totals.totalMarkupPct}%)</span>
+                  <span className="font-mono">+{fmt(totals.totalMarkupAmount)} {store.settings.currency}</span>
                 </div>
               )}
               {totals.percentAmount > 0 && (

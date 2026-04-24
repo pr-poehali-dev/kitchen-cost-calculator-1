@@ -117,6 +117,14 @@ export default function CalcPage() {
           // Строим список строк сводки
           type SummaryRow = { id: string; label: string; value: number; sign?: '+'; color?: string; indent?: boolean };
           const rows: SummaryRow[] = [];
+          const activeExp = allExpenses.filter(e => e.enabled !== false);
+
+          // Группировщик расходов по groupId
+          const groupByGid = <T extends { groupId?: string }>(items: T[]) => {
+            const map: Record<string, T[]> = {};
+            items.forEach(e => { const k = e.groupId || '__ug'; map[k] = [...(map[k] || []), e]; });
+            return map;
+          };
 
           // 1. Блоки материалов
           totals.blockExtras.forEach(b => {
@@ -127,66 +135,62 @@ export default function CalcPage() {
             }
           });
 
-          // 2. Услуги
+          // 2. Наценка на материалы (по группам)
+          if (totals.matMarkupAmount > 0) {
+            const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'materials');
+            Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
+              const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
+              const pct = grpItems.reduce((s, e) => s + e.value, 0);
+              const amt = Math.round(totals.rawMaterials * pct / 100);
+              if (amt > 0) rows.push({ id: `matMarkup-${gid}`, label: `${grp?.name ?? 'Наценка на материалы'} (${pct}%)`, value: amt, sign: '+', color: 'gold' });
+            });
+          }
+
+          // 3. Услуги
           if (totalServices > 0) {
             rows.push({ id: 'services', label: 'Услуги', value: totalServices });
           }
 
-          // 3. Группы расходов из настроек
-          const activeExp = allExpenses.filter(e => e.enabled !== false);
-
-          // Наценки на итог (grouped)
-          const totalMarkupItems = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
-          if (totals.totalMarkupAmount > 0) {
-            const groupIds = [...new Set(totalMarkupItems.map(e => e.groupId).filter(Boolean))];
-            if (groupIds.length > 0) {
-              groupIds.forEach(gid => {
-                const grp = groups.find(g => g.id === gid);
-                const items = totalMarkupItems.filter(e => e.groupId === gid);
-                const pct = items.reduce((s, e) => s + e.value, 0);
-                const amt = Math.round(totals.base * pct / 100);
-                if (amt > 0) rows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? 'Наценка на итог'} (${pct}%)`, value: amt, sign: '+', color: 'gold' });
-              });
-              // Без группы
-              const ungrouped = totalMarkupItems.filter(e => !e.groupId);
-              if (ungrouped.length > 0) {
-                const pct = ungrouped.reduce((s, e) => s + e.value, 0);
-                const amt = Math.round(totals.base * pct / 100);
-                if (amt > 0) rows.push({ id: 'totalMarkup-ug', label: `Наценка на итог (${pct}%)`, value: amt, sign: '+', color: 'gold' });
-              }
-            } else {
-              rows.push({ id: 'totalMarkup', label: `Наценка на итог (${totals.totalMarkupPct}%)`, value: totals.totalMarkupAmount, sign: '+', color: 'gold' });
-            }
+          // 4. Наценка на услуги (по группам)
+          if (totals.svcMarkupAmount > 0) {
+            const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'services');
+            Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
+              const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
+              const pct = grpItems.reduce((s, e) => s + e.value, 0);
+              const amt = Math.round(totals.rawServices * pct / 100);
+              if (amt > 0) rows.push({ id: `svcMarkup-${gid}`, label: `${grp?.name ?? 'Наценка на услуги'} (${pct}%)`, value: amt, sign: '+', color: 'gold' });
+            });
           }
 
-          // Процентные расходы по группам
+          // 5. Наценка на итог (по группам)
+          if (totals.totalMarkupAmount > 0) {
+            const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
+            Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
+              const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
+              const pct = grpItems.reduce((s, e) => s + e.value, 0);
+              const amt = Math.round(totals.base * pct / 100);
+              if (amt > 0) rows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? 'Наценка на итог'} (${pct}%)`, value: amt, sign: '+', color: 'gold' });
+            });
+          }
+
+          // 6. Процентные расходы (по группам)
           const percentItems = activeExp.filter(e => e.type === 'percent');
           if (percentItems.length > 0) {
-            const byGroup: Record<string, typeof percentItems> = {};
-            percentItems.forEach(e => {
-              const key = e.groupId || '__ungrouped';
-              byGroup[key] = [...(byGroup[key] || []), e];
-            });
-            Object.entries(byGroup).forEach(([gid, items]) => {
-              const grp = gid !== '__ungrouped' ? groups.find(g => g.id === gid) : null;
+            Object.entries(groupByGid(percentItems)).forEach(([gid, items]) => {
+              const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
               const pct = items.reduce((s, e) => s + e.value, 0);
               const amt = items.reduce((s, e) => s + Math.round(totals.base * e.value / 100), 0);
-              rows.push({ id: `percent-${gid}`, label: `${grp?.name ?? 'Процентные расходы'} (${pct}%)`, value: amt, sign: '+', color: 'blue' });
+              if (amt > 0) rows.push({ id: `percent-${gid}`, label: `${grp?.name ?? 'Расходы'} (${pct}%)`, value: amt, sign: '+', color: 'blue' });
             });
           }
 
-          // Фиксированные расходы по группам
+          // 7. Фиксированные расходы (по группам)
           const fixedItems = activeExp.filter(e => e.type === 'fixed');
           if (fixedItems.length > 0) {
-            const byGroup: Record<string, typeof fixedItems> = {};
-            fixedItems.forEach(e => {
-              const key = e.groupId || '__ungrouped';
-              byGroup[key] = [...(byGroup[key] || []), e];
-            });
-            Object.entries(byGroup).forEach(([gid, items]) => {
-              const grp = gid !== '__ungrouped' ? groups.find(g => g.id === gid) : null;
+            Object.entries(groupByGid(fixedItems)).forEach(([gid, items]) => {
+              const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
               const amt = items.reduce((s, e) => s + e.value, 0);
-              rows.push({ id: `fixed-${gid}`, label: grp?.name ?? 'Постоянные расходы', value: amt, sign: '+' });
+              if (amt > 0) rows.push({ id: `fixed-${gid}`, label: grp?.name ?? 'Постоянные расходы', value: amt, sign: '+' });
             });
           }
 

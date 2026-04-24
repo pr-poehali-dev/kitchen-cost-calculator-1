@@ -264,20 +264,30 @@ export function useStore() {
   const calcProjectTotals = (project: Project) => {
     const activeExpenses = state.expenses.filter(e => e.enabled !== false);
 
-    // Наценки «на материалы» и «на услуги» уже заложены в цены строк через calcPriceWithMarkup
+    // Базовые суммы из строк (цены уже включают наценку через calcPriceWithMarkup при выборе из базы)
     const rawMaterials = project.blocks.reduce((sum, b) =>
       sum + b.rows.reduce((s, r) => s + r.qty * r.price, 0), 0);
     const rawServices = project.serviceBlocks.reduce((sum, b) =>
       sum + b.rows.reduce((s, r) => s + r.qty * r.price, 0), 0);
 
-    const base = rawMaterials + rawServices;
+    // Наценка markup/materials от активных расходов — применяется к сумме материалов
+    const matMarkupItems = activeExpenses.filter(e => e.type === 'markup' && e.applyTo === 'materials');
+    const matMarkupPct = matMarkupItems.reduce((s, e) => s + e.value, 0);
+    const matMarkupAmount = Math.round(rawMaterials * matMarkupPct / 100);
 
-    // Наценка на итог (markup / total) — суммируем все
+    // Наценка markup/services — применяется к сумме услуг
+    const svcMarkupItems = activeExpenses.filter(e => e.type === 'markup' && e.applyTo === 'services');
+    const svcMarkupPct = svcMarkupItems.reduce((s, e) => s + e.value, 0);
+    const svcMarkupAmount = Math.round(rawServices * svcMarkupPct / 100);
+
+    const base = rawMaterials + rawServices + matMarkupAmount + svcMarkupAmount;
+
+    // Наценка на итог (markup/total)
     const totalMarkupItems = activeExpenses.filter(e => e.type === 'markup' && e.applyTo === 'total');
     const totalMarkupPct = totalMarkupItems.reduce((s, e) => s + e.value, 0);
     const totalMarkupAmount = Math.round(base * totalMarkupPct / 100);
 
-    // Наценки на конкретные блоки (markup / block)
+    // Наценки на конкретные блоки (markup/block)
     const blockExtras = project.blocks.map(b => {
       const blockBase = b.rows.reduce((s, r) => s + r.qty * r.price, 0);
       const blockMarkups = activeExpenses.filter(e =>
@@ -288,7 +298,7 @@ export function useStore() {
       return { blockId: b.id, blockName: b.name, base: blockBase, extra };
     });
 
-    // Процентные расходы (percent — от базы материалы+услуги)
+    // Процентные расходы (percent — от base с наценками)
     const percentExpenses = activeExpenses.filter(e => e.type === 'percent');
     const percentAmount = percentExpenses.reduce((s, e) => s + Math.round(base * e.value / 100), 0);
 
@@ -302,6 +312,10 @@ export function useStore() {
     return {
       rawMaterials,
       rawServices,
+      matMarkupAmount,
+      matMarkupPct,
+      svcMarkupAmount,
+      svcMarkupPct,
       base,
       totalMarkupAmount,
       totalMarkupPct,
