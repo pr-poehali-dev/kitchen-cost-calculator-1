@@ -143,7 +143,7 @@ const initialState: AppState = {
   ],
 };
 
-const STORAGE_KEY = 'kuhni-pro-state-v4';
+const STORAGE_KEY = 'kuhni-pro-state-v3';
 
 const DEFAULT_VISIBLE_COLUMNS: CalcColumnKey[] = ['material', 'manufacturer', 'vendor', 'article', 'color', 'thickness', 'unit', 'qty', 'price', 'total'];
 
@@ -183,11 +183,10 @@ function loadState(): AppState {
         ? parsed.settings.materialTypes
         : DEFAULT_MATERIAL_TYPES;
 
-      // Мигрируем expenses: enabled=undefined → true, старые markup без applyTo → 'materials'
-      const migratedExpenses = (parsed.expenses ?? initialState.expenses).map(e => ({
-        ...e,
-        enabled: e.enabled !== false, // undefined и true → true, только false → false
-      }));
+      // Мигрируем expenses: enabled=undefined → true (не трогаем пользовательские данные)
+      const migratedExpenses = parsed.expenses
+        ? parsed.expenses.map(e => ({ ...e, enabled: e.enabled !== false }))
+        : initialState.expenses;
 
       return {
         ...initialState,
@@ -196,6 +195,7 @@ function loadState(): AppState {
         vendors: parsed.vendors?.length ? parsed.vendors : initialState.vendors,
         templates: parsed.templates ?? initialState.templates,
         projects: parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
+        // Группы расходов: берём пользовательские если есть, иначе дефолтные
         expenseGroups: parsed.expenseGroups?.length ? parsed.expenseGroups : initialState.expenseGroups,
         expenses: migratedExpenses,
         settings: {
