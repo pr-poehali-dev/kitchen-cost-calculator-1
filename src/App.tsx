@@ -1,28 +1,23 @@
+import { useState } from 'react';
+import Layout from '@/components/Layout';
+import CalcPage from '@/pages/CalcPage';
+import ServicesPage from '@/pages/ServicesPage';
+import BasePage from '@/pages/BasePage';
+import ExpensesPage from '@/pages/ExpensesPage';
+import SettingsPage from '@/pages/SettingsPage';
 
-import { Toaster } from "@/components/ui/toaster";
-import { Toaster as Sonner } from "@/components/ui/sonner";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Index from "./pages/Index";
-import NotFound from "./pages/NotFound";
+type Section = 'calc' | 'services' | 'base' | 'expenses' | 'settings';
 
-const queryClient = new QueryClient();
+export default function App() {
+  const [section, setSection] = useState<Section>('calc');
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Index />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
-    </TooltipProvider>
-  </QueryClientProvider>
-);
-
-export default App;
+  return (
+    <Layout active={section} onNav={setSection}>
+      {section === 'calc' && <CalcPage />}
+      {section === 'services' && <ServicesPage />}
+      {section === 'base' && <BasePage />}
+      {section === 'expenses' && <ExpensesPage />}
+      {section === 'settings' && <SettingsPage />}
+    </Layout>
+  );
+}
