@@ -9,10 +9,14 @@ interface Props {
   totalServices: number;
   total: number;
   showProjects: boolean;
+  confirmDeleteProject: string | null;
   onToggleProjects: () => void;
   onStopPropagation: (e: React.MouseEvent) => void;
   onOpenTemplates: () => void;
   onExportPdf: () => void;
+  onRequestDeleteProject: (id: string) => void;
+  onConfirmDeleteProject: (id: string) => void;
+  onCancelDeleteProject: () => void;
 }
 
 function InlineEdit({ value, onChange, placeholder = '', className = '' }: {
@@ -28,7 +32,13 @@ function InlineEdit({ value, onChange, placeholder = '', className = '' }: {
   );
 }
 
-export default function CalcHeader({ project, totalMaterials, totalServices, total, showProjects, onToggleProjects, onStopPropagation, onOpenTemplates, onExportPdf }: Props) {
+export default function CalcHeader({
+  project, totalMaterials, totalServices, total,
+  showProjects, confirmDeleteProject,
+  onToggleProjects, onStopPropagation,
+  onOpenTemplates, onExportPdf,
+  onRequestDeleteProject, onConfirmDeleteProject, onCancelDeleteProject,
+}: Props) {
   const store = useStore();
 
   return (
@@ -44,18 +54,52 @@ export default function CalcHeader({ project, totalMaterials, totalServices, tot
               <span className="font-medium">{project.object || 'Проект'}</span>
               <Icon name="ChevronDown" size={12} />
             </button>
+
             {showProjects && (
-              <div className="absolute top-8 left-0 z-50 bg-[hsl(220,14%,11%)] border border-border rounded shadow-xl min-w-64">
-                {store.projects.map(p => (
-                  <button
-                    key={p.id}
-                    onClick={() => { store.setState(s => ({ ...s, activeProjectId: p.id })); onToggleProjects(); }}
-                    className={`w-full text-left px-4 py-2.5 text-sm hover:bg-[hsl(220,12%,16%)] flex items-center justify-between ${p.id === project.id ? 'text-gold' : 'text-foreground'}`}
-                  >
-                    <span>{p.object || 'Без названия'}</span>
-                    <span className="text-[hsl(var(--text-muted))] text-xs ml-4">{p.client}</span>
-                  </button>
-                ))}
+              <div className="absolute top-8 left-0 z-50 bg-[hsl(220,14%,11%)] border border-border rounded shadow-xl min-w-72">
+                <div className="py-1">
+                  {store.projects.map(p => (
+                    <div
+                      key={p.id}
+                      className={`group flex items-center justify-between px-3 py-2 hover:bg-[hsl(220,12%,16%)] transition-colors ${p.id === project.id ? 'border-l-2 border-gold' : 'border-l-2 border-transparent'}`}
+                    >
+                      {confirmDeleteProject === p.id ? (
+                        <div className="flex items-center justify-between w-full gap-2">
+                          <span className="text-xs text-[hsl(var(--text-muted))]">Удалить «{p.object || 'Без названия'}»?</span>
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              onClick={() => onConfirmDeleteProject(p.id)}
+                              className="px-2 py-0.5 bg-destructive text-white rounded text-xs font-medium"
+                            >Да</button>
+                            <button
+                              onClick={onCancelDeleteProject}
+                              className="px-2 py-0.5 border border-border rounded text-xs text-[hsl(var(--text-dim))]"
+                            >Нет</button>
+                          </div>
+                        </div>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => { store.setState(s => ({ ...s, activeProjectId: p.id })); onToggleProjects(); }}
+                            className="flex-1 text-left min-w-0"
+                          >
+                            <div className={`text-sm truncate ${p.id === project.id ? 'text-gold font-medium' : 'text-foreground'}`}>
+                              {p.object || 'Без названия'}
+                            </div>
+                            {p.client && <div className="text-xs text-[hsl(var(--text-muted))] truncate">{p.client}</div>}
+                          </button>
+                          <button
+                            onClick={() => onRequestDeleteProject(p.id)}
+                            className="ml-2 p-1 text-[hsl(var(--text-muted))] hover:text-destructive opacity-0 group-hover:opacity-100 transition-all shrink-0"
+                            title="Удалить проект"
+                          >
+                            <Icon name="Trash2" size={12} />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
                 <div className="border-t border-border">
                   <button
                     onClick={() => { store.createProject(); onToggleProjects(); }}

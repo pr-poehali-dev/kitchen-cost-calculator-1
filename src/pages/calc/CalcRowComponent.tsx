@@ -120,13 +120,24 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
             );
           case 'qty':
             return (
-              <input
-                key={col}
-                type="number"
-                value={row.qty || ''}
-                onChange={e => store.updateRow(projectId, blockId, row.id, { qty: parseFloat(e.target.value) || 0 })}
-                className="bg-transparent text-sm font-mono text-right outline-none w-full border-b border-transparent focus:border-[hsl(var(--gold))] pr-1"
-              />
+              <div key={col} className="flex items-center justify-end gap-1">
+                <button
+                  tabIndex={-1}
+                  onClick={() => store.updateRow(projectId, blockId, row.id, { qty: Math.max(0, (row.qty || 0) - 1) })}
+                  className="w-5 h-5 flex items-center justify-center rounded bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,22%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors shrink-0 text-xs leading-none"
+                >−</button>
+                <input
+                  type="number"
+                  value={row.qty || ''}
+                  onChange={e => store.updateRow(projectId, blockId, row.id, { qty: parseFloat(e.target.value) || 0 })}
+                  className="bg-transparent text-sm font-mono text-center outline-none border-b border-transparent focus:border-[hsl(var(--gold))] w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                />
+                <button
+                  tabIndex={-1}
+                  onClick={() => store.updateRow(projectId, blockId, row.id, { qty: (row.qty || 0) + 1 })}
+                  className="w-5 h-5 flex items-center justify-center rounded bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,22%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors shrink-0 text-xs leading-none"
+                >+</button>
+              </div>
             );
           case 'price':
             return (

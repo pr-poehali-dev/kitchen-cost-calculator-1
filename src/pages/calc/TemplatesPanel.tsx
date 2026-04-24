@@ -14,6 +14,7 @@ export default function TemplatesPanel({ projectId, onClose }: Props) {
   const [saveDesc, setSaveDesc] = useState('');
   const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [confirmLoad, setConfirmLoad] = useState<string | null>(null);
+  const [confirmOverwrite, setConfirmOverwrite] = useState<string | null>(null);
 
   const handleSave = () => {
     if (!saveName.trim()) return;
@@ -27,6 +28,11 @@ export default function TemplatesPanel({ projectId, onClose }: Props) {
     store.loadTemplate(projectId, templateId);
     setConfirmLoad(null);
     onClose();
+  };
+
+  const handleOverwrite = (templateId: string) => {
+    store.overwriteTemplate(templateId, projectId);
+    setConfirmOverwrite(null);
   };
 
   return (
@@ -136,6 +142,14 @@ export default function TemplatesPanel({ projectId, onClose }: Props) {
                       <button onClick={() => setConfirmLoad(null)}
                         className="px-2.5 py-1 border border-border rounded text-xs text-[hsl(var(--text-dim))]">Нет</button>
                     </div>
+                  ) : confirmOverwrite === tpl.id ? (
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs text-[hsl(var(--text-muted))]">Перезаписать шаблон?</span>
+                      <button onClick={() => handleOverwrite(tpl.id)}
+                        className="px-2.5 py-1 bg-[hsl(30,70%,40%)] text-white rounded text-xs font-medium">Да</button>
+                      <button onClick={() => setConfirmOverwrite(null)}
+                        className="px-2.5 py-1 border border-border rounded text-xs text-[hsl(var(--text-dim))]">Нет</button>
+                    </div>
                   ) : confirmDelete === tpl.id ? (
                     <div className="flex items-center gap-1.5">
                       <span className="text-xs text-[hsl(var(--text-muted))]">Удалить?</span>
@@ -149,8 +163,16 @@ export default function TemplatesPanel({ projectId, onClose }: Props) {
                       <button
                         onClick={() => setConfirmLoad(tpl.id)}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-gold border border-[hsl(38,40%,30%)] bg-[hsl(38,40%,12%)] rounded hover:bg-[hsl(38,40%,18%)] transition-colors"
+                        title="Загрузить в текущий расчёт"
                       >
                         <Icon name="Download" size={12} /> Загрузить
+                      </button>
+                      <button
+                        onClick={() => setConfirmOverwrite(tpl.id)}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs text-[hsl(var(--text-dim))] border border-border rounded hover:border-[hsl(var(--text-dim))] hover:text-foreground transition-colors opacity-0 group-hover:opacity-100"
+                        title="Обновить шаблон из текущего расчёта"
+                      >
+                        <Icon name="RefreshCw" size={11} />
                       </button>
                       <button
                         onClick={() => setConfirmDelete(tpl.id)}

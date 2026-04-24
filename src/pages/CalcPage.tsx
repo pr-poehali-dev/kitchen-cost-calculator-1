@@ -16,6 +16,7 @@ export default function CalcPage() {
   const [blockSettingsId, setBlockSettingsId] = useState<string | null>(null);
   const [showProjects, setShowProjects] = useState(false);
   const [showTemplates, setShowTemplates] = useState(false);
+  const [confirmDeleteProject, setConfirmDeleteProject] = useState<string | null>(null);
 
   if (!project) {
     return (
@@ -54,33 +55,47 @@ export default function CalcPage() {
     });
   };
 
+  const handleDeleteProject = (projectId: string) => {
+    store.deleteProject(projectId);
+    setConfirmDeleteProject(null);
+    setShowProjects(false);
+  };
+
   return (
-    <div className="flex flex-col h-full animate-fade-in" onClick={() => setShowProjects(false)}>
+    <div className="flex flex-col h-full animate-fade-in" onClick={() => { setShowProjects(false); setConfirmDeleteProject(null); }}>
       <CalcHeader
         project={project}
         totalMaterials={totalMaterials}
         totalServices={totalServices}
         total={total}
         showProjects={showProjects}
+        confirmDeleteProject={confirmDeleteProject}
         onToggleProjects={() => setShowProjects(v => !v)}
         onStopPropagation={e => e.stopPropagation()}
         onOpenTemplates={() => setShowTemplates(true)}
         onExportPdf={handleExportPdf}
+        onRequestDeleteProject={setConfirmDeleteProject}
+        onConfirmDeleteProject={handleDeleteProject}
+        onCancelDeleteProject={() => setConfirmDeleteProject(null)}
       />
 
       <div className="flex-1 overflow-auto scrollbar-thin p-6 space-y-4">
-        {project.blocks.map(block => (
+        {project.blocks.map((block, idx) => (
           <CalcBlock
             key={block.id}
             block={block}
             projectId={project.id}
             currency={store.settings.currency}
+            isFirst={idx === 0}
+            isLast={idx === project.blocks.length - 1}
             isEditingName={editingBlockId === block.id}
             editingName={editingBlockName}
             onStartEditName={() => { setEditingBlockId(block.id); setEditingBlockName(block.name); }}
             onEditNameChange={setEditingBlockName}
             onFinishEditName={() => handleFinishEditName(block.id, block.name)}
             onOpenSettings={() => setBlockSettingsId(block.id)}
+            onMoveUp={() => store.moveBlock(project.id, block.id, 'up')}
+            onMoveDown={() => store.moveBlock(project.id, block.id, 'down')}
           />
         ))}
 

@@ -333,6 +333,30 @@ export function useStore() {
     }));
   };
 
+  const moveBlock = (projectId: string, blockId: string, direction: 'up' | 'down') => {
+    updateProject(projectId, p => {
+      const arr = [...p.blocks];
+      const idx = arr.findIndex(b => b.id === blockId);
+      if (idx < 0) return p;
+      const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= arr.length) return p;
+      [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+      return { ...p, blocks: arr };
+    });
+  };
+
+  const moveServiceBlock = (projectId: string, blockId: string, direction: 'up' | 'down') => {
+    updateProject(projectId, p => {
+      const arr = [...p.serviceBlocks];
+      const idx = arr.findIndex(b => b.id === blockId);
+      if (idx < 0) return p;
+      const newIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (newIdx < 0 || newIdx >= arr.length) return p;
+      [arr[idx], arr[newIdx]] = [arr[newIdx], arr[idx]];
+      return { ...p, serviceBlocks: arr };
+    });
+  };
+
   const addServiceRow = (projectId: string, blockId: string) => {
     const id = `sr${Date.now()}`;
     const newRow: ServiceRow = { id, name: '', unit: 'шт', qty: 1, price: 0 };
@@ -565,6 +589,27 @@ export function useStore() {
     setState(s => ({ ...s, templates: s.templates.map(t => t.id === templateId ? { ...t, ...data } : t) }));
   };
 
+  const overwriteTemplate = (templateId: string, projectId: string) => {
+    const project = state.projects.find(p => p.id === projectId);
+    const template = state.templates.find(t => t.id === templateId);
+    if (!project || !template) return;
+    const updated: CalcTemplate = {
+      ...template,
+      createdAt: new Date().toISOString().split('T')[0],
+      blocks: project.blocks.map(b => ({
+        name: b.name,
+        allowedTypeIds: b.allowedTypeIds,
+        visibleColumns: b.visibleColumns,
+        rows: b.rows.map(r => ({ name: r.name, materialId: r.materialId, unit: r.unit, qty: r.qty })),
+      })),
+      serviceBlocks: project.serviceBlocks.map(sb => ({
+        name: sb.name,
+        rows: sb.rows.map(r => ({ name: r.name, serviceId: r.serviceId, unit: r.unit, qty: r.qty })),
+      })),
+    };
+    setState(s => ({ ...s, templates: s.templates.map(t => t.id === templateId ? updated : t) }));
+  };
+
   const addUnit = (unit: string) => {
     if (!unit.trim() || state.settings.units.includes(unit.trim())) return;
     setState(s => ({ ...s, settings: { ...s.settings, units: [...s.settings.units, unit.trim()] } }));
@@ -612,7 +657,8 @@ export function useStore() {
     addMaterialType, updateMaterialType, deleteMaterialType,
     addMaterialCategory, updateMaterialCategory, deleteMaterialCategory,
     addUnit, deleteUnit,
-    saveTemplate, loadTemplate, deleteTemplate, updateTemplate,
+    moveBlock, moveServiceBlock,
+    saveTemplate, loadTemplate, deleteTemplate, updateTemplate, overwriteTemplate,
     setState: (updater: (s: AppState) => AppState) => setState(updater),
   };
 }
