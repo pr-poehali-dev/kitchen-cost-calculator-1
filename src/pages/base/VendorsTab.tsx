@@ -229,15 +229,49 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
 
                     {isExpanded && (
                       <div>
-                        {mats.map(m => (
-                          <MaterialRow
-                            key={m.id}
-                            material={m}
-                            currency={store.settings.currency}
-                            onEdit={() => setEditingMaterial(m)}
-                            onDelete={() => store.deleteMaterial(m.id)}
-                          />
-                        ))}
+                        {(() => {
+                          const allCategories = store.settings.materialCategories || [];
+                          const catsUsed = allCategories.filter(c => mats.some(m => m.categoryId === c.id));
+                          const uncategorized = mats.filter(m => !m.categoryId);
+                          if (catsUsed.length === 0) {
+                            return mats.map(m => (
+                              <MaterialRow key={m.id} material={m} currency={store.settings.currency}
+                                onEdit={() => setEditingMaterial(m)} onDelete={() => store.deleteMaterial(m.id)} />
+                            ));
+                          }
+                          return (
+                            <>
+                              {catsUsed.map(cat => {
+                                const ct = cat.typeId ? store.getTypeById(cat.typeId) : null;
+                                return (
+                                  <div key={cat.id}>
+                                    <div className="flex items-center gap-2 px-6 py-1.5 bg-[hsl(220,12%,15%)] border-b border-[hsl(220,12%,17%)]">
+                                      <span className="text-xs font-medium text-gold">{cat.name}</span>
+                                      {ct && <span className="text-xs text-[hsl(var(--text-muted))]">· {ct.name}</span>}
+                                      <span className="text-xs text-[hsl(var(--text-muted))] ml-auto">{mats.filter(m => m.categoryId === cat.id).length} поз.</span>
+                                    </div>
+                                    {mats.filter(m => m.categoryId === cat.id).map(m => (
+                                      <MaterialRow key={m.id} material={m} currency={store.settings.currency}
+                                        onEdit={() => setEditingMaterial(m)} onDelete={() => store.deleteMaterial(m.id)} />
+                                    ))}
+                                  </div>
+                                );
+                              })}
+                              {uncategorized.length > 0 && (
+                                <div>
+                                  <div className="flex items-center gap-2 px-6 py-1.5 bg-[hsl(220,12%,15%)] border-b border-[hsl(220,12%,17%)]">
+                                    <span className="text-xs text-[hsl(var(--text-muted))]">Без категории</span>
+                                    <span className="text-xs text-[hsl(var(--text-muted))] ml-auto">{uncategorized.length} поз.</span>
+                                  </div>
+                                  {uncategorized.map(m => (
+                                    <MaterialRow key={m.id} material={m} currency={store.settings.currency}
+                                      onEdit={() => setEditingMaterial(m)} onDelete={() => store.deleteMaterial(m.id)} />
+                                  ))}
+                                </div>
+                              )}
+                            </>
+                          );
+                        })()}
                       </div>
                     )}
                   </div>
@@ -327,12 +361,24 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Тип материала <span className="text-gold">*</span></label>
-                <select value={editingMaterial.typeId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, typeId: e.target.value }))}
+                <select value={editingMaterial.typeId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, typeId: e.target.value, categoryId: undefined }))}
                   className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
                   <option value="">— выбрать —</option>
                   {allTypes.map(t => <option key={t.id} value={t.id} className="bg-[hsl(220,14%,11%)]">{t.name}</option>)}
                 </select>
               </div>
+              <div>
+                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Категория</label>
+                <select value={editingMaterial.categoryId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, categoryId: e.target.value || undefined }))}
+                  className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
+                  <option value="">— не указана —</option>
+                  {store.getCategoriesForType(editingMaterial.typeId).map(c => (
+                    <option key={c.id} value={c.id} className="bg-[hsl(220,14%,11%)]">{c.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Ед. изм.</label>
                 <select value={editingMaterial.unit || 'м²'} onChange={e => setEditingMaterial(p => ({ ...p!, unit: e.target.value }))}
