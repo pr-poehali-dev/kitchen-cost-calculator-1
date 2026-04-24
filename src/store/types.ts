@@ -1,19 +1,10 @@
-export type Unit = 'м²' | 'м.п.' | 'шт' | 'компл' | 'л' | 'кг';
+export type Unit = string;
 
-export type MaterialType =
-  | 'ЛДСП'
-  | 'МДФ'
-  | 'ХДФ'
-  | 'Фанера'
-  | 'ДСП'
-  | 'Стекло'
-  | 'Зеркало'
-  | 'Столешница'
-  | 'Фасад'
-  | 'Фурнитура'
-  | 'Профиль'
-  | 'Кромка'
-  | 'Другое';
+export interface MaterialType {
+  id: string;
+  name: string;
+  color?: string;
+}
 
 export interface Supplier {
   id: string;
@@ -21,13 +12,14 @@ export interface Supplier {
   contact?: string;
   phone?: string;
   note?: string;
+  materialTypeIds: string[];
 }
 
 export interface Material {
   id: string;
   supplierId: string;
   name: string;
-  type: MaterialType;
+  typeId: string;
   thickness?: number;
   color?: string;
   article?: string;
@@ -47,16 +39,20 @@ export interface Service {
 export interface ExpenseItem {
   id: string;
   name: string;
-  type: 'fixed' | 'percent';
+  type: 'fixed' | 'percent' | 'markup';
   value: number;
+  applyTo?: 'materials' | 'services' | 'total';
   note?: string;
 }
 
-export interface Settings {
-  currency: string;
-  markupMaterial: number;
-  markupService: number;
-  units: Unit[];
+export type CalcColumnKey = 'material' | 'supplier' | 'article' | 'color' | 'thickness' | 'unit' | 'qty' | 'price';
+
+export interface CalcBlock {
+  id: string;
+  name: string;
+  allowedTypeIds: string[];
+  visibleColumns: CalcColumnKey[];
+  rows: CalcRow[];
 }
 
 export interface CalcRow {
@@ -64,19 +60,13 @@ export interface CalcRow {
   materialId?: string;
   name: string;
   supplierId?: string;
-  type?: MaterialType;
+  typeId?: string;
   color?: string;
   article?: string;
   thickness?: number;
   unit: Unit;
   qty: number;
   price: number;
-}
-
-export interface CalcBlock {
-  id: string;
-  name: string;
-  rows: CalcRow[];
 }
 
 export interface ServiceRow {
@@ -105,6 +95,14 @@ export interface Project {
   createdAt: string;
   blocks: CalcBlock[];
   serviceBlocks: ServiceBlock[];
+}
+
+export interface Settings {
+  currency: string;
+  markupMaterial: number;
+  markupService: number;
+  units: Unit[];
+  materialTypes: MaterialType[];
 }
 
 export interface AppState {

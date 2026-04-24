@@ -49,12 +49,12 @@ export default function ServicesPage() {
                     value={editingBlockName}
                     onChange={e => setEditingBlockName(e.target.value)}
                     onBlur={() => {
-                      store.updateServiceBlockName(project.id, block.id, editingBlockName || block.name);
+                      store.updateServiceBlock(project.id, block.id, { name: editingBlockName || block.name });
                       setEditingBlock(null);
                     }}
                     onKeyDown={e => {
                       if (e.key === 'Enter') {
-                        store.updateServiceBlockName(project.id, block.id, editingBlockName || block.name);
+                        store.updateServiceBlock(project.id, block.id, { name: editingBlockName || block.name });
                         setEditingBlock(null);
                       }
                     }}
@@ -105,7 +105,7 @@ export default function ServicesPage() {
                       serviceId: sv.id,
                       name: sv.name,
                       unit: sv.unit,
-                      price: store.calcPriceWithMarkup(sv.basePrice, true),
+                      price: store.calcPriceWithMarkup(sv.basePrice, 'services'),
                     });
                   }}
                 />
@@ -142,6 +142,7 @@ function ServiceRowComponent({ row, currency, services, onUpdate, onDelete, onAp
   onDelete: () => void;
   onApplyService: (id: string) => void;
 }) {
+  const store = useStore();
   const [showSuggest, setShowSuggest] = useState(false);
   const [nameFilter, setNameFilter] = useState(row.name);
   const rowTotal = row.qty * row.price;
@@ -189,7 +190,7 @@ function ServiceRowComponent({ row, currency, services, onUpdate, onDelete, onAp
         onChange={e => onUpdate({ unit: e.target.value as Unit })}
         className="bg-transparent text-xs text-[hsl(var(--text-dim))] border-0 outline-none"
       >
-        {(['шт', 'компл', 'м²', 'м.п.', 'л', 'кг'] as Unit[]).map(u => (
+        {store.settings.units.map(u => (
           <option key={u} value={u} className="bg-[hsl(220,14%,11%)]">{u}</option>
         ))}
       </select>
