@@ -2,13 +2,6 @@ import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
 import { fmt } from './calc/constants';
-
-// Ключи видимых строк сводки
-type SummaryVisKey = 'blocks' | 'services' | 'blockMarkups' | 'totalMarkup' | 'percent' | 'fixed';
-const SUMMARY_VIS_DEFAULT: Record<SummaryVisKey, boolean> = {
-  blocks: true, services: true, blockMarkups: true,
-  totalMarkup: true, percent: true, fixed: true,
-};
 import CalcHeader from './calc/CalcHeader';
 import CalcBlock from './calc/CalcBlock';
 import CalcBlockSettings from './calc/CalcBlockSettings';
@@ -26,7 +19,7 @@ export default function CalcPage() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showClientView, setShowClientView] = useState(false);
   const [confirmDeleteProject, setConfirmDeleteProject] = useState<string | null>(null);
-  const [summaryVis, setSummaryVis] = useState<Record<SummaryVisKey, boolean>>(SUMMARY_VIS_DEFAULT);
+  const [hiddenSummaryRows, setHiddenSummaryRows] = useState<Set<string>>(new Set());
   const [showSummarySettings, setShowSummarySettings] = useState(false);
 
   if (!project) {
@@ -116,93 +109,163 @@ export default function CalcPage() {
         </button>
 
         {/* Summary */}
-        <div className="bg-[hsl(220,14%,11%)] rounded border border-border p-4">
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))]">Итоговая сводка</span>
-            <button
-              onClick={() => setShowSummarySettings(v => !v)}
-              className={`flex items-center gap-1 text-xs transition-colors ${showSummarySettings ? 'text-gold' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
-              title="Настроить видимость строк"
-            >
-              <Icon name="SlidersHorizontal" size={12} />
-              <span>Настроить</span>
-            </button>
-          </div>
+        {(() => {
+          const cur = store.settings.currency;
+          const groups = store.expenseGroups || [];
+          const allExpenses = store.expenses;
 
-          {/* Настройки видимости */}
-          {showSummarySettings && (
-            <div className="mb-3 p-3 bg-[hsl(220,12%,14%)] rounded border border-border space-y-2">
-              <div className="text-xs text-[hsl(var(--text-muted))] mb-1">Показывать строки:</div>
-              {([
-                { key: 'blocks',      label: 'Блоки материалов' },
-                { key: 'services',    label: 'Услуги' },
-                { key: 'blockMarkups',label: 'Наценки на блоки' },
-                { key: 'totalMarkup', label: 'Наценка на итог' },
-                { key: 'percent',     label: 'Процентные расходы' },
-                { key: 'fixed',       label: 'Постоянные расходы' },
-              ] as { key: SummaryVisKey; label: string }[]).map(({ key, label }) => (
+          // Строим список строк сводки
+          type SummaryRow = { id: string; label: string; value: number; sign?: '+'; color?: string; indent?: boolean };
+          const rows: SummaryRow[] = [];
+
+          // 1. Блоки материалов
+          totals.blockExtras.forEach(b => {
+            if (b.base <= 0) return;
+            rows.push({ id: `block-${b.blockId}`, label: b.blockName, value: b.base });
+            if (b.extra > 0) {
+              rows.push({ id: `block-extra-${b.blockId}`, label: '+ наценка на блок', value: b.extra, sign: '+', color: 'gold', indent: true });
+            }
+          });
+
+          // 2. Услуги
+          if (totalServices > 0) {
+            rows.push({ id: 'services', label: 'Услуги', value: totalServices });
+          }
+
+          // 3. Группы расходов из настроек
+          const activeExp = allExpenses.filter(e => e.enabled !== false);
+
+          // Наценки на итог (grouped)
+          const totalMarkupItems = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
+          if (totals.totalMarkupAmount > 0) {
+            const groupIds = [...new Set(totalMarkupItems.map(e => e.groupId).filter(Boolean))];
+            if (groupIds.length > 0) {
+              groupIds.forEach(gid => {
+                const grp = groups.find(g => g.id === gid);
+                const items = totalMarkupItems.filter(e => e.groupId === gid);
+                const pct = items.reduce((s, e) => s + e.value, 0);
+                const amt = Math.round(totals.base * pct / 100);
+                if (amt > 0) rows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? 'Наценка на итог'} (${pct}%)`, value: amt, sign: '+', color: 'gold' });
+              });
+              // Без группы
+              const ungrouped = totalMarkupItems.filter(e => !e.groupId);
+              if (ungrouped.length > 0) {
+                const pct = ungrouped.reduce((s, e) => s + e.value, 0);
+                const amt = Math.round(totals.base * pct / 100);
+                if (amt > 0) rows.push({ id: 'totalMarkup-ug', label: `Наценка на итог (${pct}%)`, value: amt, sign: '+', color: 'gold' });
+              }
+            } else {
+              rows.push({ id: 'totalMarkup', label: `Наценка на итог (${totals.totalMarkupPct}%)`, value: totals.totalMarkupAmount, sign: '+', color: 'gold' });
+            }
+          }
+
+          // Процентные расходы по группам
+          const percentItems = activeExp.filter(e => e.type === 'percent');
+          if (percentItems.length > 0) {
+            const byGroup: Record<string, typeof percentItems> = {};
+            percentItems.forEach(e => {
+              const key = e.groupId || '__ungrouped';
+              byGroup[key] = [...(byGroup[key] || []), e];
+            });
+            Object.entries(byGroup).forEach(([gid, items]) => {
+              const grp = gid !== '__ungrouped' ? groups.find(g => g.id === gid) : null;
+              const pct = items.reduce((s, e) => s + e.value, 0);
+              const amt = items.reduce((s, e) => s + Math.round(totals.base * e.value / 100), 0);
+              rows.push({ id: `percent-${gid}`, label: `${grp?.name ?? 'Процентные расходы'} (${pct}%)`, value: amt, sign: '+', color: 'blue' });
+            });
+          }
+
+          // Фиксированные расходы по группам
+          const fixedItems = activeExp.filter(e => e.type === 'fixed');
+          if (fixedItems.length > 0) {
+            const byGroup: Record<string, typeof fixedItems> = {};
+            fixedItems.forEach(e => {
+              const key = e.groupId || '__ungrouped';
+              byGroup[key] = [...(byGroup[key] || []), e];
+            });
+            Object.entries(byGroup).forEach(([gid, items]) => {
+              const grp = gid !== '__ungrouped' ? groups.find(g => g.id === gid) : null;
+              const amt = items.reduce((s, e) => s + e.value, 0);
+              rows.push({ id: `fixed-${gid}`, label: grp?.name ?? 'Постоянные расходы', value: amt, sign: '+' });
+            });
+          }
+
+          // Список строк для настроек
+          const allRowIds = rows.map(r => r.id);
+          const visibleRows = rows.filter(r => !hiddenSummaryRows.has(r.id));
+
+          return (
+            <div className="bg-[hsl(220,14%,11%)] rounded border border-border p-4">
+              <div className="flex items-center justify-between mb-3">
+                <span className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))]">Итоговая сводка</span>
                 <button
-                  key={key}
-                  onClick={() => setSummaryVis(v => ({ ...v, [key]: !v[key] }))}
-                  className="flex items-center gap-2 w-full text-left text-xs hover:text-foreground transition-colors"
+                  onClick={() => setShowSummarySettings(v => !v)}
+                  className={`flex items-center gap-1 text-xs transition-colors ${showSummarySettings ? 'text-gold' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
                 >
-                  <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${summaryVis[key] ? 'bg-gold border-gold' : 'border-border'}`}>
-                    {summaryVis[key] && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
-                  </span>
-                  <span className={summaryVis[key] ? 'text-foreground' : 'text-[hsl(var(--text-muted))]'}>{label}</span>
+                  <Icon name="SlidersHorizontal" size={12} />
+                  <span>Настроить</span>
                 </button>
-              ))}
-            </div>
-          )}
+              </div>
 
-          <div className="space-y-2">
-            {summaryVis.blocks && totals.blockExtras.map(b => {
-              if (b.base <= 0) return null;
-              return (
-                <div key={b.blockId}>
-                  <div className="flex justify-between text-sm text-[hsl(var(--text-dim))]">
-                    <span>{b.blockName}</span>
-                    <span className="font-mono">{fmt(b.base)} {store.settings.currency}</span>
-                  </div>
-                  {summaryVis.blockMarkups && b.extra > 0 && (
-                    <div className="flex justify-between text-xs text-gold pl-3">
-                      <span>+ наценка на блок</span>
-                      <span className="font-mono">+{fmt(b.extra)} {store.settings.currency}</span>
-                    </div>
+              {showSummarySettings && (
+                <div className="mb-3 p-3 bg-[hsl(220,12%,14%)] rounded border border-border space-y-1.5">
+                  <div className="text-xs text-[hsl(var(--text-muted))] mb-2">Показывать строки:</div>
+                  {rows.map(r => {
+                    const hidden = hiddenSummaryRows.has(r.id);
+                    return (
+                      <button key={r.id}
+                        onClick={() => setHiddenSummaryRows(prev => {
+                          const next = new Set(prev);
+                          if (next.has(r.id)) next.delete(r.id); else next.add(r.id);
+                          return next;
+                        })}
+                        className="flex items-center gap-2 w-full text-left text-xs hover:text-foreground transition-colors"
+                      >
+                        <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${!hidden ? 'bg-gold border-gold' : 'border-border'}`}>
+                          {!hidden && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
+                        </span>
+                        <span className={`${r.indent ? 'pl-3' : ''} ${!hidden ? 'text-foreground' : 'text-[hsl(var(--text-muted))]'}`}>{r.label}</span>
+                        <span className="ml-auto font-mono text-[hsl(var(--text-muted))]">{fmt(r.value)} {cur}</span>
+                      </button>
+                    );
+                  })}
+                  {allRowIds.length > 0 && (
+                    <button onClick={() => setHiddenSummaryRows(new Set())} className="text-xs text-gold hover:underline mt-1">
+                      Показать все
+                    </button>
                   )}
                 </div>
-              );
-            })}
-            {summaryVis.services && (
-              <div className="flex justify-between text-sm text-[hsl(var(--text-dim))] border-t border-border pt-2">
-                <span>Услуги</span>
-                <span className="font-mono">{fmt(totalServices)} {store.settings.currency}</span>
+              )}
+
+              <div className="space-y-1.5">
+                {visibleRows.map((r, i) => {
+                  const isFirst = i === 0;
+                  const isService = r.id === 'services';
+                  const prevIsBlock = i > 0 && visibleRows[i - 1].id.startsWith('block-') && !visibleRows[i - 1].indent;
+                  const addDivider = isService || (r.sign === '+' && (i === 0 || !visibleRows[i - 1]?.sign));
+                  return (
+                    <div key={r.id}
+                      className={`flex justify-between text-sm ${r.indent ? 'pl-4' : ''} ${addDivider && !isFirst ? 'border-t border-border pt-1.5' : ''} ${
+                        r.color === 'gold' ? 'text-gold' :
+                        r.color === 'blue' ? 'text-[hsl(200,60%,70%)]' :
+                        'text-[hsl(var(--text-dim))]'
+                      }`}
+                    >
+                      <span>{r.label}</span>
+                      <span className="font-mono shrink-0 ml-4">
+                        {r.sign ? `+${fmt(r.value)}` : fmt(r.value)} {cur}
+                      </span>
+                    </div>
+                  );
+                })}
+                <div className="flex justify-between text-base font-semibold border-t border-border pt-2 mt-1">
+                  <span>Итого</span>
+                  <span className="font-mono text-gold">{fmt(grandTotal)} {cur}</span>
+                </div>
               </div>
-            )}
-            {summaryVis.totalMarkup && totals.totalMarkupAmount > 0 && (
-              <div className="flex justify-between text-sm text-gold">
-                <span>Наценка на итог ({totals.totalMarkupPct}%)</span>
-                <span className="font-mono">+{fmt(totals.totalMarkupAmount)} {store.settings.currency}</span>
-              </div>
-            )}
-            {summaryVis.percent && totals.percentAmount > 0 && (
-              <div className="flex justify-between text-sm text-[hsl(200,60%,70%)]">
-                <span>Процентные расходы</span>
-                <span className="font-mono">+{fmt(totals.percentAmount)} {store.settings.currency}</span>
-              </div>
-            )}
-            {summaryVis.fixed && totals.fixedAmount > 0 && (
-              <div className="flex justify-between text-sm text-[hsl(var(--text-dim))]">
-                <span>Постоянные расходы</span>
-                <span className="font-mono">+{fmt(totals.fixedAmount)} {store.settings.currency}</span>
-              </div>
-            )}
-            <div className="flex justify-between text-base font-semibold border-t border-border pt-2">
-              <span>Итого</span>
-              <span className="font-mono text-gold">{fmt(grandTotal)} {store.settings.currency}</span>
             </div>
-          </div>
-        </div>
+          );
+        })()}
       </div>
 
       {blockSettingsId && (

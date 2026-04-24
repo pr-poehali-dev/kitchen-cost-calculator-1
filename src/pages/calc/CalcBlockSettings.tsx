@@ -3,7 +3,7 @@ import type { CalcColumnKey } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { COLUMN_LABELS } from './constants';
 
-const ALL_COLS: CalcColumnKey[] = ['material', 'manufacturer', 'vendor', 'article', 'color', 'thickness', 'unit', 'qty', 'price'];
+const ALL_COLS: CalcColumnKey[] = ['material', 'manufacturer', 'vendor', 'article', 'color', 'thickness', 'unit', 'qty', 'price', 'total'];
 
 interface Props {
   blockId: string;

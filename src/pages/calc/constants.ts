@@ -3,27 +3,29 @@ import type { CalcColumnKey } from '@/store/types';
 export const MESSENGERS = ['WhatsApp', 'Telegram', 'Viber', 'Звонок'] as const;
 
 export const COLUMN_LABELS: Record<CalcColumnKey, string> = {
-  material: 'Материал',
+  material:     'Материал',
   manufacturer: 'Производитель',
-  vendor: 'Поставщик',
-  article: 'Артикул',
-  color: 'Цвет',
-  thickness: 'Толщина',
-  unit: 'Ед. изм.',
-  qty: 'Кол-во',
-  price: 'Цена',
+  vendor:       'Поставщик',
+  article:      'Артикул',
+  color:        'Цвет',
+  thickness:    'Толщ.',
+  unit:         'Ед.',
+  qty:          'Кол-во',
+  price:        'Цена/ед.',
+  total:        'Стоимость',
 };
 
 export const COLUMN_WIDTHS: Record<CalcColumnKey, string> = {
-  material: 'minmax(140px, 2fr)',
+  material:     'minmax(140px, 2fr)',
   manufacturer: 'minmax(80px, 1fr)',
-  vendor: 'minmax(80px, 1fr)',
-  article: 'minmax(60px, 0.7fr)',
-  color: 'minmax(80px, 1fr)',
-  thickness: '60px',
-  unit: '56px',
-  qty: '96px',
-  price: 'minmax(100px, 1.2fr)',
+  vendor:       'minmax(80px, 1fr)',
+  article:      'minmax(60px, 0.7fr)',
+  color:        'minmax(80px, 1fr)',
+  thickness:    '58px',
+  unit:         '52px',
+  qty:          '100px',
+  price:        'minmax(90px, 1fr)',
+  total:        'minmax(100px, 1fr)',
 };
 
 export const fmt = (n: number) =>

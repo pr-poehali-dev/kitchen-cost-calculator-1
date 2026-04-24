@@ -142,9 +142,17 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
           case 'price':
             return (
               <div key={col} className="text-right">
-                <div className="text-sm font-mono text-foreground leading-tight">{row.price > 0 ? fmt(row.price) : '—'}</div>
+                <div className="text-sm font-mono text-foreground">{row.price > 0 ? fmt(row.price) : '—'}</div>
+              </div>
+            );
+          case 'total':
+            return (
+              <div key={col} className="text-right">
+                <div className={`text-sm font-mono font-semibold ${row.price > 0 && row.qty > 0 ? 'text-gold' : 'text-[hsl(var(--text-muted))]'}`}>
+                  {row.price > 0 && row.qty > 0 ? fmt(rowTotal) : '—'}
+                </div>
                 {row.price > 0 && row.qty > 0 && (
-                  <div className="text-xs text-gold font-mono leading-tight">{fmt(rowTotal)} {currency}</div>
+                  <div className="text-xs text-[hsl(var(--text-muted))]">{currency}</div>
                 )}
               </div>
             );

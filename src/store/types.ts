@@ -78,7 +78,7 @@ export interface ExpenseItem {
   note?: string;
 }
 
-export type CalcColumnKey = 'material' | 'manufacturer' | 'vendor' | 'article' | 'color' | 'thickness' | 'unit' | 'qty' | 'price';
+export type CalcColumnKey = 'material' | 'manufacturer' | 'vendor' | 'article' | 'color' | 'thickness' | 'unit' | 'qty' | 'price' | 'total';
 
 export interface CalcBlock {
   id: string;

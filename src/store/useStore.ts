@@ -143,18 +143,26 @@ const initialState: AppState = {
   ],
 };
 
-const STORAGE_KEY = 'kuhni-pro-state-v3';
+const STORAGE_KEY = 'kuhni-pro-state-v4';
 
-const DEFAULT_VISIBLE_COLUMNS: CalcColumnKey[] = ['material', 'manufacturer', 'vendor', 'article', 'color', 'thickness', 'unit', 'qty', 'price'];
+const DEFAULT_VISIBLE_COLUMNS: CalcColumnKey[] = ['material', 'manufacturer', 'vendor', 'article', 'color', 'thickness', 'unit', 'qty', 'price', 'total'];
 
 function migrateProjects(projects: AppState['projects']): AppState['projects'] {
   return projects.map(p => ({
     ...p,
-    blocks: p.blocks.map(b => ({
-      ...b,
-      allowedTypeIds: b.allowedTypeIds ?? [],
-      visibleColumns: b.visibleColumns?.length ? b.visibleColumns : DEFAULT_VISIBLE_COLUMNS,
-    })),
+    blocks: p.blocks.map(b => {
+      let cols = b.visibleColumns?.length ? b.visibleColumns : DEFAULT_VISIBLE_COLUMNS;
+      // Добавляем колонку total если её нет, после price
+      if (!cols.includes('total')) {
+        const priceIdx = cols.indexOf('price');
+        if (priceIdx >= 0) {
+          cols = [...cols.slice(0, priceIdx + 1), 'total', ...cols.slice(priceIdx + 1)];
+        } else {
+          cols = [...cols, 'total'];
+        }
+      }
+      return { ...b, allowedTypeIds: b.allowedTypeIds ?? [], visibleColumns: cols };
+    }),
   }));
 }
 
@@ -175,6 +183,12 @@ function loadState(): AppState {
         ? parsed.settings.materialTypes
         : DEFAULT_MATERIAL_TYPES;
 
+      // Мигрируем expenses: enabled=undefined → true, старые markup без applyTo → 'materials'
+      const migratedExpenses = (parsed.expenses ?? initialState.expenses).map(e => ({
+        ...e,
+        enabled: e.enabled !== false, // undefined и true → true, только false → false
+      }));
+
       return {
         ...initialState,
         ...parsed,
@@ -183,6 +197,7 @@ function loadState(): AppState {
         templates: parsed.templates ?? initialState.templates,
         projects: parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
         expenseGroups: parsed.expenseGroups?.length ? parsed.expenseGroups : initialState.expenseGroups,
+        expenses: migratedExpenses,
         settings: {
           ...defaultSettings,
           ...(parsed.settings || {}),
