@@ -622,7 +622,10 @@ export function useStore() {
     (state.settings.materialCategories || []).find(c => c.id === id);
 
   const getCategoriesForType = (typeId?: string) =>
-    (state.settings.materialCategories || []).filter(c => !c.typeId || c.typeId === typeId);
+    (state.settings.materialCategories || []).filter(c => {
+      const ids = c.typeIds?.length ? c.typeIds : (c.typeId ? [c.typeId] : []);
+      return ids.length === 0 || (typeId ? ids.includes(typeId) : true);
+    });
 
   const addMaterialCategory = (cat: Omit<MaterialCategory, 'id'>) => {
     const id = `mc${Date.now()}`;

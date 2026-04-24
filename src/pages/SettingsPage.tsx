@@ -23,8 +23,15 @@ export default function SettingsPage() {
   const [newUnit, setNewUnit] = useState('');
   const [confirmReset, setConfirmReset] = useState(false);
   const [editingType, setEditingType] = useState<Partial<MaterialType> | null>(null);
-  const [editingCategory, setEditingCategory] = useState<Partial<MaterialCategory> | null>(null);
+  const [editingCategory, setEditingCategory] = useState<Partial<MaterialCategory & { typeIds: string[] }> | null>(null);
   const [catTypeFilter, setCatTypeFilter] = useState<string>('all');
+
+  // Получить массив typeIds из категории (мигрируем старый typeId)
+  const getCatTypeIds = (cat: MaterialCategory): string[] => {
+    if (cat.typeIds?.length) return cat.typeIds;
+    if (cat.typeId) return [cat.typeId];
+    return [];
+  };
 
   const handleAddUnit = () => {
     if (!newUnit.trim()) return;
@@ -35,7 +42,10 @@ export default function SettingsPage() {
   const categories = store.settings.materialCategories || [];
   const filteredCategories = catTypeFilter === 'all'
     ? categories
-    : categories.filter(c => c.typeId === catTypeFilter || !c.typeId);
+    : categories.filter(c => {
+        const ids = getCatTypeIds(c);
+        return ids.length === 0 || ids.includes(catTypeFilter);
+      });
 
   return (
     <div className="flex flex-col h-full animate-fade-in">
@@ -106,7 +116,7 @@ export default function SettingsPage() {
                   {store.materials.filter(m => m.typeId === t.id).length} матер.
                 </span>
                 <span className="text-xs text-[hsl(var(--text-muted))]">
-                  {categories.filter(c => c.typeId === t.id).length > 0 && `${categories.filter(c => c.typeId === t.id).length} катег.`}
+                  {categories.filter(c => getCatTypeIds(c).includes(t.id)).length > 0 && `${categories.filter(c => getCatTypeIds(c).includes(t.id)).length} катег.`}
                 </span>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => setEditingType(t)} className="text-[hsl(var(--text-muted))] hover:text-foreground p-1 transition-colors">
@@ -141,47 +151,54 @@ export default function SettingsPage() {
             >
               Все ({categories.length})
             </button>
-            {store.settings.materialTypes.filter(t => categories.some(c => c.typeId === t.id)).map(t => (
+            {store.settings.materialTypes.filter(t => categories.some(c => getCatTypeIds(c).includes(t.id))).map(t => (
               <button
                 key={t.id}
                 onClick={() => setCatTypeFilter(t.id)}
                 className={`px-3 py-1.5 rounded text-xs transition-colors font-medium ${catTypeFilter === t.id ? 'text-[hsl(220,16%,8%)]' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
                 style={catTypeFilter === t.id ? { backgroundColor: t.color || '#c8a96e' } : {}}
               >
-                {t.name} ({categories.filter(c => c.typeId === t.id).length})
+                {t.name} ({categories.filter(c => getCatTypeIds(c).includes(t.id)).length})
               </button>
             ))}
-            {categories.some(c => !c.typeId) && (
+            {categories.some(c => getCatTypeIds(c).length === 0) && (
               <button
                 onClick={() => setCatTypeFilter('general')}
                 className={`px-3 py-1.5 rounded text-xs transition-colors ${catTypeFilter === 'general' ? 'bg-[hsl(220,12%,30%)] text-foreground font-medium' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
               >
-                Общие ({categories.filter(c => !c.typeId).length})
+                Общие ({categories.filter(c => getCatTypeIds(c).length === 0).length})
               </button>
             )}
           </div>
 
           <div className="space-y-1.5 mb-4">
             {(catTypeFilter === 'general'
-              ? categories.filter(c => !c.typeId)
+              ? categories.filter(c => getCatTypeIds(c).length === 0)
               : filteredCategories
             ).map(cat => {
-              const type = store.settings.materialTypes.find(t => t.id === cat.typeId);
+              const typeIds = getCatTypeIds(cat);
+              const types = store.settings.materialTypes.filter(t => typeIds.includes(t.id));
               return (
                 <div key={cat.id} className="flex items-center gap-3 px-3 py-2 bg-[hsl(220,12%,14%)] rounded group">
-                  {type
-                    ? <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: type.color || '#888' }} />
+                  {types.length > 0
+                    ? <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: types[0].color || '#888' }} />
                     : <span className="w-3 h-3 rounded-full shrink-0 bg-[hsl(220,12%,30%)]" />
                   }
                   <span className="flex-1 text-sm text-foreground font-medium">{cat.name}</span>
-                  {type && <span className="text-xs px-2 py-0.5 rounded-full text-[hsl(220,16%,8%)] font-medium" style={{ backgroundColor: type.color || '#888' }}>{type.name}</span>}
-                  {!type && <span className="text-xs text-[hsl(var(--text-muted))]">Общая</span>}
+                  <div className="flex gap-1 flex-wrap">
+                    {types.length > 0
+                      ? types.map(t => (
+                          <span key={t.id} className="text-xs px-2 py-0.5 rounded-full text-[hsl(220,16%,8%)] font-medium" style={{ backgroundColor: t.color || '#888' }}>{t.name}</span>
+                        ))
+                      : <span className="text-xs text-[hsl(var(--text-muted))]">Общая</span>
+                    }
+                  </div>
                   {cat.note && <span className="text-xs text-[hsl(var(--text-muted))] truncate max-w-32">{cat.note}</span>}
                   <span className="text-xs text-[hsl(var(--text-muted))] font-mono">
                     {store.materials.filter(m => m.categoryId === cat.id).length} матер.
                   </span>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => setEditingCategory(cat)} className="text-[hsl(var(--text-muted))] hover:text-foreground p-1 transition-colors">
+                    <button onClick={() => setEditingCategory({ ...cat, typeIds: getCatTypeIds(cat) })} className="text-[hsl(var(--text-muted))] hover:text-foreground p-1 transition-colors">
                       <Icon name="Pencil" size={12} />
                     </button>
                     <button onClick={() => store.deleteMaterialCategory(cat.id)} className="text-[hsl(var(--text-muted))] hover:text-destructive p-1 transition-colors">
@@ -196,7 +213,7 @@ export default function SettingsPage() {
             )}
           </div>
           <button
-            onClick={() => setEditingCategory({ name: '', typeId: catTypeFilter !== 'all' && catTypeFilter !== 'general' ? catTypeFilter : undefined })}
+            onClick={() => setEditingCategory({ name: '', typeIds: catTypeFilter !== 'all' && catTypeFilter !== 'general' ? [catTypeFilter] : [] })}
             className="flex items-center gap-2 px-4 py-2 border border-dashed border-[hsl(var(--surface-3))] rounded text-sm text-[hsl(var(--text-muted))] hover:text-gold hover:border-gold transition-all"
           >
             <Icon name="Plus" size={14} /> Добавить категорию
@@ -315,21 +332,37 @@ export default function SettingsPage() {
                   className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold" placeholder="Например: Е1, Kapso, Стандарт" />
               </div>
               <div>
-                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Тип материала</label>
-                <div className="text-xs text-[hsl(var(--text-muted))] mb-2">Если не выбрать — категория будет общей для всех типов</div>
+                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Типы материалов</label>
+                <div className="text-xs text-[hsl(var(--text-muted))] mb-2">Можно выбрать несколько. Если не выбрать — категория будет общей</div>
                 <div className="flex flex-wrap gap-1.5">
-                  <button
-                    onClick={() => setEditingCategory(p => ({ ...p!, typeId: undefined }))}
-                    className={`px-3 py-1.5 rounded text-xs transition-colors ${!editingCategory.typeId ? 'bg-[hsl(220,12%,30%)] text-foreground font-medium' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
-                  >Общая</button>
-                  {store.settings.materialTypes.map(t => (
-                    <button key={t.id}
-                      onClick={() => setEditingCategory(p => ({ ...p!, typeId: t.id }))}
-                      className={`px-3 py-1.5 rounded text-xs font-medium transition-colors ${editingCategory.typeId === t.id ? 'text-[hsl(220,16%,8%)]' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
-                      style={editingCategory.typeId === t.id ? { backgroundColor: t.color || '#c8a96e' } : {}}
-                    >{t.name}</button>
-                  ))}
+                  {store.settings.materialTypes.map(t => {
+                    const selected = (editingCategory.typeIds || []).includes(t.id);
+                    return (
+                      <button
+                        key={t.id}
+                        onClick={() => setEditingCategory(p => {
+                          const ids = p?.typeIds || [];
+                          return {
+                            ...p!,
+                            typeIds: selected ? ids.filter(id => id !== t.id) : [...ids, t.id],
+                          };
+                        })}
+                        className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs font-medium transition-all border ${
+                          selected
+                            ? 'text-[hsl(220,16%,8%)] border-transparent'
+                            : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] border-border hover:text-foreground'
+                        }`}
+                        style={selected ? { backgroundColor: t.color || '#c8a96e', borderColor: t.color || '#c8a96e' } : {}}
+                      >
+                        {selected && <Icon name="Check" size={10} />}
+                        {t.name}
+                      </button>
+                    );
+                  })}
                 </div>
+                {(editingCategory.typeIds?.length ?? 0) === 0 && (
+                  <div className="mt-2 text-xs text-[hsl(var(--text-muted))] italic">Нет выбранных типов — категория общая</div>
+                )}
               </div>
               <div>
                 <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Примечание</label>
@@ -340,8 +373,10 @@ export default function SettingsPage() {
                 <button
                   onClick={() => {
                     if (!editingCategory.name) return;
-                    if (editingCategory.id) store.updateMaterialCategory(editingCategory.id, editingCategory);
-                    else store.addMaterialCategory({ name: editingCategory.name, typeId: editingCategory.typeId, note: editingCategory.note });
+                    const typeIds = editingCategory.typeIds || [];
+                    const data = { name: editingCategory.name, typeIds, typeId: typeIds[0], note: editingCategory.note };
+                    if (editingCategory.id) store.updateMaterialCategory(editingCategory.id, data);
+                    else store.addMaterialCategory(data);
                     setEditingCategory(null);
                   }}
                   className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90"

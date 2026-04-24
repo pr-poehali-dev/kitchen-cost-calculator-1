@@ -9,7 +9,8 @@ export interface MaterialType {
 export interface MaterialCategory {
   id: string;
   name: string;
-  typeId?: string; // к какому типу относится (опционально, может быть общей)
+  typeId?: string;    // устарело, для совместимости
+  typeIds?: string[]; // список типов (новый формат, заменяет typeId)
   note?: string;
 }
 
