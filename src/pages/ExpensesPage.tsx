@@ -113,7 +113,7 @@ export default function ExpensesPage() {
                         else store.addExpense({ name: `Наценка на итого`, type: 'markup', value: val, applyTo: 'total' });
                       }
                     }}
-                    className="w-20 bg-[hsl(220,12%,18%)] border border-border rounded px-3 py-1.5 text-lg font-mono text-gold outline-none focus:border-gold text-center"
+                    className="w-20 bg-[hsl(220,12%,18%)] border border-border rounded px-3 py-1.5 text-lg font-mono text-gold outline-none focus:border-gold text-center [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   />
                   <span className="text-xl text-[hsl(var(--text-dim))]">%</span>
                   {item && (
@@ -265,7 +265,7 @@ export default function ExpensesPage() {
                   type="number"
                   value={editing.value || ''}
                   onChange={e => setEditing(p => ({ ...p!, value: parseFloat(e.target.value) || 0 }))}
-                  className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm font-mono outline-none focus:border-gold"
+                  className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm font-mono outline-none focus:border-gold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
               </div>
 

@@ -195,19 +195,31 @@ function ServiceRowComponent({ row, currency, services, onUpdate, onDelete, onAp
         ))}
       </select>
 
-      <input
-        type="number"
-        value={row.qty || ''}
-        onChange={e => onUpdate({ qty: parseFloat(e.target.value) || 0 })}
-        className="bg-transparent text-sm font-mono text-right outline-none w-full border-b border-transparent focus:border-[hsl(var(--gold))] pr-1"
-      />
+      <div className="flex items-center justify-end gap-1">
+        <button
+          tabIndex={-1}
+          onClick={() => onUpdate({ qty: Math.max(0, (row.qty || 0) - 1) })}
+          className="w-5 h-5 flex items-center justify-center rounded bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,22%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors shrink-0 text-xs leading-none"
+        >−</button>
+        <input
+          type="number"
+          value={row.qty || ''}
+          onChange={e => onUpdate({ qty: parseFloat(e.target.value) || 0 })}
+          className="bg-transparent text-sm font-mono text-center outline-none border-b border-transparent focus:border-[hsl(var(--gold))] w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        />
+        <button
+          tabIndex={-1}
+          onClick={() => onUpdate({ qty: (row.qty || 0) + 1 })}
+          className="w-5 h-5 flex items-center justify-center rounded bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,22%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors shrink-0 text-xs leading-none"
+        >+</button>
+      </div>
 
       <div className="text-right pr-1">
         <input
           type="number"
           value={row.price || ''}
           onChange={e => onUpdate({ price: parseFloat(e.target.value) || 0 })}
-          className="bg-transparent text-sm font-mono text-right outline-none w-full border-b border-transparent focus:border-[hsl(var(--gold))]"
+          className="bg-transparent text-sm font-mono text-right outline-none w-full border-b border-transparent focus:border-[hsl(var(--gold))] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
         />
         <div className="text-xs text-gold font-mono mt-0.5">{fmt(rowTotal)} {currency}</div>
       </div>
