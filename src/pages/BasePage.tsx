@@ -198,33 +198,37 @@ export default function BasePage() {
                   )}
 
                   {groupedByType.map(({ type, materials: mats }) => (
-                    <div key={type.id}>
-                      <div className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,13%)] border-b border-border">
+                    <div key={type.id} className="border-b border-border last:border-0">
+                      <div className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,13%)]">
                         <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: type.color || '#888' }} />
                         <span className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--text-dim))]">{type.name}</span>
                         <span className="text-xs text-[hsl(var(--text-muted))]">· {mats.length} позиций</span>
                       </div>
-                      {mats.map(m => (
-                        <MaterialRow key={m.id} material={m}
-                          onEdit={() => setEditingMaterial(m)}
-                          onDelete={() => store.deleteMaterial(m.id)}
-                          currency={store.settings.currency}
-                        />
-                      ))}
+                      <div>
+                        {mats.map(m => (
+                          <MaterialRow key={m.id} material={m}
+                            onEdit={() => setEditingMaterial(m)}
+                            onDelete={() => store.deleteMaterial(m.id)}
+                            currency={store.settings.currency}
+                          />
+                        ))}
+                      </div>
                     </div>
                   ))}
                   {ungrouped.length > 0 && (
-                    <div>
+                    <div key="ungrouped">
                       <div className="px-4 py-2 bg-[hsl(220,12%,13%)] border-b border-border">
                         <span className="text-xs font-semibold uppercase tracking-wider text-[hsl(var(--text-muted))]">Без типа</span>
                       </div>
-                      {ungrouped.map(m => (
-                        <MaterialRow key={m.id} material={m}
-                          onEdit={() => setEditingMaterial(m)}
-                          onDelete={() => store.deleteMaterial(m.id)}
-                          currency={store.settings.currency}
-                        />
-                      ))}
+                      <div>
+                        {ungrouped.map(m => (
+                          <MaterialRow key={m.id} material={m}
+                            onEdit={() => setEditingMaterial(m)}
+                            onDelete={() => store.deleteMaterial(m.id)}
+                            currency={store.settings.currency}
+                          />
+                        ))}
+                      </div>
                     </div>
                   )}
                 </div>
