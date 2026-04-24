@@ -87,7 +87,7 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
                           <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t?.color || '#888' }} />
                           <span className="flex-1 text-foreground truncate">{m.name}</span>
                           <span className="text-[hsl(var(--text-muted))] text-xs shrink-0">{sup?.name}</span>
-                          <span className="text-gold text-xs font-mono shrink-0">{store.calcPriceWithMarkup(m.basePrice).toLocaleString()}</span>
+                          <span className="text-gold text-xs font-mono shrink-0">{store.calcPriceWithMarkup(m.basePrice, 'materials').toLocaleString()}</span>
                         </button>
                       );
                     })}

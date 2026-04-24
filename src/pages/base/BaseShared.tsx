@@ -38,7 +38,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
 }
 
 export function MaterialRow({ material, onEdit, onDelete }: {
-  material: Material; onEdit: () => void; onDelete: () => void; currency: string;
+  material: Material; onEdit: () => void; onDelete: () => void; currency?: string;
 }) {
   return (
     <div className="grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,14%)] hover:bg-[hsl(220,12%,12%)] group transition-colors text-sm"

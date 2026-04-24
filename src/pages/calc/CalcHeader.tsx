@@ -86,7 +86,7 @@ export default function CalcHeader({ project, totalMaterials, totalServices, tot
           { label: 'Телефон', key: 'phone' as const, placeholder: '+7 000 000-00-00' },
           { label: 'Адрес', key: 'address' as const, placeholder: 'Адрес объекта' },
         ].map(f => (
-          <div key={f.key} className={f.colSpan ? `col-span-${f.colSpan}` : ''}>
+          <div key={f.key} className={f.colSpan === 2 ? 'col-span-2' : ''}>
             <label className="text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider block mb-1">{f.label}</label>
             <InlineEdit
               value={project[f.key]}
