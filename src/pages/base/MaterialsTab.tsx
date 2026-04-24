@@ -1,0 +1,143 @@
+import { useState } from 'react';
+import { useStore } from '@/store/useStore';
+import type { Material } from '@/store/types';
+import Icon from '@/components/ui/icon';
+import { fmt, Field, Modal } from './BaseShared';
+
+interface Props {
+  matTypeFilter: string;
+  onFilterChange: (v: string) => void;
+}
+
+export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
+  const store = useStore();
+  const [editingMaterial, setEditingMaterial] = useState<Partial<Material> | null>(null);
+
+  const allTypes = store.settings.materialTypes;
+
+  const filteredMaterials = matTypeFilter === 'all'
+    ? store.materials
+    : store.materials.filter(m => m.typeId === matTypeFilter);
+
+  return (
+    <>
+      <div>
+        <div className="flex items-center justify-between mb-4 gap-4">
+          {/* Type filter tabs */}
+          <div className="flex gap-1 flex-wrap">
+            <button
+              onClick={() => onFilterChange('all')}
+              className={`px-3 py-1.5 rounded text-xs transition-colors ${matTypeFilter === 'all' ? 'bg-gold text-[hsl(220,16%,8%)] font-medium' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
+            >
+              Все ({store.materials.length})
+            </button>
+            {allTypes.filter(t => store.materials.some(m => m.typeId === t.id)).map(t => (
+              <button
+                key={t.id}
+                onClick={() => onFilterChange(t.id)}
+                className={`px-3 py-1.5 rounded text-xs transition-colors font-medium ${matTypeFilter === t.id ? 'text-[hsl(220,16%,8%)]' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
+                style={matTypeFilter === t.id ? { backgroundColor: t.color || '#c8a96e' } : {}}
+              >
+                {t.name} ({store.materials.filter(m => m.typeId === t.id).length})
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setEditingMaterial({ unit: 'м²', typeId: allTypes[0]?.id, basePrice: 0 })}
+            className="flex items-center gap-2 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90 shrink-0"
+          >
+            <Icon name="Plus" size={14} /> Добавить материал
+          </button>
+        </div>
+
+        <div className="bg-[hsl(220,14%,11%)] rounded border border-border">
+          <div className="grid text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider px-4 py-2.5 border-b border-border"
+            style={{ gridTemplateColumns: '2fr 1fr 1fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
+            <span>Наименование</span><span>Поставщик</span><span>Тип</span><span>Толщ.</span>
+            <span>Цвет</span><span>Артикул</span><span className="text-right">Цена</span><span></span>
+          </div>
+          {filteredMaterials.length === 0 && (
+            <div className="px-4 py-8 text-center text-[hsl(var(--text-muted))] text-sm">Нет материалов</div>
+          )}
+          {filteredMaterials.map(m => {
+            const sup = store.suppliers.find(s => s.id === m.supplierId);
+            const t = store.getTypeById(m.typeId);
+            return (
+              <div key={m.id} className="grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,14%)] hover:bg-[hsl(220,12%,12%)] group transition-colors text-sm"
+                style={{ gridTemplateColumns: '2fr 1fr 1fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
+                <div className="flex items-center gap-2 truncate">
+                  {t && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color || '#888' }} />}
+                  <span className="truncate text-foreground">{m.name}</span>
+                </div>
+                <span className="text-xs text-[hsl(var(--text-dim))]">{sup?.name || '—'}</span>
+                <span className="text-xs text-[hsl(var(--text-dim))]">{t?.name || '—'}</span>
+                <span className="text-xs text-[hsl(var(--text-dim))]">{m.thickness ? `${m.thickness}мм` : '—'}</span>
+                <span className="text-xs text-[hsl(var(--text-dim))] truncate">{m.color || '—'}</span>
+                <span className="text-xs text-[hsl(var(--text-dim))]">{m.article || '—'}</span>
+                <span className="text-right font-mono text-sm">{fmt(m.basePrice)} <span className="text-[hsl(var(--text-muted))] text-xs">/{m.unit}</span></span>
+                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => setEditingMaterial(m)} className="text-[hsl(var(--text-muted))] hover:text-foreground"><Icon name="Pencil" size={12} /></button>
+                  <button onClick={() => store.deleteMaterial(m.id)} className="text-[hsl(var(--text-muted))] hover:text-destructive"><Icon name="Trash2" size={12} /></button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Modal: Material */}
+      {editingMaterial !== null && (
+        <Modal title={editingMaterial.id ? 'Изменить материал' : 'Новый материал'} onClose={() => setEditingMaterial(null)}>
+          <div className="space-y-3">
+            <Field label="Наименование" value={editingMaterial.name || ''} onChange={v => setEditingMaterial(p => ({ ...p!, name: v }))} required />
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Поставщик</label>
+                <select value={editingMaterial.supplierId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, supplierId: e.target.value }))}
+                  className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
+                  <option value="">— выбрать —</option>
+                  {store.suppliers.map(s => <option key={s.id} value={s.id} className="bg-[hsl(220,14%,11%)]">{s.name}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Тип материала <span className="text-gold">*</span></label>
+                <select value={editingMaterial.typeId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, typeId: e.target.value }))}
+                  className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
+                  <option value="">— выбрать —</option>
+                  {allTypes.map(t => <option key={t.id} value={t.id} className="bg-[hsl(220,14%,11%)]">{t.name}</option>)}
+                </select>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Толщина, мм" value={String(editingMaterial.thickness || '')} onChange={v => setEditingMaterial(p => ({ ...p!, thickness: parseFloat(v) || undefined }))} type="number" />
+              <Field label="Цвет" value={editingMaterial.color || ''} onChange={v => setEditingMaterial(p => ({ ...p!, color: v }))} />
+              <Field label="Артикул" value={editingMaterial.article || ''} onChange={v => setEditingMaterial(p => ({ ...p!, article: v }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Ед. изм.</label>
+                <select value={editingMaterial.unit || 'м²'} onChange={e => setEditingMaterial(p => ({ ...p!, unit: e.target.value }))}
+                  className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
+                  {store.settings.units.map(u => <option key={u} value={u} className="bg-[hsl(220,14%,11%)]">{u}</option>)}
+                </select>
+              </div>
+              <Field label="Цена (без наценки)" value={String(editingMaterial.basePrice || '')} onChange={v => setEditingMaterial(p => ({ ...p!, basePrice: parseFloat(v) || 0 }))} type="number" required />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => {
+                  if (!editingMaterial.name || !editingMaterial.typeId) return;
+                  if (editingMaterial.id) store.updateMaterial(editingMaterial.id, editingMaterial);
+                  else store.addMaterial(editingMaterial as Omit<Material, 'id'>);
+                  setEditingMaterial(null);
+                }}
+                className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90"
+              >Сохранить</button>
+              <button onClick={() => setEditingMaterial(null)} className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground">Отмена</button>
+            </div>
+          </div>
+        </Modal>
+      )}
+    </>
+  );
+}
