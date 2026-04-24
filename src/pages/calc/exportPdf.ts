@@ -1,5 +1,3 @@
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
 import type { Project } from '@/store/types';
 
 const fmt = (n: number) =>
@@ -16,261 +14,297 @@ interface ExportCtx {
 export function exportProjectPdf(ctx: ExportCtx) {
   const { project, currency, getManufacturerName, getVendorName } = ctx;
 
-  const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
-
-  const W = doc.internal.pageSize.getWidth();
-  const GOLD = [200, 169, 110] as [number, number, number];
-  const DARK = [20, 22, 28] as [number, number, number];
-  const GRAY = [80, 85, 95] as [number, number, number];
-  const LIGHT = [245, 245, 248] as [number, number, number];
-
-  // === HEADER ===
-  doc.setFillColor(...DARK);
-  doc.rect(0, 0, W, 28, 'F');
-
-  doc.setFillColor(...GOLD);
-  doc.rect(0, 0, 3, 28, 'F');
-
-  doc.setTextColor(...GOLD);
-  doc.setFontSize(16);
-  doc.setFont('helvetica', 'bold');
-  doc.text('КухниПро', 10, 12);
-
-  doc.setTextColor(220, 220, 230);
-  doc.setFontSize(9);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Калькулятор мебели', 10, 19);
-
-  // Project title
-  doc.setTextColor(255, 255, 255);
-  doc.setFontSize(14);
-  doc.setFont('helvetica', 'bold');
-  const title = project.object || 'Расчёт';
-  doc.text(title, W / 2, 12, { align: 'center' });
-
-  doc.setTextColor(180, 180, 200);
-  doc.setFontSize(8);
-  doc.setFont('helvetica', 'normal');
-  doc.text(`Дата: ${project.createdAt || new Date().toISOString().split('T')[0]}`, W / 2, 19, { align: 'center' });
-
-  // === CLIENT INFO ===
-  let y = 36;
-
-  if (project.client || project.phone || project.address) {
-    doc.setFillColor(...LIGHT);
-    doc.roundedRect(10, y - 4, W - 20, 18, 2, 2, 'F');
-
-    doc.setTextColor(...DARK);
-    doc.setFontSize(8);
-    doc.setFont('helvetica', 'bold');
-    doc.text('КЛИЕНТ:', 14, y + 2);
-
-    doc.setFont('helvetica', 'normal');
-    const parts = [
-      project.client && `${project.client}`,
-      project.phone && `тел: ${project.phone}`,
-      project.address && `адрес: ${project.address}`,
-    ].filter(Boolean).join('   ·   ');
-    doc.text(parts, 36, y + 2);
-
-    y += 22;
-  }
-
-  // === MATERIAL BLOCKS ===
   const totalMaterials = project.blocks.reduce((s, b) =>
     s + b.rows.reduce((rs, r) => rs + r.qty * r.price, 0), 0);
   const totalServices = project.serviceBlocks.reduce((s, b) =>
     s + b.rows.reduce((rs, r) => rs + r.qty * r.price, 0), 0);
   const total = totalMaterials + totalServices;
 
-  for (const block of project.blocks) {
-    const blockTotal = block.rows.reduce((s, r) => s + r.qty * r.price, 0);
-    if (block.rows.length === 0) continue;
+  const blocksHtml = project.blocks
+    .filter(b => b.rows.length > 0)
+    .map(block => {
+      const blockTotal = block.rows.reduce((s, r) => s + r.qty * r.price, 0);
+      const rows = block.rows.map((r, i) => `
+        <tr>
+          <td class="num">${i + 1}</td>
+          <td class="name">${r.name || '—'}</td>
+          <td>${getManufacturerName(r.manufacturerId) || '—'}</td>
+          <td>${getVendorName(r.vendorId) || '—'}</td>
+          <td>${r.color || '—'}</td>
+          <td class="center">${r.thickness ? `${r.thickness} мм` : '—'}</td>
+          <td class="center">${r.unit || '—'}</td>
+          <td class="right">${r.qty}</td>
+          <td class="right">${fmt(r.price)} ${currency}</td>
+          <td class="right sum">${fmt(r.qty * r.price)} ${currency}</td>
+        </tr>
+      `).join('');
+      return `
+        <div class="block">
+          <div class="block-header">
+            <span class="block-name">${block.name}</span>
+            <span class="block-total">${fmt(blockTotal)} ${currency}</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th class="num">№</th>
+                <th class="name">Наименование</th>
+                <th>Производитель</th>
+                <th>Поставщик</th>
+                <th>Цвет</th>
+                <th class="center">Толщина</th>
+                <th class="center">Ед.</th>
+                <th class="right">Кол-во</th>
+                <th class="right">Цена</th>
+                <th class="right">Сумма</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }).join('');
 
-    // Block header
-    doc.setFillColor(...DARK);
-    doc.roundedRect(10, y, W - 20, 8, 1, 1, 'F');
-    doc.setFillColor(...GOLD);
-    doc.roundedRect(10, y, 3, 8, 1, 1, 'F');
+  const serviceBlocksHtml = project.serviceBlocks
+    .filter(sb => sb.rows.length > 0)
+    .map(sb => {
+      const sbTotal = sb.rows.reduce((s, r) => s + r.qty * r.price, 0);
+      const rows = sb.rows.map((r, i) => `
+        <tr>
+          <td class="num">${i + 1}</td>
+          <td class="name">${r.name || '—'}</td>
+          <td class="center">${r.unit || '—'}</td>
+          <td class="right">${r.qty}</td>
+          <td class="right">${fmt(r.price)} ${currency}</td>
+          <td class="right sum">${fmt(r.qty * r.price)} ${currency}</td>
+        </tr>
+      `).join('');
+      return `
+        <div class="block service-block">
+          <div class="block-header">
+            <span class="block-name">${sb.name}</span>
+            <span class="block-total">${fmt(sbTotal)} ${currency}</span>
+          </div>
+          <table>
+            <thead>
+              <tr>
+                <th class="num">№</th>
+                <th class="name">Услуга / Работа</th>
+                <th class="center">Ед.</th>
+                <th class="right">Кол-во</th>
+                <th class="right">Цена</th>
+                <th class="right">Сумма</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        </div>
+      `;
+    }).join('');
 
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text(block.name.toUpperCase(), 17, y + 5.5);
+  const clientInfo = [
+    project.client && `<span><strong>Клиент:</strong> ${project.client}</span>`,
+    project.phone && `<span><strong>Тел:</strong> ${project.phone}</span>`,
+    project.address && `<span><strong>Адрес:</strong> ${project.address}</span>`,
+  ].filter(Boolean).join('<span class="dot">·</span>');
 
-    doc.setTextColor(...GOLD);
-    doc.setFontSize(9);
-    doc.text(`${fmt(blockTotal)} ${currency}`, W - 12, y + 5.5, { align: 'right' });
+  const html = `<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>${project.object || 'Расчёт'}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    y += 10;
-
-    // Table
-    const rows = block.rows
-      .filter(r => r.name || r.materialId)
-      .map((r, idx) => [
-        String(idx + 1),
-        r.name || '—',
-        getManufacturerName(r.manufacturerId) || '—',
-        getVendorName(r.vendorId) || '—',
-        r.color || '—',
-        r.thickness ? `${r.thickness} мм` : '—',
-        r.unit,
-        String(r.qty),
-        `${r.price.toLocaleString()} ${currency}`,
-        `${fmt(r.qty * r.price)} ${currency}`,
-      ]);
-
-    autoTable(doc, {
-      startY: y,
-      head: [['№', 'Наименование', 'Производитель', 'Поставщик', 'Цвет', 'Толщ.', 'Ед.', 'Кол-во', 'Цена', 'Сумма']],
-      body: rows,
-      margin: { left: 10, right: 10 },
-      styles: {
-        fontSize: 7.5,
-        cellPadding: 2.5,
-        textColor: DARK,
-        lineColor: [220, 220, 228],
-        lineWidth: 0.2,
-      },
-      headStyles: {
-        fillColor: [235, 235, 242],
-        textColor: GRAY,
-        fontStyle: 'bold',
-        fontSize: 7,
-      },
-      alternateRowStyles: {
-        fillColor: [250, 250, 253],
-      },
-      columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 'auto' },
-        2: { cellWidth: 28 },
-        3: { cellWidth: 28 },
-        4: { cellWidth: 22 },
-        5: { cellWidth: 16, halign: 'center' },
-        6: { cellWidth: 14, halign: 'center' },
-        7: { cellWidth: 14, halign: 'center' },
-        8: { cellWidth: 26, halign: 'right' },
-        9: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
-      },
-      didParseCell: (data) => {
-        if (data.column.index === 9 && data.section === 'body') {
-          data.cell.styles.textColor = GOLD;
-        }
-      },
-    });
-
-    y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
-
-    if (y > doc.internal.pageSize.getHeight() - 40) {
-      doc.addPage();
-      y = 15;
+    body {
+      font-family: 'IBM Plex Sans', Arial, sans-serif;
+      font-size: 9pt;
+      color: #1a1c22;
+      background: #fff;
     }
+
+    /* ===== HEADER ===== */
+    .header {
+      background: #14161c;
+      color: white;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 4px solid #c8a96e;
+      margin-bottom: 12px;
+    }
+    .header-left .brand { font-size: 15pt; font-weight: 700; color: #c8a96e; }
+    .header-left .sub { font-size: 8pt; color: #9096a8; margin-top: 2px; }
+    .header-right { text-align: right; }
+    .header-right .title { font-size: 13pt; font-weight: 700; color: #fff; }
+    .header-right .date { font-size: 8pt; color: #9096a8; margin-top: 2px; }
+
+    /* ===== CLIENT ===== */
+    .client-bar {
+      background: #f4f5f8;
+      border-radius: 4px;
+      padding: 7px 14px;
+      margin: 0 0 12px 0;
+      font-size: 8.5pt;
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .client-bar strong { color: #555; font-weight: 600; }
+    .dot { color: #aaa; margin: 0 2px; }
+
+    /* ===== BLOCK ===== */
+    .block { margin-bottom: 14px; }
+    .block-header {
+      background: #14161c;
+      color: white;
+      padding: 6px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-left: 3px solid #c8a96e;
+      border-radius: 3px 3px 0 0;
+    }
+    .block-name { font-size: 9pt; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; }
+    .block-total { font-size: 9pt; font-weight: 700; color: #c8a96e; font-family: 'IBM Plex Mono', monospace; }
+
+    .service-block .block-header { background: #1c2330; }
+
+    /* ===== TABLE ===== */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 8pt;
+    }
+    thead tr { background: #ebebf2; }
+    thead th {
+      padding: 5px 7px;
+      text-align: left;
+      font-weight: 600;
+      color: #50555f;
+      font-size: 7.5pt;
+      border-bottom: 1px solid #d8d8e4;
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid #e8e8f0; }
+    tbody tr:nth-child(even) { background: #fafafd; }
+    tbody td { padding: 5px 7px; vertical-align: middle; }
+    tbody tr:hover { background: #f2f2f8; }
+
+    .num { width: 24px; color: #999; text-align: center; }
+    .name { min-width: 120px; font-weight: 500; }
+    .center { text-align: center; }
+    .right { text-align: right; font-family: 'IBM Plex Mono', monospace; white-space: nowrap; }
+    .sum { font-weight: 600; color: #b8893e; }
+
+    /* ===== TOTALS ===== */
+    .totals-wrap {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: 16px;
+      page-break-inside: avoid;
+    }
+    .totals {
+      background: #14161c;
+      border-radius: 6px;
+      padding: 14px 20px;
+      min-width: 260px;
+      border-left: 3px solid #c8a96e;
+    }
+    .totals-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 24px;
+      padding: 3px 0;
+      font-size: 8.5pt;
+    }
+    .totals-row .label { color: #9096a8; }
+    .totals-row .val { color: #d8dce8; font-family: 'IBM Plex Mono', monospace; font-weight: 500; }
+    .totals-divider { border: none; border-top: 1px solid #c8a96e; margin: 8px 0; opacity: 0.5; }
+    .totals-row.grand .label { color: #c8a96e; font-weight: 700; font-size: 10pt; }
+    .totals-row.grand .val { color: #c8a96e; font-weight: 700; font-size: 12pt; }
+
+    /* ===== FOOTER ===== */
+    .footer {
+      margin-top: 20px;
+      border-top: 1px solid #ddd;
+      padding-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      font-size: 7pt;
+      color: #aaa;
+    }
+
+    /* ===== PRINT ===== */
+    @media print {
+      @page { size: A4 landscape; margin: 10mm 12mm; }
+      body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+      .block { page-break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-left">
+    <div class="brand">КухниПро</div>
+    <div class="sub">Калькулятор корпусной мебели</div>
+  </div>
+  <div class="header-right">
+    <div class="title">${project.object || 'Расчёт'}</div>
+    <div class="date">Дата: ${project.createdAt || new Date().toISOString().split('T')[0]}</div>
+  </div>
+</div>
+
+${clientInfo ? `<div class="client-bar">${clientInfo}</div>` : ''}
+
+${blocksHtml}
+${serviceBlocksHtml}
+
+<div class="totals-wrap">
+  <div class="totals">
+    <div class="totals-row">
+      <span class="label">Материалы</span>
+      <span class="val">${fmt(totalMaterials)} ${currency}</span>
+    </div>
+    <div class="totals-row">
+      <span class="label">Услуги</span>
+      <span class="val">${fmt(totalServices)} ${currency}</span>
+    </div>
+    <hr class="totals-divider">
+    <div class="totals-row grand">
+      <span class="label">ИТОГО</span>
+      <span class="val">${fmt(total)} ${currency}</span>
+    </div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>КухниПро — ${project.object || ''} · ${project.client || ''}</span>
+  <span>Сформировано: ${new Date().toLocaleDateString('ru-RU')}</span>
+</div>
+
+<script>
+  // Ждём загрузки шрифтов, потом печатаем
+  document.fonts.ready.then(() => {
+    setTimeout(() => { window.print(); }, 300);
+  });
+</script>
+</body>
+</html>`;
+
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const win = window.open(url, '_blank');
+  if (win) {
+    win.onafterprint = () => {
+      win.close();
+      URL.revokeObjectURL(url);
+    };
   }
-
-  // === SERVICE BLOCKS ===
-  for (const sBlock of project.serviceBlocks) {
-    const blockTotal = sBlock.rows.reduce((s, r) => s + r.qty * r.price, 0);
-    if (sBlock.rows.length === 0) continue;
-
-    doc.setFillColor(28, 35, 48);
-    doc.roundedRect(10, y, W - 20, 8, 1, 1, 'F');
-    doc.setFillColor(...GOLD);
-    doc.roundedRect(10, y, 3, 8, 1, 1, 'F');
-
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(9);
-    doc.setFont('helvetica', 'bold');
-    doc.text(sBlock.name.toUpperCase(), 17, y + 5.5);
-    doc.setTextColor(...GOLD);
-    doc.text(`${fmt(blockTotal)} ${currency}`, W - 12, y + 5.5, { align: 'right' });
-
-    y += 10;
-
-    autoTable(doc, {
-      startY: y,
-      head: [['№', 'Услуга / Работа', 'Ед.', 'Кол-во', 'Цена', 'Сумма']],
-      body: sBlock.rows.map((r, i) => [
-        String(i + 1),
-        r.name || '—',
-        r.unit,
-        String(r.qty),
-        `${r.price.toLocaleString()} ${currency}`,
-        `${fmt(r.qty * r.price)} ${currency}`,
-      ]),
-      margin: { left: 10, right: 10 },
-      styles: { fontSize: 7.5, cellPadding: 2.5, textColor: DARK, lineColor: [220, 220, 228], lineWidth: 0.2 },
-      headStyles: { fillColor: [235, 235, 242], textColor: GRAY, fontStyle: 'bold', fontSize: 7 },
-      alternateRowStyles: { fillColor: [250, 250, 253] },
-      columnStyles: {
-        0: { cellWidth: 8, halign: 'center' },
-        1: { cellWidth: 'auto' },
-        2: { cellWidth: 18, halign: 'center' },
-        3: { cellWidth: 18, halign: 'center' },
-        4: { cellWidth: 32, halign: 'right' },
-        5: { cellWidth: 38, halign: 'right', fontStyle: 'bold' },
-      },
-      didParseCell: (data) => {
-        if (data.column.index === 5 && data.section === 'body') {
-          data.cell.styles.textColor = GOLD;
-        }
-      },
-    });
-
-    y = (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
-  }
-
-  // === TOTALS BOX ===
-  if (y > doc.internal.pageSize.getHeight() - 45) {
-    doc.addPage();
-    y = 15;
-  }
-
-  y += 4;
-  const boxH = 32;
-  doc.setFillColor(...DARK);
-  doc.roundedRect(W - 110, y, 100, boxH, 3, 3, 'F');
-  doc.setFillColor(...GOLD);
-  doc.roundedRect(W - 110, y, 3, boxH, 3, 3, 'F');
-
-  doc.setTextColor(160, 165, 180);
-  doc.setFontSize(7.5);
-  doc.setFont('helvetica', 'normal');
-  doc.text('Материалы:', W - 100, y + 9);
-  doc.text('Услуги:', W - 100, y + 17);
-
-  doc.setTextColor(220, 225, 240);
-  doc.setFont('helvetica', 'bold');
-  doc.text(`${fmt(totalMaterials)} ${currency}`, W - 12, y + 9, { align: 'right' });
-  doc.text(`${fmt(totalServices)} ${currency}`, W - 12, y + 17, { align: 'right' });
-
-  // Total line
-  doc.setDrawColor(...GOLD);
-  doc.setLineWidth(0.4);
-  doc.line(W - 107, y + 21, W - 12, y + 21);
-
-  doc.setTextColor(...GOLD);
-  doc.setFontSize(11);
-  doc.setFont('helvetica', 'bold');
-  doc.text('ИТОГО:', W - 100, y + 28);
-  doc.text(`${fmt(total)} ${currency}`, W - 12, y + 28, { align: 'right' });
-
-  // === FOOTER ===
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    const pH = doc.internal.pageSize.getHeight();
-    doc.setDrawColor(220, 220, 228);
-    doc.setLineWidth(0.3);
-    doc.line(10, pH - 10, W - 10, pH - 10);
-    doc.setTextColor(...GRAY);
-    doc.setFontSize(7);
-    doc.setFont('helvetica', 'normal');
-    doc.text('КухниПро — Калькулятор корпусной мебели', 10, pH - 5);
-    doc.text(`Стр. ${i} из ${pageCount}`, W - 10, pH - 5, { align: 'right' });
-  }
-
-  const filename = `${project.object || 'Расчёт'}_${project.createdAt || 'смета'}.pdf`
-    .replace(/[^а-яёa-z0-9_\-. ]/gi, '_');
-  doc.save(filename);
 }
