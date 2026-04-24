@@ -131,10 +131,11 @@ export default function SettingsPage() {
 
         {/* Stats */}
         <Section title="Статистика">
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-5 gap-3">
             {[
               { label: 'Проектов', value: store.projects.length, icon: 'FolderOpen' },
-              { label: 'Поставщиков', value: store.suppliers.length, icon: 'Truck' },
+              { label: 'Производителей', value: store.manufacturers.length, icon: 'Building2' },
+              { label: 'Поставщиков', value: store.vendors.length, icon: 'Truck' },
               { label: 'Материалов', value: store.materials.length, icon: 'Package' },
               { label: 'Услуг', value: store.services.length, icon: 'Wrench' },
             ].map(stat => (
