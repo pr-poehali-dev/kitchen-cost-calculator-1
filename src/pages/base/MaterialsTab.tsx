@@ -8,6 +8,7 @@ import BulkPriceModal from './materials/BulkPriceModal';
 import MaterialEditModal from './materials/MaterialEditModal';
 import ExcelPriceModal from './materials/ExcelPriceModal';
 import SkatPriceModal from './materials/SkatPriceModal';
+import SkatImportModal from './materials/SkatImportModal';
 
 interface Props {
   matTypeFilter: string;
@@ -22,6 +23,7 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
   const [showPricelistUpdate, setShowPricelistUpdate] = useState(false);
   const [showExcelPrice, setShowExcelPrice] = useState(false);
   const [showSkatPrice, setShowSkatPrice] = useState(false);
+  const [showSkatImport, setShowSkatImport] = useState(false);
 
   const allTypes = store.settings.materialTypes;
   const allCategories = store.settings.materialCategories || [];
@@ -60,11 +62,18 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
           </div>
           <div className="flex gap-2 shrink-0">
             <button
+              onClick={() => setShowSkatImport(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
+              title="Импортировать все материалы СКАТ в базу"
+            >
+              <Icon name="PackagePlus" size={14} /> Импорт СКАТ
+            </button>
+            <button
               onClick={() => setShowSkatPrice(true)}
               className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
               title="Обновить цены из прайса СКАТ"
             >
-              <Icon name="RefreshCw" size={14} /> СКАТ
+              <Icon name="RefreshCw" size={14} /> Цены СКАТ
             </button>
             <button
               onClick={() => setShowExcelPrice(true)}
@@ -164,6 +173,11 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
           })}
         </div>
       </div>
+
+      {/* Modal: SKAT import */}
+      {showSkatImport && (
+        <SkatImportModal onClose={() => setShowSkatImport(false)} />
+      )}
 
       {/* Modal: SKAT price update */}
       {showSkatPrice && (

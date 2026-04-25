@@ -3,6 +3,7 @@ import { useStore } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
 import { fmt, Modal } from '../BaseShared';
 import func2url from '../../../../backend/func2url.json';
+import { skatArticle } from './SkatImportModal';
 
 const PARSE_URL = (func2url as Record<string, string>)['parse-pricelist'];
 
@@ -22,51 +23,36 @@ interface SkatItem {
 interface Match {
   materialId: string;
   materialName: string;
+  section: string;
+  subsection: string;
   oldPrice: number;
   newPrice: number;
   selected: boolean;
-  matchedBy: 'name' | 'partial';
-}
-
-function norm(s: string) {
-  return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
 function findMatches(items: SkatItem[], materials: ReturnType<typeof useStore>['materials']): Match[] {
-  const matches: Match[] = [];
-
-  for (const mat of materials) {
-    const matNorm = norm(mat.name);
-
-    // Точное совпадение по полному имени
-    let found = items.find(item => norm(item.name) === matNorm);
-    let matchedBy: 'name' | 'partial' = 'name';
-
-    // Нечёткое — ищем совпадение по типу фасада + толщина
-    if (!found) {
-      found = items.find(item => {
-        const facadeNorm = norm(item.facade_type);
-        const thickMatch = !mat.thickness || !item.thickness || Math.abs(mat.thickness - item.thickness) < 1;
-        return thickMatch && (
-          matNorm.includes(facadeNorm) || facadeNorm.includes(matNorm) ||
-          norm(item.subsection + ' ' + item.facade_type).includes(matNorm)
-        );
-      });
-      matchedBy = 'partial';
-    }
-
-    if (found && found.price !== mat.basePrice) {
-      matches.push({
-        materialId: mat.id,
-        materialName: mat.name,
-        oldPrice: mat.basePrice,
-        newPrice: found.price,
-        selected: true,
-        matchedBy,
-      });
-    }
+  // Строим карту article → price из прайса
+  const priceMap = new Map<string, SkatItem>();
+  for (const item of items) {
+    priceMap.set(skatArticle(item.thickness_section, item.subsection, item.facade_type), item);
   }
 
+  const matches: Match[] = [];
+  for (const mat of materials) {
+    if (!mat.article) continue;
+    const item = priceMap.get(mat.article);
+    if (!item) continue;
+    if (item.price === mat.basePrice) continue; // цена не изменилась
+    matches.push({
+      materialId: mat.id,
+      materialName: mat.name,
+      section: item.thickness_section,
+      subsection: item.subsection,
+      oldPrice: mat.basePrice,
+      newPrice: item.price,
+      selected: true,
+    });
+  }
   return matches;
 }
 
@@ -199,7 +185,7 @@ export default function SkatPriceModal({ onClose }: { onClose: () => void }) {
                   <div className="text-center py-6 text-[hsl(var(--text-muted))] text-sm space-y-1">
                     <Icon name="SearchX" size={24} className="mx-auto opacity-40 mb-2" />
                     <p>Совпадений не найдено</p>
-                    <p className="text-xs">Добавь фасады СКАТ в базу материалов — названия должны совпадать с прайсом</p>
+                    <p className="text-xs">Сначала импортируй материалы через кнопку «Импорт СКАТ» — они создадутся с нужными артикулами</p>
                   </div>
                 ) : (
                   <>
@@ -215,28 +201,25 @@ export default function SkatPriceModal({ onClose }: { onClose: () => void }) {
 
                     <div className="max-h-60 overflow-auto scrollbar-thin bg-[hsl(220,12%,14%)] rounded border border-border">
                       <div className="grid text-[10px] uppercase tracking-wider text-[hsl(var(--text-muted))] px-3 py-1.5 border-b border-border sticky top-0 bg-[hsl(220,12%,14%)]"
-                        style={{ gridTemplateColumns: '20px 1fr 65px 65px 50px' }}>
-                        <span /><span>Материал</span>
+                        style={{ gridTemplateColumns: '20px 1fr 1fr 65px 65px' }}>
+                        <span /><span>Материал</span><span>Секция</span>
                         <span className="text-right">Было</span>
                         <span className="text-right">Стало</span>
-                        <span className="text-center">Матч</span>
                       </div>
                       {matches.map((m, idx) => (
                         <div key={idx}
                           className="grid items-center gap-2 px-3 py-2 border-b border-[hsl(220,12%,17%)] last:border-0 cursor-pointer hover:bg-[hsl(220,12%,16%)]"
-                          style={{ gridTemplateColumns: '20px 1fr 65px 65px 50px' }}
+                          style={{ gridTemplateColumns: '20px 1fr 1fr 65px 65px' }}
                           onClick={() => toggle(idx)}
                         >
                           <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${m.selected ? 'bg-gold border-gold' : 'border-border'}`}>
                             {m.selected && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
                           </div>
                           <span className="text-xs truncate">{m.materialName}</span>
+                          <span className="text-xs text-[hsl(var(--text-muted))] truncate">{m.section}</span>
                           <span className="text-xs font-mono text-right text-[hsl(var(--text-dim))]">{fmt(m.oldPrice)}</span>
                           <span className={`text-xs font-mono text-right font-semibold ${m.newPrice > m.oldPrice ? 'text-red-400' : 'text-green-400'}`}>
                             {fmt(m.newPrice)}
-                          </span>
-                          <span className={`text-[10px] text-center px-1 py-0.5 rounded ${m.matchedBy === 'name' ? 'bg-green-400/10 text-green-400' : 'bg-yellow-400/10 text-yellow-400'}`}>
-                            {m.matchedBy === 'name' ? 'точно' : 'похож'}
                           </span>
                         </div>
                       ))}
