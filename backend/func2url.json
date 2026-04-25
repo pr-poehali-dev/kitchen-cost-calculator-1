@@ -1,3 +1,5 @@
 {
+  "auth": "https://functions.poehali.dev/b1d7d64b-25fc-4b8e-96d8-087b2255d942",
+  "admin": "https://functions.poehali.dev/e48c5260-c45a-48c2-be96-d451e6422c7b",
   "parse-pricelist": "https://functions.poehali.dev/ddbcee2e-cecc-4d47-9917-847b33e2fcba"
 }

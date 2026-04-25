@@ -1,0 +1,48 @@
+{
+  "tests": [
+    {
+      "name": "Register first user (becomes admin)",
+      "method": "POST",
+      "path": "/?action=register",
+      "body": {"login": "testadmin", "password": "secret123"},
+      "expectedStatus": 201,
+      "expectedBody": {"role": "admin"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login with correct credentials",
+      "method": "POST",
+      "path": "/?action=login",
+      "body": {"login": "testadmin", "password": "secret123"},
+      "expectedStatus": 200,
+      "expectedBody": {"login": "testadmin"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login with wrong password",
+      "method": "POST",
+      "path": "/?action=login",
+      "body": {"login": "testadmin", "password": "wrongpass"},
+      "expectedStatus": 401,
+      "expectedBody": {"error": "Неверный логин или пароль"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Register duplicate login",
+      "method": "POST",
+      "path": "/?action=register",
+      "body": {"login": "testadmin", "password": "anotherpass"},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "Такой логин уже занят"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Me without token",
+      "method": "GET",
+      "path": "/?action=me",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "Нет токена"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -7,21 +7,64 @@ import ServicesPage from '@/pages/ServicesPage';
 import BasePage from '@/pages/BasePage';
 import ExpensesPage from '@/pages/ExpensesPage';
 import SettingsPage from '@/pages/SettingsPage';
+import LoginPage from '@/auth/LoginPage';
+import AdminPanel from '@/auth/AdminPanel';
+import { useAuth } from '@/auth/useAuth';
+import Icon from '@/components/ui/icon';
 
 type Section = 'home' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings';
 
 export default function App() {
   const [section, setSection] = useState<Section>('home');
+  const [showAdmin, setShowAdmin] = useState(false);
+  const { state, login, register, logout, getToken } = useAuth();
+
+  // Загрузка
+  if (state.status === 'loading') {
+    return (
+      <div className="min-h-screen bg-[hsl(220,16%,7%)] flex items-center justify-center">
+        <div className="flex items-center gap-3 text-[hsl(var(--text-muted))]">
+          <Icon name="Loader2" size={20} className="animate-spin text-gold" />
+          <span className="text-sm">Загрузка...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Не авторизован
+  if (state.status === 'unauthenticated') {
+    return <LoginPage onLogin={login} onRegister={register} />;
+  }
+
+  // Авторизован
+  const user = state.user;
+  const token = getToken() || '';
 
   return (
-    <Layout active={section} onNav={setSection}>
-      {section === 'home'     && <HomePage />}
-      {section === 'calc'     && <CalcPage />}
-      {section === 'blocks'   && <BlocksPage />}
-      {section === 'services' && <ServicesPage />}
-      {section === 'base'     && <BasePage />}
-      {section === 'expenses' && <ExpensesPage />}
-      {section === 'settings' && <SettingsPage />}
-    </Layout>
+    <>
+      <Layout
+        active={section}
+        onNav={setSection}
+        user={user}
+        onLogout={logout}
+        onAdminPanel={user.role === 'admin' ? () => setShowAdmin(true) : undefined}
+      >
+        {section === 'home'     && <HomePage />}
+        {section === 'calc'     && <CalcPage />}
+        {section === 'blocks'   && <BlocksPage />}
+        {section === 'services' && <ServicesPage />}
+        {section === 'base'     && <BasePage />}
+        {section === 'expenses' && <ExpensesPage />}
+        {section === 'settings' && <SettingsPage />}
+      </Layout>
+
+      {showAdmin && (
+        <AdminPanel
+          currentUser={user}
+          token={token}
+          onClose={() => setShowAdmin(false)}
+        />
+      )}
+    </>
   );
 }

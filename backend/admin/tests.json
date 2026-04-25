@@ -1,0 +1,12 @@
+{
+  "tests": [
+    {
+      "name": "Get users without token",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 403,
+      "expectedBody": {"error": "Доступ запрещён"},
+      "bodyMatcher": "partial"
+    }
+  ]
+}
