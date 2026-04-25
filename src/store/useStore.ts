@@ -45,11 +45,11 @@ const initialState: AppState = {
     { id: 'mfr2', name: 'Kronospan', contact: 'Менеджер Анна', phone: '+7 900 000-00-02', materialTypeIds: ['mt1', 'mt4'] },
     { id: 'mfr3', name: 'Egger', contact: 'Менеджер Павел', phone: '+7 900 000-00-03', materialTypeIds: ['mt1', 'mt2', 'mt9'] },
     { id: 'mfr4', name: 'Boyard', contact: '', phone: '', materialTypeIds: ['mt10'] },
-    { id: 'mfr5', name: 'Slotex', contact: '', phone: '', materialTypeIds: ['mt8'] },
+    { id: 'mfr5', name: 'Slotex', contact: '', phone: '', materialTypeIds: ['mt8', 'mt12'] },
   ],
   vendors: [
     { id: 'v1', name: 'МАРШАЛ', contact: 'Менеджер Сергей', phone: '+7 900 100-00-01', materialTypeIds: ['mt1', 'mt2', 'mt3'] },
-    { id: 'v2', name: 'Специалист', contact: 'Менеджер Ольга', phone: '+7 900 100-00-02', materialTypeIds: ['mt10', 'mt11'] },
+    { id: 'v2', name: 'Специалист', contact: 'Менеджер Ольга', phone: '+7 900 100-00-02', materialTypeIds: ['mt8', 'mt10', 'mt11', 'mt12'] },
     { id: 'v3', name: 'КДМ', contact: 'Менеджер Дмитрий', phone: '+7 900 100-00-03', materialTypeIds: ['mt1', 'mt4', 'mt5'] },
   ],
   materials: [
@@ -136,6 +136,34 @@ const initialState: AppState = {
         { id: 'sl_st2_v9',  size: '3000×800',  thickness: 40, params: 'UU/05',    basePrice: 24440 },
         { id: 'sl_st2_v10', size: '3000×600',  thickness: 40, params: '00/U1/05', basePrice: 12080 },
         { id: 'sl_st2_v11', size: '3000×600',  thickness: 40, params: 'UU/05',    basePrice: 13290 },
+        { id: 'sl_st2_v12', size: '3000×1200', thickness: 27, params: '00/U1/05', basePrice: 23210 },
+        { id: 'sl_st2_v13', size: '3000×1200', thickness: 27, params: 'UU/05',    basePrice: 25530 },
+        { id: 'sl_st2_v14', size: '3000×800',  thickness: 27, params: '00/U1/05', basePrice: 21590 },
+        { id: 'sl_st2_v15', size: '3000×800',  thickness: 27, params: 'UU/05',    basePrice: 23750 },
+        { id: 'sl_st2_v16', size: '3000×600',  thickness: 27, params: '00/U1/05', basePrice: 11700 },
+        { id: 'sl_st2_v17', size: '3000×600',  thickness: 27, params: 'UU/05',    basePrice: 12870 },
+      ],
+    },
+
+    // ── Slotex Стеновые панели ─────────────────────────────────────
+    {
+      id: 'sl_sp1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Стеновая панель Slotex', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'sl_sp1_v1', size: '3000×600', thickness: 6, params: 'PF+', basePrice: 3200 },
+        { id: 'sl_sp1_v2', size: '3000×600', thickness: 6, params: 'PF+ глянец', basePrice: 3800 },
+        { id: 'sl_sp1_v3', size: '4200×600', thickness: 6, params: 'PF+', basePrice: 4400 },
+        { id: 'sl_sp1_v4', size: '4200×600', thickness: 6, params: 'PF+ глянец', basePrice: 5200 },
+      ],
+    },
+
+    // ── Slotex Кромка ──────────────────────────────────────────────
+    {
+      id: 'sl_kr1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Кромка Slotex для столешниц', typeId: 'mt12', unit: 'м.п.', basePrice: 0,
+      variants: [
+        { id: 'sl_kr1_v1', size: 'торец прямой',   params: '40мм', basePrice: 320 },
+        { id: 'sl_kr1_v2', size: 'торец скошенный', params: '40мм', basePrice: 380 },
+        { id: 'sl_kr1_v3', size: 'торец прямой',   params: '27мм', basePrice: 270 },
+        { id: 'sl_kr1_v4', size: 'торец скошенный', params: '27мм', basePrice: 320 },
       ],
     },
   ],
@@ -284,16 +312,12 @@ function loadState(): AppState {
       }
 
       return {
-        ...initialState,
-        ...parsed,
         manufacturers: mergeById(parsed.manufacturers, initialState.manufacturers),
         vendors:       mergeById(parsed.vendors,       initialState.vendors),
         materials:     mergeById(parsed.materials,     initialState.materials),
-        templates:     parsed.templates ?? initialState.templates,
-        savedBlocks:   parsed.savedBlocks ?? initialState.savedBlocks,
-        projects: parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
+        services:      parsed.services?.length      ? parsed.services      : initialState.services,
         expenseGroups: mergeById(parsed.expenseGroups, initialState.expenseGroups),
-        expenses: migratedExpenses,
+        expenses:      migratedExpenses,
         settings: {
           ...defaultSettings,
           ...(parsed.settings || {}),
@@ -302,6 +326,10 @@ function loadState(): AppState {
             ? parsed.settings.materialCategories
             : DEFAULT_MATERIAL_CATEGORIES,
         },
+        projects:        parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
+        activeProjectId: parsed.activeProjectId ?? initialState.activeProjectId,
+        templates:       parsed.templates  ?? initialState.templates,
+        savedBlocks:     parsed.savedBlocks ?? initialState.savedBlocks,
       };
     }
   } catch (e) {

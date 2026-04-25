@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '@/store/useStore';
 import type { CalcRow, CalcColumnKey, Material, MaterialVariant } from '@/store/types';
 import Icon from '@/components/ui/icon';
@@ -268,12 +269,13 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
         <Icon name="X" size={13} />
       </button>
 
-      {variantPickerMat && (
+      {variantPickerMat && createPortal(
         <VariantPicker
           material={variantPickerMat}
           onPick={v => applyMaterialWithVariant(variantPickerMat, v)}
           onCancel={() => setVariantPickerMat(null)}
-        />
+        />,
+        document.body
       )}
     </div>
   );
