@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react';
 import { useStore } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
-import { fmt } from './calc/constants';
 import CalcHeader from './calc/CalcHeader';
 import CalcBlock from './calc/CalcBlock';
 import CalcBlockSettings from './calc/CalcBlockSettings';
+import CalcSummary from './calc/CalcSummary';
 import TemplatesPanel from './calc/TemplatesPanel';
 import ClientViewPanel from './calc/ClientViewPanel';
 import { exportProjectPdf } from './calc/exportPdf';
@@ -35,10 +35,7 @@ export default function CalcPage() {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4">
         <p className="text-[hsl(var(--text-muted))] text-sm">Нет активного проекта</p>
-        <button
-          onClick={() => store.createProject()}
-          className="flex items-center gap-2 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded font-medium text-sm hover:opacity-90"
-        >
+        <button onClick={() => store.createProject()} className="flex items-center gap-2 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded font-medium text-sm hover:opacity-90">
           <Icon name="Plus" size={14} /> Создать проект
         </button>
       </div>
@@ -55,9 +52,7 @@ export default function CalcPage() {
 
   const handleExportPdf = () => {
     exportProjectPdf({
-      project,
-      currency: store.settings.currency,
-      totals,
+      project, currency: store.settings.currency, totals,
       getManufacturerName: (id) => store.getManufacturerById(id)?.name || '',
       getVendorName: (id) => store.getVendorById(id)?.name || '',
       getTypeName: (id) => store.getTypeName(id),
@@ -117,7 +112,6 @@ export default function CalcPage() {
           <Icon name="Plus" size={14} /> Добавить блок материалов
         </button>
 
-        {/* Кнопка обновления цен */}
         <div className="flex items-center justify-between px-4 py-3 bg-[hsl(220,14%,11%)] rounded border border-border">
           <div className="text-sm text-[hsl(var(--text-dim))]">
             <span className="font-medium text-foreground">Обновить розничные цены</span>
@@ -126,9 +120,7 @@ export default function CalcPage() {
           <button
             onClick={handleRefreshPrices}
             className={`flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium transition-all shrink-0 ${
-              refreshed
-                ? 'bg-[hsl(140,50%,35%)] text-white'
-                : 'bg-[hsl(220,12%,20%)] text-foreground hover:bg-gold hover:text-[hsl(220,16%,8%)]'
+              refreshed ? 'bg-[hsl(140,50%,35%)] text-white' : 'bg-[hsl(220,12%,20%)] text-foreground hover:bg-gold hover:text-[hsl(220,16%,8%)]'
             }`}
           >
             <Icon name={refreshed ? 'Check' : 'RefreshCw'} size={14} />
@@ -136,172 +128,27 @@ export default function CalcPage() {
           </button>
         </div>
 
-        {/* Summary */}
-        {(() => {
-          const cur = store.settings.currency;
-          const groups = store.expenseGroups || [];
-          const allExpenses = store.expenses;
-
-          // Строим список строк сводки
-          type SummaryRow = { id: string; label: string; value: number; sign?: '+'; color?: string; indent?: boolean };
-          const rows: SummaryRow[] = [];
-          const activeExp = allExpenses.filter(e => e.enabled !== false);
-
-          // Группировщик расходов по groupId
-          const groupByGid = <T extends { groupId?: string }>(items: T[]) => {
-            const map: Record<string, T[]> = {};
-            items.forEach(e => { const k = e.groupId || '__ug'; map[k] = [...(map[k] || []), e]; });
-            return map;
-          };
-
-          // 1. Блоки материалов (price = розничная, наценка уже внутри)
-          totals.blockExtras.forEach(b => {
-            if (b.base <= 0) return;
-            rows.push({ id: `block-${b.blockId}`, label: b.blockName, value: b.base });
-            if (b.extra > 0) {
-              rows.push({ id: `block-extra-${b.blockId}`, label: '+ надбавка на блок', value: b.extra, sign: '+', color: 'gold', indent: true });
-            }
-          });
-
-          // 2. Услуги (price = розничная, наценка уже внутри)
-          if (totalServices > 0) {
-            rows.push({ id: 'services', label: 'Услуги', value: totalServices });
-          }
-
-          // 3. Надбавка на итог целиком (markup/total — применяется поверх всей суммы)
-          if (totals.totalMarkupAmount > 0) {
-            const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
-            Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
-              const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
-              const pct = grpItems.reduce((s, e) => s + e.value, 0);
-              const amt = Math.round(totals.base * pct / 100);
-              if (amt > 0) rows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? 'Надбавка на итог'} (${pct}%)`, value: amt, sign: '+', color: 'gold' });
-            });
-          }
-
-          // База для накладных = материалы + услуги + надбавки на блоки + надбавка на итог
-          const baseForOverhead = totals.base + totals.totalMarkupAmount + totals.blockExtraTotal;
-
-          // 4. Процентные накладные расходы (по группам)
-          const percentItems = activeExp.filter(e => e.type === 'percent');
-          if (percentItems.length > 0) {
-            Object.entries(groupByGid(percentItems)).forEach(([gid, items]) => {
-              const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
-              const pct = items.reduce((s, e) => s + e.value, 0);
-              const amt = items.reduce((s, e) => s + Math.round(baseForOverhead * e.value / 100), 0);
-              if (amt > 0) rows.push({ id: `percent-${gid}`, label: `${grp?.name ?? 'Расходы'} (${pct}%)`, value: amt, sign: '+', color: 'blue' });
-            });
-          }
-
-          // 5. Фиксированные накладные расходы (по группам)
-          const fixedItems = activeExp.filter(e => e.type === 'fixed');
-          if (fixedItems.length > 0) {
-            Object.entries(groupByGid(fixedItems)).forEach(([gid, items]) => {
-              const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
-              const amt = items.reduce((s, e) => s + e.value, 0);
-              if (amt > 0) rows.push({ id: `fixed-${gid}`, label: grp?.name ?? 'Постоянные расходы', value: amt, sign: '+' });
-            });
-          }
-
-          // Список строк для настроек
-          const allRowIds = rows.map(r => r.id);
-          const visibleRows = rows.filter(r => !hiddenSummaryRows.has(r.id));
-
-          return (
-            <div className="bg-[hsl(220,14%,11%)] rounded border border-border p-4">
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))]">Итоговая сводка</span>
-                <button
-                  onClick={() => setShowSummarySettings(v => !v)}
-                  className={`flex items-center gap-1 text-xs transition-colors ${showSummarySettings ? 'text-gold' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
-                >
-                  <Icon name="SlidersHorizontal" size={12} />
-                  <span>Настроить</span>
-                </button>
-              </div>
-
-              {showSummarySettings && (
-                <div className="mb-3 p-3 bg-[hsl(220,12%,14%)] rounded border border-border space-y-1.5">
-                  <div className="text-xs text-[hsl(var(--text-muted))] mb-2">Показывать строки:</div>
-                  {rows.map(r => {
-                    const hidden = hiddenSummaryRows.has(r.id);
-                    return (
-                      <button key={r.id}
-                        onClick={() => setHiddenSummaryRows(prev => {
-                          const next = new Set(prev);
-                          if (next.has(r.id)) next.delete(r.id); else next.add(r.id);
-                          return next;
-                        })}
-                        className="flex items-center gap-2 w-full text-left text-xs hover:text-foreground transition-colors"
-                      >
-                        <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${!hidden ? 'bg-gold border-gold' : 'border-border'}`}>
-                          {!hidden && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
-                        </span>
-                        <span className={`${r.indent ? 'pl-3' : ''} ${!hidden ? 'text-foreground' : 'text-[hsl(var(--text-muted))]'}`}>{r.label}</span>
-                        <span className="ml-auto font-mono text-[hsl(var(--text-muted))]">{fmt(r.value)} {cur}</span>
-                      </button>
-                    );
-                  })}
-                  {allRowIds.length > 0 && (
-                    <button onClick={() => setHiddenSummaryRows(new Set())} className="text-xs text-gold hover:underline mt-1">
-                      Показать все
-                    </button>
-                  )}
-                </div>
-              )}
-
-              <div className="space-y-1.5">
-                {visibleRows.map((r, i) => {
-                  const isFirst = i === 0;
-                  const isService = r.id === 'services';
-                  const prevIsBlock = i > 0 && visibleRows[i - 1].id.startsWith('block-') && !visibleRows[i - 1].indent;
-                  const addDivider = isService || (r.sign === '+' && (i === 0 || !visibleRows[i - 1]?.sign));
-                  return (
-                    <div key={r.id}
-                      className={`flex justify-between text-sm ${r.indent ? 'pl-4' : ''} ${addDivider && !isFirst ? 'border-t border-border pt-1.5' : ''} ${
-                        r.color === 'gold' ? 'text-gold' :
-                        r.color === 'blue' ? 'text-[hsl(200,60%,70%)]' :
-                        'text-[hsl(var(--text-dim))]'
-                      }`}
-                    >
-                      <span>{r.label}</span>
-                      <span className="font-mono shrink-0 ml-4">
-                        {r.sign ? `+${fmt(r.value)}` : fmt(r.value)} {cur}
-                      </span>
-                    </div>
-                  );
-                })}
-                <div className="flex justify-between text-base font-semibold border-t border-border pt-2 mt-1">
-                  <span>Итого</span>
-                  <span className="font-mono text-gold">{fmt(grandTotal)} {cur}</span>
-                </div>
-              </div>
-            </div>
-          );
-        })()}
+        <CalcSummary
+          project={project}
+          totals={totals}
+          totalServices={totalServices}
+          grandTotal={grandTotal}
+          hiddenRows={hiddenSummaryRows}
+          showSettings={showSummarySettings}
+          onToggleSettings={() => setShowSummarySettings(v => !v)}
+          onToggleRow={id => setHiddenSummaryRows(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; })}
+          onShowAll={() => setHiddenSummaryRows(new Set())}
+        />
       </div>
 
       {blockSettingsId && (
-        <CalcBlockSettings
-          blockId={blockSettingsId}
-          projectId={project.id}
-          onClose={() => setBlockSettingsId(null)}
-        />
+        <CalcBlockSettings blockId={blockSettingsId} projectId={project.id} onClose={() => setBlockSettingsId(null)} />
       )}
-
       {showTemplates && (
-        <TemplatesPanel
-          projectId={project.id}
-          onClose={() => setShowTemplates(false)}
-        />
+        <TemplatesPanel projectId={project.id} onClose={() => setShowTemplates(false)} />
       )}
-
       {showClientView && (
-        <ClientViewPanel
-          projectId={project.id}
-          onClose={() => setShowClientView(false)}
-          onExportPdf={handleExportPdf}
-        />
+        <ClientViewPanel projectId={project.id} onClose={() => setShowClientView(false)} onExportPdf={handleExportPdf} />
       )}
     </div>
   );
