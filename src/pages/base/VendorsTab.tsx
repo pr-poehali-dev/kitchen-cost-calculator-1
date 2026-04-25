@@ -3,6 +3,7 @@ import { useStore } from '@/store/useStore';
 import type { Vendor, Material } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { fmt, Field, Modal, MaterialRow } from './BaseShared';
+import VariantsEditor from './VariantsEditor';
 
 interface Props {
   selectedId: string | null;
@@ -462,7 +463,12 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
               <Field label="Цвет" value={editingMaterial.color || ''} onChange={v => setEditingMaterial(p => ({ ...p!, color: v }))} />
               <Field label="Артикул" value={editingMaterial.article || ''} onChange={v => setEditingMaterial(p => ({ ...p!, article: v }))} />
             </div>
-            <Field label="Цена (без наценки)" value={String(editingMaterial.basePrice || '')} onChange={v => setEditingMaterial(p => ({ ...p!, basePrice: parseFloat(v) || 0 }))} type="number" required />
+            <Field label="Базовая цена (если нет вариантов)" value={String(editingMaterial.basePrice || '')} onChange={v => setEditingMaterial(p => ({ ...p!, basePrice: parseFloat(v) || 0 }))} type="number" required />
+            <VariantsEditor
+              variants={editingMaterial.variants || []}
+              unit={editingMaterial.unit || 'шт'}
+              onChange={variants => setEditingMaterial(p => ({ ...p!, variants }))}
+            />
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => {

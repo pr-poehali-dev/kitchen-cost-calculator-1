@@ -37,6 +37,16 @@ export interface Vendor {
 // Supplier остаётся как алиас для обратной совместимости
 export type Supplier = Manufacturer;
 
+// Вариант материала — конкретный размер/толщина/параметры со своей ценой
+// Используется для материалов у которых цена зависит от размера (столешницы, панели)
+export interface MaterialVariant {
+  id: string;
+  size?: string;       // формат, напр. "4200×1200"
+  thickness?: number;  // толщина мм
+  params?: string;     // доп. параметры (подгиб, класс и т.п.)
+  basePrice: number;   // закупочная
+}
+
 export interface Material {
   id: string;
   manufacturerId: string;  // производитель (бренд)
@@ -49,6 +59,7 @@ export interface Material {
   article?: string;
   unit: Unit;
   basePrice: number;
+  variants?: MaterialVariant[]; // варианты с разными размерами/ценами
 }
 
 export interface Service {

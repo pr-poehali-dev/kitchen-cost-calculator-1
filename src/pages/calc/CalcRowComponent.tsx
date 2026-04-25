@@ -1,8 +1,60 @@
 import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import type { CalcRow, CalcColumnKey } from '@/store/types';
+import type { CalcRow, CalcColumnKey, Material, MaterialVariant } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { COLUMN_WIDTHS, fmt } from './constants';
+
+// Модалка выбора варианта (размера/толщины) для материалов с variants
+function VariantPicker({ material, onPick, onCancel }: {
+  material: Material;
+  onPick: (variant: MaterialVariant) => void;
+  onCancel: () => void;
+}) {
+  const store = useStore();
+  const variants = material.variants || [];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onCancel}>
+      <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg shadow-2xl w-full max-w-md mx-4" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+          <div>
+            <div className="font-semibold text-sm">{material.name}</div>
+            <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5">Выберите размер</div>
+          </div>
+          <button onClick={onCancel} className="text-[hsl(var(--text-muted))] hover:text-foreground">
+            <Icon name="X" size={16} />
+          </button>
+        </div>
+
+        <div className="max-h-80 overflow-auto scrollbar-thin">
+          <div className="grid text-[10px] uppercase tracking-wider text-[hsl(var(--text-muted))] px-4 py-2 border-b border-border"
+            style={{ gridTemplateColumns: '1fr 55px 1fr 90px' }}>
+            <span>Размер</span><span className="text-center">Толщ.</span><span>Параметры</span><span className="text-right">Закуп. / Розн.</span>
+          </div>
+          {variants.map(v => {
+            const retail = store.calcPriceWithMarkup(v.basePrice, 'materials');
+            return (
+              <button
+                key={v.id}
+                onClick={() => onPick(v)}
+                className="w-full grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,15%)] last:border-0 hover:bg-[hsl(220,12%,16%)] transition-colors text-left group"
+                style={{ gridTemplateColumns: '1fr 55px 1fr 90px' }}
+              >
+                <span className="text-sm font-medium group-hover:text-gold transition-colors">{v.size || '—'}</span>
+                <span className="text-xs text-[hsl(var(--text-dim))] text-center">{v.thickness ? `${v.thickness}мм` : '—'}</span>
+                <span className="text-xs text-[hsl(var(--text-muted))] truncate">{v.params || '—'}</span>
+                <div className="text-right">
+                  <div className="text-xs text-[hsl(var(--text-dim))] font-mono">{fmt(v.basePrice)}</div>
+                  <div className="text-xs text-gold font-mono font-semibold">→ {fmt(retail)}</div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 interface Props {
   row: CalcRow;
@@ -18,6 +70,7 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
   const store = useStore();
   const [showSuggest, setShowSuggest] = useState(false);
   const [nameFilter, setNameFilter] = useState(row.name);
+  const [variantPickerMat, setVariantPickerMat] = useState<Material | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setNameFilter(row.name); }, [row.name]);
@@ -33,9 +86,36 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
     return typeOk && textOk;
   });
 
+  const applyMaterialWithVariant = (mat: Material, variant: MaterialVariant) => {
+    const retailPrice = store.calcPriceWithMarkup(variant.basePrice, 'materials');
+    const label = [mat.name, variant.size, variant.thickness ? `${variant.thickness}мм` : ''].filter(Boolean).join(' ');
+    store.updateRow(projectId, blockId, row.id, {
+      materialId: mat.id,
+      name: label,
+      manufacturerId: mat.manufacturerId,
+      vendorId: mat.vendorId,
+      typeId: mat.typeId,
+      color: mat.color,
+      article: mat.article,
+      thickness: variant.thickness ?? mat.thickness,
+      unit: mat.unit,
+      basePrice: variant.basePrice,
+      price: retailPrice,
+    });
+    setNameFilter(label);
+    setVariantPickerMat(null);
+    setShowSuggest(false);
+  };
+
   const applyMaterial = (matId: string) => {
     const mat = store.materials.find(m => m.id === matId);
     if (!mat) return;
+    // Если у материала есть варианты — показываем выбор размера
+    if (mat.variants && mat.variants.length > 0) {
+      setShowSuggest(false);
+      setVariantPickerMat(mat);
+      return;
+    }
     const retailPrice = store.calcPriceWithMarkup(mat.basePrice, 'materials');
     store.updateRow(projectId, blockId, row.id, {
       materialId: mat.id,
@@ -47,8 +127,8 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
       article: mat.article,
       thickness: mat.thickness,
       unit: mat.unit,
-      basePrice: mat.basePrice,  // закупочная из карточки
-      price: retailPrice,        // розничная = зак. × наценка
+      basePrice: mat.basePrice,
+      price: retailPrice,
     });
     setNameFilter(mat.name);
     setShowSuggest(false);
@@ -89,10 +169,17 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
                         >
                           <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t?.color || '#888' }} />
                           <span className="flex-1 text-foreground truncate">{m.name}</span>
+                          {m.variants && m.variants.length > 0 && (
+                            <span className="text-[10px] bg-gold/20 text-gold px-1.5 py-0.5 rounded shrink-0">
+                              {m.variants.length} разм.
+                            </span>
+                          )}
                           {mfr && <span className="text-[hsl(var(--text-dim))] text-xs shrink-0">{mfr.name}</span>}
                           {vendor && <span className="text-[hsl(var(--text-muted))] text-xs shrink-0">/ {vendor.name}</span>}
-                          <span className="text-[hsl(var(--text-dim))] text-xs font-mono shrink-0">{fmt(m.basePrice)}</span>
-                          <span className="text-gold text-xs font-mono shrink-0">→ {fmt(store.calcPriceWithMarkup(m.basePrice, 'materials'))}</span>
+                          {(!m.variants || m.variants.length === 0) && <>
+                            <span className="text-[hsl(var(--text-dim))] text-xs font-mono shrink-0">{fmt(m.basePrice)}</span>
+                            <span className="text-gold text-xs font-mono shrink-0">→ {fmt(store.calcPriceWithMarkup(m.basePrice, 'materials'))}</span>
+                          </>}
                         </button>
                       );
                     })}
@@ -180,6 +267,14 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
       >
         <Icon name="X" size={13} />
       </button>
+
+      {variantPickerMat && (
+        <VariantPicker
+          material={variantPickerMat}
+          onPick={v => applyMaterialWithVariant(variantPickerMat, v)}
+          onCancel={() => setVariantPickerMat(null)}
+        />
+      )}
     </div>
   );
 }
