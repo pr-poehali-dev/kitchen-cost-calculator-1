@@ -45,7 +45,7 @@ export function useAuth() {
 
     try {
       const res = await fetch(`${AUTH_URL}/?action=me`, {
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, 'X-Authorization': `Bearer ${token}` },
       });
       if (!res.ok) {
         clearSession();

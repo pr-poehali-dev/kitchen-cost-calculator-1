@@ -31,7 +31,7 @@ type Modal =
   | null;
 
 function authHeaders(token: string) {
-  return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
+  return { Authorization: `Bearer ${token}`, 'X-Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
 export default function AdminPanel({ currentUser, token, inline, onClose }: Props) {
