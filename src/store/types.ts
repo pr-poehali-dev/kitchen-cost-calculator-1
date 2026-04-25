@@ -49,6 +49,7 @@ export interface Material {
   article?: string;
   unit: Unit;
   basePrice: number;
+  imageUrl?: string;       // фото декора/цвета
 }
 
 export interface Service {
