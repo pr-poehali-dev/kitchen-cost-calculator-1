@@ -15,7 +15,7 @@ export default function VariantsEditor({ variants, unit, onChange }: Props) {
   const [expanded, setExpanded] = useState(variants.length > 0);
 
   const add = () => {
-    const next = [...variants, { id: uid(), size: '', thickness: undefined, params: '', basePrice: 0 }];
+    const next = [...variants, { id: uid(), size: '', thickness: undefined, params: '', article: '', basePrice: 0 }];
     onChange(next);
     setExpanded(true);
   };
@@ -61,11 +61,12 @@ export default function VariantsEditor({ variants, unit, onChange }: Props) {
               {/* Заголовки колонок */}
               <div
                 className="grid text-[10px] uppercase tracking-wider text-[hsl(var(--text-muted))] px-3 py-1.5 border-b border-border bg-[hsl(220,12%,12%)]"
-                style={{ gridTemplateColumns: '1fr 60px 1fr 90px 24px' }}
+                style={{ gridTemplateColumns: '1fr 55px 0.8fr 0.8fr 80px 24px' }}
               >
-                <span>Размер (мм)</span>
+                <span>Размер</span>
                 <span className="text-center">Толщ.</span>
                 <span>Параметры</span>
+                <span>Артикул</span>
                 <span className="text-right">Цена, {unit}</span>
                 <span />
               </div>
@@ -74,7 +75,7 @@ export default function VariantsEditor({ variants, unit, onChange }: Props) {
                 <div
                   key={v.id}
                   className="grid items-center gap-1.5 px-3 py-1.5 border-b border-[hsl(220,12%,15%)] last:border-0 hover:bg-[hsl(220,12%,13%)] group"
-                  style={{ gridTemplateColumns: '1fr 60px 1fr 90px 24px' }}
+                  style={{ gridTemplateColumns: '1fr 55px 0.8fr 0.8fr 80px 24px' }}
                 >
                   <input
                     value={v.size || ''}
@@ -92,7 +93,13 @@ export default function VariantsEditor({ variants, unit, onChange }: Props) {
                   <input
                     value={v.params || ''}
                     onChange={e => update(v.id, { params: e.target.value })}
-                    placeholder="подгиб, класс…"
+                    placeholder="подгиб…"
+                    className="bg-transparent border-b border-transparent focus:border-gold outline-none text-sm w-full transition-colors text-[hsl(var(--text-dim))]"
+                  />
+                  <input
+                    value={v.article || ''}
+                    onChange={e => update(v.id, { article: e.target.value })}
+                    placeholder="SKU-001"
                     className="bg-transparent border-b border-transparent focus:border-gold outline-none text-sm w-full transition-colors text-[hsl(var(--text-dim))]"
                   />
                   <input
@@ -130,7 +137,7 @@ export default function VariantsEditor({ variants, unit, onChange }: Props) {
         <div className="px-3 py-2 bg-[hsl(220,12%,12%)] flex flex-wrap gap-1.5">
           {variants.slice(0, 5).map(v => (
             <span key={v.id} className="text-xs bg-[hsl(220,12%,18%)] border border-border rounded px-2 py-0.5 text-[hsl(var(--text-dim))]">
-              {[v.size, v.thickness ? `${v.thickness}мм` : ''].filter(Boolean).join(' ')}
+              {[v.size, v.thickness ? `${v.thickness}мм` : '', v.article].filter(Boolean).join(' · ')}
               {v.basePrice > 0 && <span className="text-gold ml-1">{fmt(v.basePrice)}</span>}
             </span>
           ))}

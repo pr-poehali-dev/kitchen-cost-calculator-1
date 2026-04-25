@@ -660,7 +660,9 @@ export function useStore() {
           if (!r.materialId) return r; // ручная строка — не трогаем
           const mat = state.materials.find(m => m.id === r.materialId);
           if (!mat) return r;
-          const newBasePrice = mat.basePrice;
+          // Если строка привязана к варианту — берём цену варианта
+          const variant = r.variantId ? (mat.variants || []).find(v => v.id === r.variantId) : null;
+          const newBasePrice = variant ? variant.basePrice : mat.basePrice;
           const newPrice = calcPriceWithMarkup(newBasePrice, 'materials');
           return { ...r, basePrice: newBasePrice, price: newPrice };
         }),
@@ -1056,27 +1058,111 @@ export function useStore() {
     }));
   };
 
+  // Сборки (assemblies) внутри сохранённого блока
+  const addAssembly = (blockId: string, name: string) => {
+    const id = `asm_${Date.now()}`;
+    setState(s => ({
+      ...s,
+      savedBlocks: (s.savedBlocks || []).map(b =>
+        b.id === blockId
+          ? { ...b, assemblies: [...(b.assemblies || []), { id, name, rows: [] }] }
+          : b
+      ),
+    }));
+    return id;
+  };
+
+  const updateAssembly = (blockId: string, assemblyId: string, data: Partial<import('./types').BlockAssembly>) => {
+    setState(s => ({
+      ...s,
+      savedBlocks: (s.savedBlocks || []).map(b =>
+        b.id === blockId
+          ? { ...b, assemblies: (b.assemblies || []).map(a => a.id === assemblyId ? { ...a, ...data } : a) }
+          : b
+      ),
+    }));
+  };
+
+  const deleteAssembly = (blockId: string, assemblyId: string) => {
+    setState(s => ({
+      ...s,
+      savedBlocks: (s.savedBlocks || []).map(b =>
+        b.id === blockId
+          ? { ...b, assemblies: (b.assemblies || []).filter(a => a.id !== assemblyId) }
+          : b
+      ),
+    }));
+  };
+
+  const addAssemblyRow = (blockId: string, assemblyId: string) => {
+    const id = `r${Date.now()}`;
+    const newRow: CalcRow = { id, name: '', unit: 'м²', qty: 1, price: 0 };
+    setState(s => ({
+      ...s,
+      savedBlocks: (s.savedBlocks || []).map(b =>
+        b.id === blockId
+          ? { ...b, assemblies: (b.assemblies || []).map(a =>
+              a.id === assemblyId ? { ...a, rows: [...a.rows, newRow] } : a
+            )}
+          : b
+      ),
+    }));
+  };
+
+  const updateAssemblyRow = (blockId: string, assemblyId: string, rowId: string, data: Partial<CalcRow>) => {
+    setState(s => ({
+      ...s,
+      savedBlocks: (s.savedBlocks || []).map(b =>
+        b.id === blockId
+          ? { ...b, assemblies: (b.assemblies || []).map(a =>
+              a.id === assemblyId
+                ? { ...a, rows: a.rows.map(r => r.id === rowId ? { ...r, ...data } : r) }
+                : a
+            )}
+          : b
+      ),
+    }));
+  };
+
+  const deleteAssemblyRow = (blockId: string, assemblyId: string, rowId: string) => {
+    setState(s => ({
+      ...s,
+      savedBlocks: (s.savedBlocks || []).map(b =>
+        b.id === blockId
+          ? { ...b, assemblies: (b.assemblies || []).map(a =>
+              a.id === assemblyId ? { ...a, rows: a.rows.filter(r => r.id !== rowId) } : a
+            )}
+          : b
+      ),
+    }));
+  };
+
+  const resolveRows = (rows: CalcRow[]) => rows.map(r => {
+    const mat = r.materialId ? state.materials.find(m => m.id === r.materialId) : undefined;
+    const variant = (mat && r.variantId) ? (mat.variants || []).find(v => v.id === r.variantId) : null;
+    const basePrice = variant ? variant.basePrice : (mat ? mat.basePrice : (r.basePrice ?? 0));
+    const price = mat ? calcPriceWithMarkup(basePrice, 'materials') : r.price;
+    return { ...r, id: `r${Date.now()}${Math.random().toString(36).slice(2, 6)}`, basePrice, price };
+  });
+
   // Вставить сохранённый блок в проект (копирует строки с актуальными ценами)
-  const insertSavedBlockToProject = (projectId: string, savedBlockId: string) => {
+  const insertSavedBlockToProject = (projectId: string, savedBlockId: string, assemblyId?: string) => {
     const sb = (state.savedBlocks || []).find(b => b.id === savedBlockId);
     if (!sb) return;
     const id = `b${Date.now()}`;
+    // Если указана сборка — берём её строки, иначе дефолтные
+    const sourceRows = assemblyId
+      ? (sb.assemblies || []).find(a => a.id === assemblyId)?.rows || sb.rows
+      : sb.rows;
+    const assemblyName = assemblyId
+      ? (sb.assemblies || []).find(a => a.id === assemblyId)?.name
+      : undefined;
     const newBlock: CalcBlock = {
       id,
-      name: sb.name,
+      name: assemblyName ? `${sb.name} — ${assemblyName}` : sb.name,
       allowedTypeIds: sb.allowedTypeIds,
       visibleColumns: sb.visibleColumns,
-      rows: sb.rows.map(r => {
-        const mat = r.materialId ? state.materials.find(m => m.id === r.materialId) : undefined;
-        const basePrice = mat ? mat.basePrice : (r.basePrice ?? 0);
-        const price = mat ? calcPriceWithMarkup(mat.basePrice, 'materials') : r.price;
-        return {
-          ...r,
-          id: `r${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
-          basePrice,
-          price,
-        };
-      }),
+      rows: resolveRows(sourceRows),
     };
     updateProject(projectId, p => ({ ...p, blocks: [...p.blocks, newBlock] }));
   };
@@ -1138,6 +1224,8 @@ export function useStore() {
     saveTemplate, loadTemplate, deleteTemplate, updateTemplate, overwriteTemplate,
     createSavedBlock, updateSavedBlock, deleteSavedBlock, reorderSavedBlocks,
     addSavedBlockRow, updateSavedBlockRow, deleteSavedBlockRow,
+    addAssembly, updateAssembly, deleteAssembly,
+    addAssemblyRow, updateAssemblyRow, deleteAssemblyRow,
     insertSavedBlockToProject,
     setState: (updater: (s: AppState) => AppState) => setState(updater),
   };

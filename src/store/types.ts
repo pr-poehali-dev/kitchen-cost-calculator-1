@@ -44,6 +44,7 @@ export interface MaterialVariant {
   size?: string;       // формат, напр. "4200×1200"
   thickness?: number;  // толщина мм
   params?: string;     // доп. параметры (подгиб, класс и т.п.)
+  article?: string;    // артикул варианта
   basePrice: number;   // закупочная
 }
 
@@ -102,6 +103,7 @@ export interface CalcBlock {
 export interface CalcRow {
   id: string;
   materialId?: string;
+  variantId?: string;  // id выбранного варианта MaterialVariant (для refreshProjectPrices)
   name: string;
   manufacturerId?: string;
   vendorId?: string;
@@ -195,14 +197,23 @@ export interface CalcTemplate {
   }>;
 }
 
+// Сборка внутри сохранённого блока — один из вариантов набора материалов
+export interface BlockAssembly {
+  id: string;
+  name: string;   // напр. "Сборка 1", "Эконом", "Премиум"
+  rows: CalcRow[];
+}
+
 // Сохранённый блок — шаблон с реальными строками материалов
+// Может содержать несколько сборок (assemblies) — разные варианты набора
 export interface SavedBlock {
   id: string;
   name: string;
   note?: string;
   allowedTypeIds: string[];
   visibleColumns: CalcColumnKey[];
-  rows: CalcRow[];
+  rows: CalcRow[];         // строки "по умолчанию" (если нет сборок)
+  assemblies?: BlockAssembly[]; // несколько вариантов сборок
   createdAt: string;
 }
 

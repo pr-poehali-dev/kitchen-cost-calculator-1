@@ -9,6 +9,7 @@ interface Props {
   totalServices: number;
   total: number;
   grandTotal: number;
+  totalPurchase: number;
   showProjects: boolean;
   confirmDeleteProject: string | null;
   onToggleProjects: () => void;
@@ -35,7 +36,7 @@ function InlineEdit({ value, onChange, placeholder = '', className = '' }: {
 }
 
 export default function CalcHeader({
-  project, totalMaterials, totalServices, total, grandTotal,
+  project, totalMaterials, totalServices, total, grandTotal, totalPurchase,
   showProjects, confirmDeleteProject,
   onToggleProjects, onStopPropagation,
   onOpenTemplates, onExportPdf, onOpenClientView,
@@ -147,10 +148,16 @@ export default function CalcHeader({
         </div>
 
         <div className="flex items-center gap-6">
-          <div className="flex items-center gap-4 text-sm">
+          <div className="flex items-center gap-4 text-sm flex-wrap justify-end">
             <span className="text-[hsl(var(--text-muted))]">Материалы: <span className="font-mono text-foreground">{fmt(totalMaterials)}</span></span>
             <span className="text-[hsl(var(--border))]">·</span>
             <span className="text-[hsl(var(--text-muted))]">Услуги: <span className="font-mono text-foreground">{fmt(totalServices)}</span></span>
+            {totalPurchase > 0 && (
+              <>
+                <span className="text-[hsl(var(--border))]">·</span>
+                <span className="text-[hsl(var(--text-muted))]">Закупка: <span className="font-mono text-[hsl(200,60%,70%)]">{fmt(totalPurchase)}</span></span>
+              </>
+            )}
           </div>
           <div className="text-right">
             {grandTotal !== total && (

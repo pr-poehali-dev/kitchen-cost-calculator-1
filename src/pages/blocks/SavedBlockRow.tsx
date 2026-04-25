@@ -11,11 +11,13 @@ interface Props {
   visibleCols: CalcColumnKey[];
   gridCols: string;
   currency: string;
+  assemblyId?: string; // если задан — строка принадлежит сборке
 }
 
-export default function SavedBlockRow({ block, rowId, visibleCols, gridCols, currency: _currency }: Props) {
+export default function SavedBlockRow({ block, rowId, visibleCols, gridCols, currency: _currency, assemblyId }: Props) {
   const store = useStore();
-  const row = block.rows.find(r => r.id === rowId);
+  const assembly = assemblyId ? (block.assemblies || []).find(a => a.id === assemblyId) : null;
+  const row = assembly ? assembly.rows.find(r => r.id === rowId) : block.rows.find(r => r.id === rowId);
   const [nameFilter, setNameFilter] = useState(row?.name || '');
   const [showSuggest, setShowSuggest] = useState(false);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
@@ -47,8 +49,21 @@ export default function SavedBlockRow({ block, rowId, visibleCols, gridCols, cur
     );
   });
 
-  const upd = (data: Parameters<typeof store.updateSavedBlockRow>[2]) =>
-    store.updateSavedBlockRow(block.id, rowId, data);
+  const upd = (data: Parameters<typeof store.updateSavedBlockRow>[2]) => {
+    if (assemblyId) {
+      store.updateAssemblyRow(block.id, assemblyId, rowId, data);
+    } else {
+      store.updateSavedBlockRow(block.id, rowId, data);
+    }
+  };
+
+  const delRow = () => {
+    if (assemblyId) {
+      store.deleteAssemblyRow(block.id, assemblyId, rowId);
+    } else {
+      store.deleteSavedBlockRow(block.id, rowId);
+    }
+  };
 
   const selectMaterial = (matId: string) => {
     const mat = allMaterials.find(m => m.id === matId);
@@ -161,14 +176,16 @@ export default function SavedBlockRow({ block, rowId, visibleCols, gridCols, cur
               <div key={col} className="flex items-center justify-between gap-1">
                 <button
                   tabIndex={-1}
-                  onClick={() => upd({ qty: Math.max(0, (row.qty || 0) - 1) })}
+                  onClick={() => upd({ qty: Math.max(0, parseFloat(((row.qty || 0) - 1).toFixed(4))) })}
                   className="w-5 h-5 flex items-center justify-center rounded bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,22%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors shrink-0 text-xs leading-none"
                 >−</button>
                 <input
                   type="number"
-                  value={row.qty || ''}
-                  onChange={e => upd({ qty: parseFloat(e.target.value) || 0 })}
-                  className="bg-transparent text-sm font-mono text-center outline-none border-b border-transparent focus:border-[hsl(var(--gold))] w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  step="0.01"
+                  min="0"
+                  value={row.qty === 0 ? '0' : (row.qty || '')}
+                  onChange={e => upd({ qty: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+                  className="bg-transparent text-sm font-mono text-center outline-none border-b border-transparent focus:border-[hsl(var(--gold))] w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
                   tabIndex={-1}
@@ -204,7 +221,7 @@ export default function SavedBlockRow({ block, rowId, visibleCols, gridCols, cur
         }
       })}
       <button
-        onClick={() => store.deleteSavedBlockRow(block.id, rowId)}
+        onClick={delRow}
         className="opacity-0 group-hover:opacity-100 flex items-center justify-center text-[hsl(var(--text-muted))] hover:text-destructive transition-all"
       >
         <Icon name="Trash2" size={13} />

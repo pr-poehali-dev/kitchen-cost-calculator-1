@@ -29,8 +29,8 @@ function VariantPicker({ material, onPick, onCancel }: {
 
         <div className="max-h-80 overflow-auto scrollbar-thin">
           <div className="grid text-[10px] uppercase tracking-wider text-[hsl(var(--text-muted))] px-4 py-2 border-b border-border"
-            style={{ gridTemplateColumns: '1fr 55px 1fr 90px' }}>
-            <span>Размер</span><span className="text-center">Толщ.</span><span>Параметры</span><span className="text-right">Закуп. / Розн.</span>
+            style={{ gridTemplateColumns: '1fr 50px 0.8fr 0.7fr 90px' }}>
+            <span>Размер</span><span className="text-center">Толщ.</span><span>Параметры</span><span>Артикул</span><span className="text-right">Закуп. / Розн.</span>
           </div>
           {variants.map(v => {
             const retail = store.calcPriceWithMarkup(v.basePrice, 'materials');
@@ -39,11 +39,12 @@ function VariantPicker({ material, onPick, onCancel }: {
                 key={v.id}
                 onClick={() => onPick(v)}
                 className="w-full grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,15%)] last:border-0 hover:bg-[hsl(220,12%,16%)] transition-colors text-left group"
-                style={{ gridTemplateColumns: '1fr 55px 1fr 90px' }}
+                style={{ gridTemplateColumns: '1fr 50px 0.8fr 0.7fr 90px' }}
               >
                 <span className="text-sm font-medium group-hover:text-gold transition-colors">{v.size || '—'}</span>
                 <span className="text-xs text-[hsl(var(--text-dim))] text-center">{v.thickness ? `${v.thickness}мм` : '—'}</span>
                 <span className="text-xs text-[hsl(var(--text-muted))] truncate">{v.params || '—'}</span>
+                <span className="text-xs text-[hsl(var(--text-dim))] truncate">{v.article || '—'}</span>
                 <div className="text-right">
                   <div className="text-xs text-[hsl(var(--text-dim))] font-mono">{fmt(v.basePrice)}</div>
                   <div className="text-xs text-gold font-mono font-semibold">→ {fmt(retail)}</div>
@@ -100,12 +101,13 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
     const label = [mat.name, variant.size, variant.thickness ? `${variant.thickness}мм` : ''].filter(Boolean).join(' ');
     store.updateRow(projectId, blockId, row.id, {
       materialId: mat.id,
+      variantId: variant.id,
       name: label,
       manufacturerId: mat.manufacturerId,
       vendorId: mat.vendorId,
       typeId: mat.typeId,
       color: mat.color,
-      article: mat.article,
+      article: variant.article || mat.article,
       thickness: variant.thickness ?? mat.thickness,
       unit: mat.unit,
       basePrice: variant.basePrice,
@@ -154,16 +156,28 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
         switch (col) {
           case 'material':
             return (
-              <div key={col} className="relative pr-2">
+              <div key={col} className="relative pr-2 flex items-center gap-1">
                 <input
                   ref={inputRef}
                   value={nameFilter}
-                  onChange={e => { setNameFilter(e.target.value); store.updateRow(projectId, blockId, row.id, { name: e.target.value, materialId: undefined }); setShowSuggest(true); }}
+                  onChange={e => { setNameFilter(e.target.value); store.updateRow(projectId, blockId, row.id, { name: e.target.value, materialId: undefined, variantId: undefined }); setShowSuggest(true); }}
                   onFocus={() => { updatePos(); setShowSuggest(true); }}
                   onBlur={() => setTimeout(() => setShowSuggest(false), 160)}
                   placeholder="Выбрать материал..."
                   className="bg-transparent text-sm text-foreground w-full outline-none placeholder:text-[hsl(var(--text-muted))] border-b border-transparent focus:border-[hsl(var(--gold))]"
                 />
+                {row.materialId && row.variantId && (() => {
+                  const mat = store.materials.find(m => m.id === row.materialId);
+                  return mat ? (
+                    <button
+                      onMouseDown={e => { e.preventDefault(); setVariantPickerMat(mat); }}
+                      className="shrink-0 text-[hsl(var(--text-muted))] hover:text-gold transition-colors"
+                      title="Сменить размер"
+                    >
+                      <Icon name="ChevronDown" size={11} />
+                    </button>
+                  ) : null;
+                })()}
                 {showSuggest && filteredMaterials.length > 0 && createPortal(
                   <div
                     className="fixed z-[9999] bg-[hsl(220,16%,10%)] border border-border rounded shadow-2xl w-[480px] max-h-80 overflow-auto scrollbar-thin"
@@ -239,14 +253,16 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
               <div key={col} className="flex items-center justify-between gap-1">
                 <button
                   tabIndex={-1}
-                  onClick={() => store.updateRow(projectId, blockId, row.id, { qty: Math.max(0, (row.qty || 0) - 1) })}
+                  onClick={() => store.updateRow(projectId, blockId, row.id, { qty: Math.max(0, parseFloat(((row.qty || 0) - 1).toFixed(4))) })}
                   className="w-5 h-5 flex items-center justify-center rounded bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,22%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors shrink-0 text-xs leading-none"
                 >−</button>
                 <input
                   type="number"
-                  value={row.qty || ''}
-                  onChange={e => store.updateRow(projectId, blockId, row.id, { qty: parseFloat(e.target.value) || 0 })}
-                  className="bg-transparent text-sm font-mono text-center outline-none border-b border-transparent focus:border-[hsl(var(--gold))] w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                  step="0.01"
+                  min="0"
+                  value={row.qty === 0 ? '0' : (row.qty || '')}
+                  onChange={e => store.updateRow(projectId, blockId, row.id, { qty: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+                  className="bg-transparent text-sm font-mono text-center outline-none border-b border-transparent focus:border-[hsl(var(--gold))] w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
                   tabIndex={-1}

@@ -44,6 +44,8 @@ export default function CalcPage() {
 
   const totals = store.calcProjectTotals(project);
   const { rawMaterials: totalMaterials, rawServices: totalServices, base: baseTotal, grandTotal } = totals;
+  const totalPurchase = project.blocks.reduce((sum, b) =>
+    sum + b.rows.reduce((s, r) => s + (r.basePrice ?? 0) * r.qty, 0), 0);
 
   const handleFinishEditName = (blockId: string, blockName: string) => {
     store.updateBlock(project.id, blockId, { name: editingBlockName || blockName });
@@ -73,6 +75,7 @@ export default function CalcPage() {
         totalServices={totalServices}
         total={baseTotal}
         grandTotal={grandTotal}
+        totalPurchase={totalPurchase}
         showProjects={showProjects}
         confirmDeleteProject={confirmDeleteProject}
         onToggleProjects={() => setShowProjects(v => !v)}
