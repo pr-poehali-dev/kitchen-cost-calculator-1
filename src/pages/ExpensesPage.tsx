@@ -97,6 +97,8 @@ export default function ExpensesPage() {
   const store = useStore();
   const [editing, setEditing] = useState<Partial<ExpenseItem> | null>(null);
   const [editingGroup, setEditingGroup] = useState<{ id?: string; name: string } | null>(null);
+  const [showRefreshBanner, setShowRefreshBanner] = useState(false);
+  const [refreshDone, setRefreshDone] = useState(false);
 
   const project = store.getActiveProject();
   const projectBlocks = project?.blocks.map(b => ({ id: b.id, name: b.name })) || [];
@@ -115,6 +117,14 @@ export default function ExpensesPage() {
     blockIds: [],
   });
 
+  // Показать баннер если изменили наценку на материалы/услуги
+  const notifyIfMarkupChanged = (type: ExpenseItem['type'], applyTo?: string) => {
+    if (type === 'markup' && (applyTo === 'materials' || applyTo === 'services')) {
+      setShowRefreshBanner(true);
+      setRefreshDone(false);
+    }
+  };
+
   const handleSaveExpense = () => {
     if (!editing?.name?.trim()) return;
     const data = {
@@ -129,7 +139,20 @@ export default function ExpensesPage() {
     };
     if (editing.id) store.updateExpense(editing.id, data);
     else store.addExpense(data as Omit<ExpenseItem, 'id'>);
+    notifyIfMarkupChanged(data.type, data.applyTo);
     setEditing(null);
+  };
+
+  const handleToggleExpense = (expense: ExpenseItem, enabled: boolean) => {
+    store.updateExpense(expense.id, { enabled });
+    notifyIfMarkupChanged(expense.type, expense.applyTo);
+  };
+
+  const handleApplyRefresh = () => {
+    if (!project) return;
+    store.refreshProjectPrices(project.id);
+    setRefreshDone(true);
+    setTimeout(() => { setShowRefreshBanner(false); setRefreshDone(false); }, 2000);
   };
 
   return (
@@ -157,6 +180,41 @@ export default function ExpensesPage() {
       </div>
 
       <div className="flex-1 overflow-auto scrollbar-thin p-6 space-y-4">
+
+        {/* Баннер: предложение обновить цены в проекте */}
+        {showRefreshBanner && project && (
+          <div className={`flex items-center justify-between gap-4 px-4 py-3 rounded border transition-colors ${
+            refreshDone
+              ? 'bg-[hsl(140,40%,12%)] border-[hsl(140,40%,25%)]'
+              : 'bg-[hsl(38,40%,12%)] border-[hsl(38,50%,30%)]'
+          }`}>
+            <div className="flex items-center gap-2 text-sm">
+              <Icon name={refreshDone ? 'CheckCircle' : 'AlertCircle'} size={15} className={refreshDone ? 'text-[hsl(140,50%,50%)]' : 'text-gold'} />
+              <span className={refreshDone ? 'text-[hsl(140,50%,60%)]' : 'text-[hsl(38,80%,70%)]'}>
+                {refreshDone
+                  ? 'Цены в проекте обновлены'
+                  : `Наценка изменена — обновить розничные цены в «${project.object}»?`
+                }
+              </span>
+            </div>
+            {!refreshDone && (
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  onClick={handleApplyRefresh}
+                  className="px-3 py-1.5 bg-gold text-[hsl(220,16%,8%)] rounded text-xs font-medium hover:opacity-90"
+                >
+                  Обновить
+                </button>
+                <button
+                  onClick={() => setShowRefreshBanner(false)}
+                  className="text-[hsl(var(--text-muted))] hover:text-foreground"
+                >
+                  <Icon name="X" size={14} />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Влияние на расчёт */}
         {totals && (
@@ -259,7 +317,7 @@ export default function ExpensesPage() {
                   <ExpenseRow key={e.id} expense={e} currency={store.settings.currency} projectBlocks={projectBlocks}
                     onEdit={() => setEditing(e)}
                     onDelete={() => store.deleteExpense(e.id)}
-                    onToggle={v => store.updateExpense(e.id, { enabled: v })}
+                    onToggle={v => handleToggleExpense(e, v)}
                   />
                 ))
               )}
@@ -286,7 +344,7 @@ export default function ExpensesPage() {
               <ExpenseRow key={e.id} expense={e} currency={store.settings.currency} projectBlocks={projectBlocks}
                 onEdit={() => setEditing(e)}
                 onDelete={() => store.deleteExpense(e.id)}
-                onToggle={v => store.updateExpense(e.id, { enabled: v })}
+                onToggle={v => handleToggleExpense(e, v)}
               />
             ))}
           </div>
