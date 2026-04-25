@@ -30,8 +30,12 @@ type Modal =
   | { type: 'delete'; user: UserRow }
   | null;
 
-function authHeaders(token: string) {
-  return { Authorization: `Bearer ${token}`, 'X-Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' };
+function adminUrl(token: string) {
+  return `${ADMIN_URL}?token=${encodeURIComponent(token)}`;
+}
+
+function authHeaders() {
+  return { 'Content-Type': 'application/json' };
 }
 
 export default function AdminPanel({ currentUser, token, inline, onClose }: Props) {
@@ -42,7 +46,7 @@ export default function AdminPanel({ currentUser, token, inline, onClose }: Prop
 
   const fetchUsers = async () => {
     setLoading(true);
-    const res = await fetch(ADMIN_URL, { headers: authHeaders(token) });
+    const res = await fetch(adminUrl(token), { headers: authHeaders() });
     const data = await res.json();
     setUsers(data.users || []);
     setLoading(false);
@@ -52,9 +56,9 @@ export default function AdminPanel({ currentUser, token, inline, onClose }: Prop
 
   const update = async (id: number, fields: Record<string, string>) => {
     setSaving(id);
-    await fetch(ADMIN_URL, {
+    await fetch(adminUrl(token), {
       method: 'PUT',
-      headers: authHeaders(token),
+      headers: authHeaders(),
       body: JSON.stringify({ id, ...fields }),
     });
     setSaving(null);
@@ -258,9 +262,9 @@ function CreateUserForm({ token, onDone, onCancel }: { token: string; onDone: ()
     e.preventDefault();
     setError('');
     setLoading(true);
-    const res = await fetch(ADMIN_URL, {
+    const res = await fetch(adminUrl(token), {
       method: 'POST',
-      headers: authHeaders(token),
+      headers: authHeaders(),
       body: JSON.stringify({ login: login.trim().toLowerCase(), password, role, plan }),
     });
     const data = await res.json();
@@ -339,9 +343,9 @@ function ChangePasswordForm({ user, token, onDone, onCancel }: { user: UserRow; 
     e.preventDefault();
     setError('');
     setLoading(true);
-    const res = await fetch(ADMIN_URL, {
+    const res = await fetch(adminUrl(token), {
       method: 'PUT',
-      headers: authHeaders(token),
+      headers: authHeaders(),
       body: JSON.stringify({ id: user.id, password }),
     });
     const data = await res.json();
@@ -390,9 +394,9 @@ function DeleteConfirm({ user, token, onDone, onCancel }: { user: UserRow; token
 
   const confirm = async () => {
     setLoading(true);
-    await fetch(ADMIN_URL, {
+    await fetch(adminUrl(token), {
       method: 'DELETE',
-      headers: authHeaders(token),
+      headers: authHeaders(),
       body: JSON.stringify({ id: user.id }),
     });
     setLoading(false);

@@ -21,7 +21,7 @@ JWT_SECRET = os.environ.get('JWT_SECRET', '1641Bd849poehali')
 def make_token(user_id: int, role: str) -> str:
     secret = JWT_SECRET
     payload = {
-        'sub': user_id,
+        'sub': str(user_id),
         'role': role,
         'exp': datetime.now(timezone.utc) + timedelta(days=7),
     }

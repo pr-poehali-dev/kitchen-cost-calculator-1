@@ -3,7 +3,6 @@ import os
 import jwt
 import bcrypt
 import psycopg2
-# redeploy
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -13,27 +12,50 @@ CORS = {
 
 JWT_SECRET = os.environ.get('JWT_SECRET', '1641Bd849poehali')
 
+
 def get_db():
     return psycopg2.connect(os.environ['DATABASE_URL'])
 
+
+def extract_token(event: dict) -> str:
+    """Токен берём из query string ?token=... или из тела запроса поле token"""
+    qs = event.get('queryStringParameters') or {}
+    if qs.get('token'):
+        return qs['token'].strip()
+    body_raw = event.get('body') or ''
+    if body_raw:
+        try:
+            body = json.loads(body_raw)
+            if body.get('token'):
+                return str(body['token']).strip()
+        except Exception:
+            pass
+    return ''
+
+
 def verify_admin(event: dict) -> dict | None:
-    auth = event.get('headers', {}).get('X-Authorization') or event.get('headers', {}).get('Authorization', '')
-    token = auth.replace('Bearer ', '').strip()
+    token = extract_token(event)
     if not token:
+        print('[auth] no token in qs or body')
         return None
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
+        print(f'[auth] role={payload.get("role")} sub={payload.get("sub")}')
         if payload.get('role') != 'admin':
             return None
         return payload
-    except Exception:
+    except Exception as e:
+        print(f'[auth] jwt error: {e}')
         return None
+
 
 def ok(data, status=200):
     return {'statusCode': status, 'headers': {**CORS, 'Content-Type': 'application/json'}, 'body': json.dumps(data, default=str)}
 
+
 def err(msg, status=400):
     return {'statusCode': status, 'headers': {**CORS, 'Content-Type': 'application/json'}, 'body': json.dumps({'error': msg})}
+
 
 def handler(event: dict, context) -> dict:
     """Админ-панель: управление пользователями (только для admin)"""
@@ -47,8 +69,6 @@ def handler(event: dict, context) -> dict:
 
     method = event.get('httpMethod', 'GET')
     body = json.loads(event.get('body') or '{}') if method in ('POST', 'PUT', 'DELETE') else {}
-    qs = event.get('queryStringParameters') or {}
-    action = qs.get('action', '')
 
     # GET — список всех пользователей
     if method == 'GET':
@@ -103,7 +123,6 @@ def handler(event: dict, context) -> dict:
         if not user_id:
             return err('Не указан id')
 
-        # Смена пароля
         if 'password' in body:
             new_pass = (body.get('password') or '').strip()
             if len(new_pass) < 4:
@@ -139,7 +158,7 @@ def handler(event: dict, context) -> dict:
         user_id = body.get('id')
         if not user_id:
             return err('Не указан id')
-        if user_id == admin.get('sub'):
+        if str(user_id) == str(admin.get('sub')):
             return err('Нельзя удалить себя')
         conn = get_db()
         cur = conn.cursor()
