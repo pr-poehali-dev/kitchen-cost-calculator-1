@@ -17,24 +17,15 @@ export type AuthState =
   | { status: 'unauthenticated' }
   | { status: 'authenticated'; user: AuthUser };
 
-function isTokenExpired(): boolean {
-  const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
-  if (!expiry) return true;
-  return Date.now() > parseInt(expiry, 10);
-}
-
-function setTokenExpiry(remember: boolean) {
-  if (remember) {
-    const expiry = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
-    localStorage.setItem(TOKEN_EXPIRY_KEY, String(expiry));
-  } else {
-    localStorage.removeItem(TOKEN_EXPIRY_KEY);
-  }
-}
-
 function clearSession() {
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(TOKEN_EXPIRY_KEY);
+}
+
+function isSessionExpired(): boolean {
+  const expiry = localStorage.getItem(TOKEN_EXPIRY_KEY);
+  if (!expiry) return false; // нет срока = сессионный, не истёк
+  return Date.now() > parseInt(expiry, 10);
 }
 
 export function useAuth() {
@@ -46,9 +37,7 @@ export function useAuth() {
     const token = getToken();
     if (!token) { setState({ status: 'unauthenticated' }); return; }
 
-    // Проверяем срок — если нет expiry (не выбрал «запомнить»), это сессионный токен
-    const hasExpiry = !!localStorage.getItem(TOKEN_EXPIRY_KEY);
-    if (hasExpiry && isTokenExpired()) {
+    if (isSessionExpired()) {
       clearSession();
       setState({ status: 'unauthenticated' });
       return;
@@ -58,7 +47,11 @@ export function useAuth() {
       const res = await fetch(`${AUTH_URL}/?action=me`, {
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
       });
-      if (!res.ok) { clearSession(); setState({ status: 'unauthenticated' }); return; }
+      if (!res.ok) {
+        clearSession();
+        setState({ status: 'unauthenticated' });
+        return;
+      }
       const user: AuthUser = await res.json();
       setState({ status: 'authenticated', user });
     } catch {
@@ -68,16 +61,23 @@ export function useAuth() {
 
   useEffect(() => { fetchMe(); }, [fetchMe]);
 
-  const login = async (login: string, password: string, remember = false): Promise<string | null> => {
+  const login = async (loginStr: string, password: string, remember = false): Promise<string | null> => {
     const res = await fetch(`${AUTH_URL}/?action=login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ login, password }),
+      body: JSON.stringify({ login: loginStr, password }),
     });
     const data = await res.json();
     if (!res.ok) return data.error || 'Ошибка входа';
+
     localStorage.setItem(TOKEN_KEY, data.token);
-    setTokenExpiry(remember);
+    if (remember) {
+      const expiry = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
+      localStorage.setItem(TOKEN_EXPIRY_KEY, String(expiry));
+    } else {
+      localStorage.removeItem(TOKEN_EXPIRY_KEY);
+    }
+
     setState({ status: 'authenticated', user: { id: data.id, login: data.login, role: data.role, plan: data.plan } });
     return null;
   };
