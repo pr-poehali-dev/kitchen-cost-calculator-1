@@ -63,73 +63,38 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
   const handleImport = () => {
     setImporting(true);
 
-    // 1. Найти или создать производителя СКАТ
-    let manufacturer = store.manufacturers.find(m => m.name.toLowerCase() === 'скат');
-    if (!manufacturer) {
-      store.addManufacturer({
-        name: 'СКАТ',
-        note: 'Производитель МДФ фасадов',
-        materialTypeIds: [SKAT_TYPE_ID],
-      });
-      // Получаем только что созданного (последний добавленный)
-      manufacturer = [...store.manufacturers].reverse().find(m => m.name.toLowerCase() === 'скат')
-        || store.manufacturers[store.manufacturers.length - 1];
-    }
+    // Производитель
+    const existingMfr = store.manufacturers.find(m => m.name.toLowerCase() === 'скат');
+    const mfrData = {
+      name: 'СКАТ',
+      note: 'Производитель МДФ фасадов',
+      materialTypeIds: [SKAT_TYPE_ID],
+      existingId: existingMfr?.id,
+    };
 
-    // 2. Собрать уникальные подсекции → категории
-    const subsectionSet = new Set(items.map(i => i.subsection).filter(Boolean));
-    const subsections = Array.from(subsectionSet);
+    // Категории — уникальные подсекции
+    const subsections = Array.from(new Set(items.map(i => i.subsection).filter(Boolean)));
+    const categories = subsections.map(sub => ({
+      key: sub,
+      name: shortCatName(sub),
+      typeIds: [SKAT_TYPE_ID],
+      note: `СКАТ: ${sub}`,
+    }));
 
-    // Создаём категории которых нет
-    const existingCats = store.settings.materialCategories || [];
-    const catMap: Record<string, string> = {}; // subsection → categoryId
+    // Материалы
+    const materials = items.map(item => ({
+      name: `${item.facade_type}${item.thickness ? ` ${item.thickness}мм` : ''}`,
+      typeId: SKAT_TYPE_ID,
+      thickness: item.thickness || undefined,
+      article: skatArticle(item.thickness_section, item.subsection, item.facade_type),
+      categoryKey: item.subsection || undefined,
+      unit: 'м²' as const,
+      basePrice: item.price,
+    }));
 
-    for (const sub of subsections) {
-      const catNote = `СКАТ: ${sub}`;
-      let cat = existingCats.find(c => c.note === catNote);
-      if (!cat) {
-        store.addMaterialCategory({
-          name: shortCatName(sub),
-          typeIds: [SKAT_TYPE_ID],
-          note: catNote,
-        });
-        // Последняя добавленная
-        const allCats = store.settings.materialCategories || [];
-        cat = [...allCats].reverse().find(c => c.note === catNote)
-          || allCats[allCats.length - 1];
-      }
-      if (cat) catMap[sub] = cat.id;
-    }
+    const result = store.importSkatBatch(mfrData, categories, materials);
 
-    // 3. Создать материалы
-    const mfrId = manufacturer!.id;
-    const existingMaterials = store.materials;
-    let created = 0;
-    let skipped = 0;
-
-    for (const item of items) {
-      const article = skatArticle(item.thickness_section, item.subsection, item.facade_type);
-
-      // Проверяем — уже есть такой материал?
-      const exists = existingMaterials.some(m => m.article === article);
-      if (exists) { skipped++; continue; }
-
-      const catId = item.subsection ? catMap[item.subsection] : undefined;
-
-      store.addMaterial({
-        manufacturerId: mfrId,
-        name: `${item.facade_type}${item.thickness ? ` ${item.thickness}мм` : ''}`,
-        typeId: SKAT_TYPE_ID,
-        categoryId: catId,
-        thickness: item.thickness || undefined,
-        article,
-        unit: 'м²',
-        basePrice: item.price,
-      });
-      created++;
-    }
-
-    setImportResult({ created, skipped });
+    setImportResult(result);
     setImporting(false);
     setStep('done');
   };

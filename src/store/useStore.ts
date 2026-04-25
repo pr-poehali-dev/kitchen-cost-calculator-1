@@ -812,6 +812,63 @@ export function useStore() {
     const id = `m${Date.now()}`;
     setState(s => ({ ...s, materials: [...s.materials, { ...material, id }] }));
   };
+
+  // Батчевый импорт СКАТ — всё в одном setState чтобы ID были согласованы
+  const importSkatBatch = (
+    manufacturer: Omit<Manufacturer, 'id'> & { existingId?: string },
+    categories: Array<Omit<MaterialCategory, 'id'> & { key: string }>,
+    materials: Array<Omit<Material, 'id' | 'manufacturerId' | 'categoryId'> & { categoryKey?: string }>
+  ): { created: number; skipped: number } => {
+    const ts = Date.now();
+    // Считаем результат по текущему state (до setState)
+    const existingArticles = new Set(state.materials.map(m => m.article).filter(Boolean));
+    let created = 0;
+    let skipped = 0;
+    materials.forEach(mat => {
+      if (mat.article && existingArticles.has(mat.article)) skipped++;
+      else created++;
+    });
+
+    setState(s => {
+      let next = { ...s };
+
+      // 1. Производитель
+      let mfrId = manufacturer.existingId || '';
+      if (!mfrId) {
+        mfrId = `mfr${ts}`;
+        next = { ...next, manufacturers: [...next.manufacturers, { ...manufacturer, id: mfrId }] };
+      }
+
+      // 2. Категории
+      const catIdMap: Record<string, string> = {};
+      const newCats = [...(next.settings.materialCategories || [])];
+      categories.forEach((cat, i) => {
+        const existing = newCats.find(c => c.note === cat.note);
+        if (existing) {
+          catIdMap[cat.key] = existing.id;
+        } else {
+          const catId = `mc${ts}${i}`;
+          catIdMap[cat.key] = catId;
+          newCats.push({ ...cat, id: catId });
+        }
+      });
+      next = { ...next, settings: { ...next.settings, materialCategories: newCats } };
+
+      // 3. Материалы
+      const arts = new Set(next.materials.map(m => m.article).filter(Boolean));
+      const newMaterials = [...next.materials];
+      materials.forEach((mat, i) => {
+        if (mat.article && arts.has(mat.article)) return;
+        const catId = mat.categoryKey ? catIdMap[mat.categoryKey] : undefined;
+        newMaterials.push({ ...mat, id: `m${ts}${i}`, manufacturerId: mfrId, categoryId: catId });
+      });
+      next = { ...next, materials: newMaterials };
+
+      return next;
+    });
+
+    return { created, skipped };
+  };
   const updateMaterial = (id: string, data: Partial<Material>) => {
     setState(s => ({ ...s, materials: s.materials.map(m => m.id === id ? { ...m, ...data } : m) }));
   };
@@ -1211,7 +1268,7 @@ export function useStore() {
     createProject, deleteProject,
     addManufacturer, updateManufacturer, deleteManufacturer,
     addVendor, updateVendor, deleteVendor,
-    addMaterial, updateMaterial, deleteMaterial,
+    addMaterial, updateMaterial, deleteMaterial, importSkatBatch,
     addService, updateService, deleteService,
     addExpense, updateExpense, deleteExpense,
     addExpenseGroup, updateExpenseGroup, deleteExpenseGroup,
