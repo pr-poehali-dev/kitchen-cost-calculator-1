@@ -5,6 +5,101 @@ import type { CalcRow, CalcColumnKey, Material, MaterialVariant } from '@/store/
 import Icon from '@/components/ui/icon';
 import { COLUMN_WIDTHS, fmt } from './constants';
 
+// Выпадающий список материалов с группировкой СКАТ по толщине МДФ
+function MaterialDropdown({ materials, pos, store, onPick }: {
+  materials: Material[];
+  pos: { top: number; left: number };
+  store: ReturnType<typeof useStore>;
+  onPick: (id: string) => void;
+}) {
+  const skatMats = materials.filter(m => m.article?.startsWith('skat__'));
+  const otherMats = materials.filter(m => !m.article?.startsWith('skat__'));
+
+  // Группируем СКАТ по толщине МДФ (из первого варианта)
+  const skatByThickness = new Map<number, Material[]>();
+  for (const m of skatMats) {
+    const th = m.variants?.[0]?.thickness ?? 0;
+    if (!skatByThickness.has(th)) skatByThickness.set(th, []);
+    skatByThickness.get(th)!.push(m);
+  }
+  const thicknessGroups = Array.from(skatByThickness.entries()).sort((a, b) => a[0] - b[0]);
+
+  const renderSkatItem = (m: Material) => {
+    const t = store.getTypeById(m.typeId);
+    const firstVariant = m.variants?.[0];
+    const skatSize = firstVariant?.size || m.name;
+    return (
+      <button
+        key={m.id}
+        onMouseDown={() => onPick(m.id)}
+        className="w-full text-left px-3 py-2 hover:bg-[hsl(220,12%,16%)] flex items-center gap-2 transition-colors"
+      >
+        <span className="w-1.5 h-1.5 rounded-full shrink-0" style={{ backgroundColor: t?.color || '#888' }} />
+        <span className="flex-1 text-sm text-foreground truncate">{skatSize}</span>
+        <span className="text-[10px] bg-gold/15 text-gold px-1.5 py-0.5 rounded shrink-0">{m.variants!.length} кат.</span>
+      </button>
+    );
+  };
+
+  const renderOtherItem = (m: Material) => {
+    const t = store.getTypeById(m.typeId);
+    const mfr = store.getManufacturerById(m.manufacturerId);
+    return (
+      <button
+        key={m.id}
+        onMouseDown={() => onPick(m.id)}
+        className="w-full text-left px-3 py-2 hover:bg-[hsl(220,12%,16%)] flex items-center gap-2 transition-colors border-b border-[hsl(220,12%,14%)] last:border-0"
+      >
+        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t?.color || '#888' }} />
+        <span className="flex-1 text-sm text-foreground truncate">{m.name}</span>
+        {m.variants && m.variants.length > 0 && (
+          <span className="text-[10px] bg-gold/20 text-gold px-1.5 py-0.5 rounded shrink-0">{m.variants.length} разм.</span>
+        )}
+        {mfr && <span className="text-[hsl(var(--text-dim))] text-xs shrink-0">{mfr.name}</span>}
+        {(!m.variants || m.variants.length === 0) && (
+          <span className="text-gold text-xs font-mono shrink-0">
+            {fmt(store.calcPriceWithMarkup(m.basePrice, 'materials'))} ₽
+          </span>
+        )}
+      </button>
+    );
+  };
+
+  return (
+    <div
+      className="fixed z-[9999] bg-[hsl(220,16%,10%)] border border-border rounded shadow-2xl w-[480px] max-h-96 overflow-auto scrollbar-thin"
+      style={{ top: pos.top, left: pos.left }}
+    >
+      {/* СКАТ — сгруппированы по толщине */}
+      {thicknessGroups.length > 0 && (
+        <>
+          {thicknessGroups.map(([thickness, mats]) => (
+            <div key={thickness}>
+              <div className="flex items-center gap-2 px-3 py-1.5 bg-[hsl(220,14%,13%)] border-b border-[hsl(220,12%,17%)] sticky top-0 z-10">
+                <span className="text-[10px] font-bold text-gold uppercase tracking-wider">СКАТ</span>
+                <span className="text-[10px] bg-[hsl(220,12%,20%)] text-[hsl(var(--text-dim))] px-2 py-0.5 rounded font-medium">
+                  МДФ {thickness}мм
+                </span>
+                <span className="text-[10px] text-[hsl(var(--text-muted))]">{mats.length} позиций</span>
+              </div>
+              <div>
+                {mats.map(renderSkatItem)}
+              </div>
+            </div>
+          ))}
+          {/* Разделитель если есть и другие материалы */}
+          {otherMats.length > 0 && (
+            <div className="border-t-2 border-[hsl(220,12%,18%)]" />
+          )}
+        </>
+      )}
+
+      {/* Остальные материалы */}
+      {otherMats.slice(0, 20 - skatMats.length).map(renderOtherItem)}
+    </div>
+  );
+}
+
 // Модалка выбора варианта (размера/толщины) для материалов с variants
 function VariantPicker({ material, onPick, onCancel }: {
   material: Material;
@@ -226,57 +321,12 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
                   ) : null;
                 })()}
                 {showSuggest && filteredMaterials.length > 0 && createPortal(
-                  <div
-                    className="fixed z-[9999] bg-[hsl(220,16%,10%)] border border-border rounded shadow-2xl w-[480px] max-h-80 overflow-auto scrollbar-thin"
-                    style={{ top: dropdownPos.top, left: dropdownPos.left }}
-                  >
-                    {filteredMaterials.slice(0, 20).map(m => {
-                      const t = store.getTypeById(m.typeId);
-                      const mfr = store.getManufacturerById(m.manufacturerId);
-                      const isSkat = m.article?.startsWith('skat__');
-                      const firstVariant = m.variants?.[0];
-                      // Для СКАТ берём полное описание из size первого варианта
-                      const skatSize = isSkat && firstVariant?.size ? firstVariant.size : null;
-                      const skatThickness = isSkat && firstVariant?.thickness ? `${firstVariant.thickness}мм` : null;
-                      return (
-                        <button
-                          key={m.id}
-                          onMouseDown={() => applyMaterial(m.id)}
-                          className="w-full text-left px-3 py-2 hover:bg-[hsl(220,12%,16%)] flex items-center gap-2 border-b border-[hsl(220,12%,14%)] last:border-0"
-                        >
-                          <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t?.color || '#888' }} />
-                          <div className="flex-1 min-w-0">
-                            {isSkat ? (
-                              // СКАТ: показываем тип · серия + толщина
-                              <>
-                                <div className="text-sm text-foreground truncate">{skatSize || m.name}</div>
-                                <div className="flex items-center gap-1.5 mt-0.5">
-                                  {skatThickness && (
-                                    <span className="text-[10px] bg-[hsl(220,12%,18%)] text-[hsl(var(--text-dim))] px-1.5 py-0.5 rounded font-medium">{skatThickness}</span>
-                                  )}
-                                  {mfr && <span className="text-[10px] text-[hsl(var(--text-muted))]">{mfr.name}</span>}
-                                  <span className="text-[10px] bg-gold/15 text-gold px-1.5 py-0.5 rounded">{m.variants!.length} кат.</span>
-                                </div>
-                              </>
-                            ) : (
-                              // Обычный материал
-                              <span className="text-sm text-foreground truncate block">{m.name}</span>
-                            )}
-                          </div>
-                          {!isSkat && m.variants && m.variants.length > 0 && (
-                            <span className="text-[10px] bg-gold/20 text-gold px-1.5 py-0.5 rounded shrink-0">
-                              {m.variants.length} разм.
-                            </span>
-                          )}
-                          {!isSkat && mfr && <span className="text-[hsl(var(--text-dim))] text-xs shrink-0">{mfr.name}</span>}
-                          {!isSkat && (!m.variants || m.variants.length === 0) && <>
-                            <span className="text-[hsl(var(--text-dim))] text-xs font-mono shrink-0">{fmt(m.basePrice)}</span>
-                            <span className="text-gold text-xs font-mono shrink-0">→ {fmt(store.calcPriceWithMarkup(m.basePrice, 'materials'))}</span>
-                          </>}
-                        </button>
-                      );
-                    })}
-                  </div>,
+                  <MaterialDropdown
+                    materials={filteredMaterials}
+                    pos={dropdownPos}
+                    store={store}
+                    onPick={applyMaterial}
+                  />,
                   document.body
                 )}
               </div>
