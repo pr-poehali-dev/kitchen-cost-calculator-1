@@ -252,7 +252,8 @@ const initialState: AppState = {
   savedBlocks: [],
 };
 
-const STORAGE_KEY = 'kuhni-pro-state-v3';
+const STORAGE_KEY = 'kuhni-pro-state-v4';
+const STORAGE_KEY_PREV = 'kuhni-pro-state-v3';
 
 const DEFAULT_VISIBLE_COLUMNS: CalcColumnKey[] = ['material', 'manufacturer', 'vendor', 'article', 'color', 'thickness', 'unit', 'qty', 'baseprice', 'price', 'total'];
 
@@ -287,54 +288,70 @@ function isValidMaterialTypes(arr: unknown[]): boolean {
     'id' in (arr[0] as object);
 }
 
+// Универсальный merge по id — пользовательские данные + новые из дефолтов
+function mergeById<T extends { id: string }>(userList: T[] | undefined, defaults: T[]): T[] {
+  const existing = userList || [];
+  const existingIds = new Set(existing.map(x => x.id));
+  const toAdd = defaults.filter(x => !existingIds.has(x.id));
+  return [...existing, ...toAdd];
+}
+
+function parseAndMerge(raw: string): AppState {
+  const parsed = JSON.parse(raw) as Partial<AppState>;
+
+  const validTypes = parsed.settings?.materialTypes?.length &&
+    isValidMaterialTypes(parsed.settings.materialTypes as unknown[])
+    ? parsed.settings.materialTypes
+    : DEFAULT_MATERIAL_TYPES;
+
+  const migratedExpenses = parsed.expenses
+    ? parsed.expenses.map(e => ({ ...e, enabled: e.enabled !== false }))
+    : initialState.expenses;
+
+  return {
+    manufacturers:   mergeById(parsed.manufacturers,  initialState.manufacturers),
+    vendors:         mergeById(parsed.vendors,         initialState.vendors),
+    materials:       mergeById(parsed.materials,       initialState.materials),
+    services:        parsed.services?.length ? parsed.services : initialState.services,
+    expenseGroups:   mergeById(parsed.expenseGroups,   initialState.expenseGroups),
+    expenses:        migratedExpenses,
+    settings: {
+      ...defaultSettings,
+      ...(parsed.settings || {}),
+      materialTypes: validTypes,
+      materialCategories: parsed.settings?.materialCategories?.length
+        ? parsed.settings.materialCategories
+        : DEFAULT_MATERIAL_CATEGORIES,
+    },
+    projects:        parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
+    activeProjectId: parsed.activeProjectId ?? initialState.activeProjectId,
+    templates:       parsed.templates  ?? initialState.templates,
+    savedBlocks:     parsed.savedBlocks ?? initialState.savedBlocks,
+  };
+}
+
 function loadState(): AppState {
+  // Сначала пробуем актуальный ключ v4
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved) as Partial<AppState>;
-      const validTypes = parsed.settings?.materialTypes?.length &&
-        isValidMaterialTypes(parsed.settings.materialTypes as unknown[])
-        ? parsed.settings.materialTypes
-        : DEFAULT_MATERIAL_TYPES;
+    if (saved) return parseAndMerge(saved);
+  } catch (e) {
+    console.error('[store] failed to load v4:', e);
+  }
 
-      // Мигрируем expenses: enabled=undefined → true (не трогаем пользовательские данные)
-      const migratedExpenses = parsed.expenses
-        ? parsed.expenses.map(e => ({ ...e, enabled: e.enabled !== false }))
-        : initialState.expenses;
-
-      // Универсальный merge: берём пользовательские записи + добавляем из initialState те, которых нет по id
-      // Это гарантирует что новые позиции из обновлений кода всегда попадут к пользователю
-      function mergeById<T extends { id: string }>(saved: T[] | undefined, defaults: T[]): T[] {
-        const existing = saved || [];
-        const existingIds = new Set(existing.map(x => x.id));
-        const toAdd = defaults.filter(x => !existingIds.has(x.id));
-        return [...existing, ...toAdd];
-      }
-
-      return {
-        manufacturers: mergeById(parsed.manufacturers, initialState.manufacturers),
-        vendors:       mergeById(parsed.vendors,       initialState.vendors),
-        materials:     mergeById(parsed.materials,     initialState.materials),
-        services:      parsed.services?.length      ? parsed.services      : initialState.services,
-        expenseGroups: mergeById(parsed.expenseGroups, initialState.expenseGroups),
-        expenses:      migratedExpenses,
-        settings: {
-          ...defaultSettings,
-          ...(parsed.settings || {}),
-          materialTypes: validTypes,
-          materialCategories: parsed.settings?.materialCategories?.length
-            ? parsed.settings.materialCategories
-            : DEFAULT_MATERIAL_CATEGORIES,
-        },
-        projects:        parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
-        activeProjectId: parsed.activeProjectId ?? initialState.activeProjectId,
-        templates:       parsed.templates  ?? initialState.templates,
-        savedBlocks:     parsed.savedBlocks ?? initialState.savedBlocks,
-      };
+  // Если v4 нет — мигрируем из v3, сохраняем проекты пользователя
+  try {
+    const prev = localStorage.getItem(STORAGE_KEY_PREV);
+    if (prev) {
+      const state = parseAndMerge(prev);
+      // Сразу сохраняем под новым ключом
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      return state;
     }
   } catch (e) {
-    void e;
+    console.error('[store] failed to migrate from v3:', e);
   }
+
   return initialState;
 }
 
