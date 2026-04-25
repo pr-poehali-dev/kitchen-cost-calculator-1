@@ -5,7 +5,8 @@ import { Modal } from '../BaseShared';
 import func2url from '../../../../backend/func2url.json';
 
 const PARSE_URL = (func2url as Record<string, string>)['parse-pricelist'];
-const SKAT_TYPE_ID = 'mt9'; // Фасад
+const SKAT_TYPE_ID = 'mt2'; // МДФ
+const SKAT_VENDOR_ID = 'v2'; // Специалист
 const CATEGORIES = ['1 кат', '2 кат', '3 кат', '4 кат', '5 кат'];
 
 export function skatArticle(section: string, subsection: string, facadeType: string): string {
@@ -103,6 +104,7 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
       return {
         name: item.facade_type,
         typeId: SKAT_TYPE_ID,
+        vendorId: SKAT_VENDOR_ID,
         thickness: item.thickness || undefined,
         article,
         categoryKey: item.subsection || undefined,
@@ -116,6 +118,9 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
       categories,
       materials
     );
+
+    // Патч уже существующих материалов СКАТ (если импорт был раньше)
+    store.patchSkatMaterials(SKAT_TYPE_ID, SKAT_VENDOR_ID);
 
     setResult(res);
     setImporting(false);

@@ -46,7 +46,7 @@ export function MaterialRow({ material, onEdit, onDelete }: {
       <span className="truncate text-foreground">{material.name}</span>
       <span className="text-xs text-[hsl(var(--text-dim))]">{material.thickness ? `${material.thickness}мм` : '—'}</span>
       <span className="text-xs text-[hsl(var(--text-dim))] truncate">{material.color || '—'}</span>
-      <span className="text-xs text-[hsl(var(--text-dim))]">{material.article || '—'}</span>
+      <span className="text-xs text-[hsl(var(--text-dim))] truncate max-w-0 min-w-0" title={material.article || ''}>{material.article || '—'}</span>
       <span className="text-right font-mono">{fmt(material.basePrice)} <span className="text-[hsl(var(--text-muted))] text-xs">/{material.unit}</span></span>
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
         <button onClick={onEdit} className="text-[hsl(var(--text-muted))] hover:text-foreground"><Icon name="Pencil" size={12} /></button>

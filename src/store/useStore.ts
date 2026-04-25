@@ -818,7 +818,7 @@ export function useStore() {
     manufacturer: Omit<Manufacturer, 'id'> & { existingId?: string },
     categories: Array<Omit<MaterialCategory, 'id'> & { key: string }>,
     materials: Array<{
-      name: string; typeId: string; thickness?: number; article: string;
+      name: string; typeId: string; vendorId?: string; thickness?: number; article: string;
       categoryKey?: string; unit: Unit;
       variants: Array<{ variantId: string; params: string; basePrice: number }>;
     }>
@@ -874,8 +874,8 @@ export function useStore() {
         } else {
           newMaterials.push({
             id: `m${ts}${i}`, manufacturerId: mfrId, categoryId: catId,
-            name: mat.name, typeId: mat.typeId, thickness: mat.thickness,
-            article: mat.article, unit: mat.unit, basePrice, variants,
+            name: mat.name, typeId: mat.typeId, vendorId: mat.vendorId,
+            thickness: mat.thickness, article: mat.article, unit: mat.unit, basePrice, variants,
           });
         }
       });
@@ -885,6 +885,20 @@ export function useStore() {
     });
 
     return { created, updated, skipped };
+  };
+
+  // Патч всех материалов СКАТ: тип и поставщик
+  const patchSkatMaterials = (typeId: string, vendorId: string): number => {
+    let count = 0;
+    setState(s => {
+      const newMaterials = s.materials.map(m => {
+        if (!m.article?.startsWith('skat__')) return m;
+        count++;
+        return { ...m, typeId, vendorId };
+      });
+      return { ...s, materials: newMaterials };
+    });
+    return count;
   };
 
   // Батчевое обновление цен СКАТ (все варианты сразу)
@@ -1308,7 +1322,7 @@ export function useStore() {
     createProject, deleteProject,
     addManufacturer, updateManufacturer, deleteManufacturer,
     addVendor, updateVendor, deleteVendor,
-    addMaterial, updateMaterial, deleteMaterial, importSkatBatch, updateSkatPrices,
+    addMaterial, updateMaterial, deleteMaterial, importSkatBatch, updateSkatPrices, patchSkatMaterials,
     addService, updateService, deleteService,
     addExpense, updateExpense, deleteExpense,
     addExpenseGroup, updateExpenseGroup, deleteExpenseGroup,

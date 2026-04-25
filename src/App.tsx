@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
+import { useStore } from '@/store/useStore';
 import HomePage from '@/pages/HomePage';
 import CalcPage from '@/pages/CalcPage';
 import BlocksPage from '@/pages/BlocksPage';
@@ -17,6 +18,12 @@ type Section = 'home' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | '
 export default function App() {
   const [section, setSection] = useState<Section>('home');
   const { state, login, logout, getToken } = useAuth();
+  const store = useStore();
+
+  // Одноразовый патч: назначить всем материалам СКАТ тип МДФ и поставщика Специалист
+  useEffect(() => {
+    store.patchSkatMaterials('mt2', 'v2');
+  }, []);
 
   if (state.status === 'loading') {
     return (
