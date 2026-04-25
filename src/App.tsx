@@ -16,9 +16,8 @@ type Section = 'home' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | '
 
 export default function App() {
   const [section, setSection] = useState<Section>('home');
-  const { state, login, register, logout, getToken } = useAuth();
+  const { state, login, logout, getToken } = useAuth();
 
-  // Загрузка
   if (state.status === 'loading') {
     return (
       <div className="min-h-screen bg-[hsl(220,16%,7%)] flex items-center justify-center">
@@ -30,32 +29,23 @@ export default function App() {
     );
   }
 
-  // Не авторизован
   if (state.status === 'unauthenticated') {
-    return <LoginPage onLogin={login} onRegister={register} />;
+    return <LoginPage onLogin={login} />;
   }
 
-  // Авторизован
   const user = state.user;
   const token = getToken() || '';
 
   return (
-    <>
-      <Layout
-        active={section}
-        onNav={setSection}
-        user={user}
-        onLogout={logout}
-      >
-        {section === 'home'     && <HomePage />}
-        {section === 'calc'     && <CalcPage />}
-        {section === 'blocks'   && <BlocksPage />}
-        {section === 'services' && <ServicesPage />}
-        {section === 'base'     && <BasePage />}
-        {section === 'expenses' && <ExpensesPage />}
-        {section === 'settings' && <SettingsPage />}
-        {section === 'users'    && <AdminPanel currentUser={user} token={token} inline />}
-      </Layout>
-    </>
+    <Layout active={section} onNav={setSection} user={user} onLogout={logout}>
+      {section === 'home'     && <HomePage />}
+      {section === 'calc'     && <CalcPage />}
+      {section === 'blocks'   && <BlocksPage />}
+      {section === 'services' && <ServicesPage />}
+      {section === 'base'     && <BasePage />}
+      {section === 'expenses' && <ExpensesPage />}
+      {section === 'settings' && <SettingsPage />}
+      {section === 'users'    && <AdminPanel currentUser={user} token={token} inline />}
+    </Layout>
   );
 }
