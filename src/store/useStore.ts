@@ -2,7 +2,7 @@ import { useState, useCallback } from 'react';
 import type {
   AppState, Manufacturer, Vendor, Material, Service, ExpenseItem, ExpenseGroup,
   CalcBlock, CalcRow, ServiceBlock, ServiceRow, Project, Settings,
-  MaterialType, MaterialCategory, CalcColumnKey, CalcTemplate
+  MaterialType, MaterialCategory, CalcColumnKey, CalcTemplate, SavedBlock
 } from './types';
 
 const DEFAULT_MATERIAL_TYPES: MaterialType[] = [
@@ -141,6 +141,7 @@ const initialState: AppState = {
       ],
     },
   ],
+  savedBlocks: [],
 };
 
 const STORAGE_KEY = 'kuhni-pro-state-v3';
@@ -199,6 +200,7 @@ function loadState(): AppState {
         manufacturers: parsed.manufacturers?.length ? parsed.manufacturers : initialState.manufacturers,
         vendors: parsed.vendors?.length ? parsed.vendors : initialState.vendors,
         templates: parsed.templates ?? initialState.templates,
+        savedBlocks: parsed.savedBlocks ?? initialState.savedBlocks,
         projects: parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
         // Группы расходов: берём пользовательские если есть, иначе дефолтные
         expenseGroups: parsed.expenseGroups?.length ? parsed.expenseGroups : initialState.expenseGroups,
@@ -748,6 +750,88 @@ export function useStore() {
     }));
   };
 
+  // ===== SAVED BLOCKS =====
+  const createSavedBlock = (name: string) => {
+    const id = `sb_${Date.now()}`;
+    const block: SavedBlock = {
+      id,
+      name,
+      allowedTypeIds: [],
+      visibleColumns: DEFAULT_VISIBLE_COLUMNS,
+      rows: [],
+      createdAt: new Date().toISOString().split('T')[0],
+    };
+    setState(s => ({ ...s, savedBlocks: [...(s.savedBlocks || []), block] }));
+    return id;
+  };
+
+  const updateSavedBlock = (blockId: string, data: Partial<SavedBlock>) => {
+    setState(s => ({
+      ...s,
+      savedBlocks: (s.savedBlocks || []).map(b => b.id === blockId ? { ...b, ...data } : b),
+    }));
+  };
+
+  const deleteSavedBlock = (blockId: string) => {
+    setState(s => ({ ...s, savedBlocks: (s.savedBlocks || []).filter(b => b.id !== blockId) }));
+  };
+
+  const addSavedBlockRow = (blockId: string) => {
+    const id = `r${Date.now()}`;
+    const newRow: CalcRow = { id, name: '', unit: 'м²', qty: 1, price: 0 };
+    setState(s => ({
+      ...s,
+      savedBlocks: (s.savedBlocks || []).map(b =>
+        b.id === blockId ? { ...b, rows: [...b.rows, newRow] } : b
+      ),
+    }));
+  };
+
+  const updateSavedBlockRow = (blockId: string, rowId: string, data: Partial<CalcRow>) => {
+    setState(s => ({
+      ...s,
+      savedBlocks: (s.savedBlocks || []).map(b =>
+        b.id === blockId
+          ? { ...b, rows: b.rows.map(r => r.id === rowId ? { ...r, ...data } : r) }
+          : b
+      ),
+    }));
+  };
+
+  const deleteSavedBlockRow = (blockId: string, rowId: string) => {
+    setState(s => ({
+      ...s,
+      savedBlocks: (s.savedBlocks || []).map(b =>
+        b.id === blockId ? { ...b, rows: b.rows.filter(r => r.id !== rowId) } : b
+      ),
+    }));
+  };
+
+  // Вставить сохранённый блок в проект (копирует строки с актуальными ценами)
+  const insertSavedBlockToProject = (projectId: string, savedBlockId: string) => {
+    const sb = (state.savedBlocks || []).find(b => b.id === savedBlockId);
+    if (!sb) return;
+    const id = `b${Date.now()}`;
+    const newBlock: CalcBlock = {
+      id,
+      name: sb.name,
+      allowedTypeIds: sb.allowedTypeIds,
+      visibleColumns: sb.visibleColumns,
+      rows: sb.rows.map(r => {
+        const mat = r.materialId ? state.materials.find(m => m.id === r.materialId) : undefined;
+        const basePrice = mat ? mat.basePrice : (r.basePrice ?? 0);
+        const price = mat ? calcPriceWithMarkup(mat.basePrice, 'materials') : r.price;
+        return {
+          ...r,
+          id: `r${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
+          basePrice,
+          price,
+        };
+      }),
+    };
+    updateProject(projectId, p => ({ ...p, blocks: [...p.blocks, newBlock] }));
+  };
+
   const addUnit = (unit: string) => {
     if (!unit.trim() || state.settings.units.includes(unit.trim())) return;
     setState(s => ({ ...s, settings: { ...s.settings, units: [...s.settings.units, unit.trim()] } }));
@@ -803,6 +887,9 @@ export function useStore() {
     addUnit, deleteUnit,
     moveBlock, moveServiceBlock,
     saveTemplate, loadTemplate, deleteTemplate, updateTemplate, overwriteTemplate,
+    createSavedBlock, updateSavedBlock, deleteSavedBlock,
+    addSavedBlockRow, updateSavedBlockRow, deleteSavedBlockRow,
+    insertSavedBlockToProject,
     setState: (updater: (s: AppState) => AppState) => setState(updater),
   };
 }

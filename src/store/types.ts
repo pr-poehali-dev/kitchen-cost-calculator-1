@@ -184,6 +184,17 @@ export interface CalcTemplate {
   }>;
 }
 
+// Сохранённый блок — шаблон с реальными строками материалов
+export interface SavedBlock {
+  id: string;
+  name: string;
+  note?: string;
+  allowedTypeIds: string[];
+  visibleColumns: CalcColumnKey[];
+  rows: CalcRow[];
+  createdAt: string;
+}
+
 export interface AppState {
   manufacturers: Manufacturer[];
   vendors: Vendor[];
@@ -195,4 +206,5 @@ export interface AppState {
   projects: Project[];
   activeProjectId: string | null;
   templates: CalcTemplate[];
+  savedBlocks: SavedBlock[];
 }
