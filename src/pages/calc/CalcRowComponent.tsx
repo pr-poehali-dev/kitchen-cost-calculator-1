@@ -122,7 +122,7 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
             );
           case 'qty':
             return (
-              <div key={col} className="flex items-center justify-end gap-1">
+              <div key={col} className="flex items-center justify-between gap-1">
                 <button
                   tabIndex={-1}
                   onClick={() => store.updateRow(projectId, blockId, row.id, { qty: Math.max(0, (row.qty || 0) - 1) })}

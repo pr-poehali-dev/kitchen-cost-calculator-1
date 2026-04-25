@@ -40,7 +40,7 @@ export const COLUMN_ALIGN: Record<CalcColumnKey, 'left' | 'center' | 'right'> = 
   color:        'left',
   thickness:    'center',
   unit:         'center',
-  qty:          'right',
+  qty:          'center',
   baseprice:    'right',
   price:        'right',
   total:        'right',
