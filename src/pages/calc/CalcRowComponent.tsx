@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '@/store/useStore';
 import type { CalcRow, CalcColumnKey, Material, MaterialVariant } from '@/store/types';
@@ -72,9 +72,17 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
   const [showSuggest, setShowSuggest] = useState(false);
   const [nameFilter, setNameFilter] = useState(row.name);
   const [variantPickerMat, setVariantPickerMat] = useState<Material | null>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setNameFilter(row.name); }, [row.name]);
+
+  const updatePos = useCallback(() => {
+    if (inputRef.current) {
+      const r = inputRef.current.getBoundingClientRect();
+      setDropdownPos({ top: r.bottom + window.scrollY + 4, left: r.left + window.scrollX });
+    }
+  }, []);
 
   const rowTotal = row.qty * row.price;
 
@@ -151,13 +159,16 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
                   ref={inputRef}
                   value={nameFilter}
                   onChange={e => { setNameFilter(e.target.value); store.updateRow(projectId, blockId, row.id, { name: e.target.value, materialId: undefined }); setShowSuggest(true); }}
-                  onFocus={() => setShowSuggest(true)}
+                  onFocus={() => { updatePos(); setShowSuggest(true); }}
                   onBlur={() => setTimeout(() => setShowSuggest(false), 160)}
                   placeholder="Выбрать материал..."
                   className="bg-transparent text-sm text-foreground w-full outline-none placeholder:text-[hsl(var(--text-muted))] border-b border-transparent focus:border-[hsl(var(--gold))]"
                 />
-                {showSuggest && filteredMaterials.length > 0 && (
-                  <div className="absolute left-0 top-full z-50 bg-[hsl(220,16%,10%)] border border-border rounded shadow-xl w-[480px] max-h-80 overflow-auto scrollbar-thin">
+                {showSuggest && filteredMaterials.length > 0 && createPortal(
+                  <div
+                    className="fixed z-[9999] bg-[hsl(220,16%,10%)] border border-border rounded shadow-2xl w-[480px] max-h-80 overflow-auto scrollbar-thin"
+                    style={{ top: dropdownPos.top, left: dropdownPos.left }}
+                  >
                     {filteredMaterials.slice(0, 20).map(m => {
                       const t = store.getTypeById(m.typeId);
                       const mfr = store.getManufacturerById(m.manufacturerId);
@@ -184,7 +195,8 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
                         </button>
                       );
                     })}
-                  </div>
+                  </div>,
+                  document.body
                 )}
               </div>
             );

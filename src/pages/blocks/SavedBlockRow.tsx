@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { useStore } from '@/store/useStore';
 import type { SavedBlock, CalcColumnKey } from '@/store/types';
 import Icon from '@/components/ui/icon';
@@ -17,7 +18,15 @@ export default function SavedBlockRow({ block, rowId, visibleCols, gridCols, cur
   const row = block.rows.find(r => r.id === rowId);
   const [nameFilter, setNameFilter] = useState(row?.name || '');
   const [showSuggest, setShowSuggest] = useState(false);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
   const inputRef = useRef<HTMLInputElement>(null);
+
+  const updatePos = useCallback(() => {
+    if (inputRef.current) {
+      const r = inputRef.current.getBoundingClientRect();
+      setDropdownPos({ top: r.bottom + window.scrollY + 4, left: r.left + window.scrollX });
+    }
+  }, []);
 
   useEffect(() => { setNameFilter(row?.name || ''); }, [row?.name]);
 
@@ -95,13 +104,16 @@ export default function SavedBlockRow({ block, rowId, visibleCols, gridCols, cur
                         upd({ name: e.target.value, materialId: undefined });
                         setShowSuggest(true);
                       }}
-                      onFocus={() => setShowSuggest(true)}
+                      onFocus={() => { updatePos(); setShowSuggest(true); }}
                       onBlur={() => setTimeout(() => setShowSuggest(false), 160)}
                       placeholder="Поиск материала..."
                       className="bg-transparent text-sm text-foreground w-full outline-none placeholder:text-[hsl(var(--text-muted))] border-b border-transparent focus:border-gold transition-colors"
                     />
-                    {showSuggest && filteredSuggestions.length > 0 && (
-                      <div className="absolute left-0 top-full z-50 bg-[hsl(220,16%,10%)] border border-border rounded shadow-xl w-[480px] max-h-80 overflow-auto scrollbar-thin">
+                    {showSuggest && filteredSuggestions.length > 0 && createPortal(
+                      <div
+                        className="fixed z-[9999] bg-[hsl(220,16%,10%)] border border-border rounded shadow-2xl w-[480px] max-h-80 overflow-auto scrollbar-thin"
+                        style={{ top: dropdownPos.top, left: dropdownPos.left }}
+                      >
                         {filteredSuggestions.slice(0, 20).map(m => {
                           const t = store.getTypeById(m.typeId);
                           const mfr = store.getManufacturerById(m.manufacturerId);
@@ -120,12 +132,13 @@ export default function SavedBlockRow({ block, rowId, visibleCols, gridCols, cur
                             </button>
                           );
                         })}
-                        {filteredSuggestions.length > 12 && (
+                        {filteredSuggestions.length > 20 && (
                           <div className="px-3 py-1.5 text-xs text-[hsl(var(--text-muted))] border-t border-border">
-                            ещё {filteredSuggestions.length - 12} — уточни запрос
+                            ещё {filteredSuggestions.length - 20} — уточни запрос
                           </div>
                         )}
-                      </div>
+                      </div>,
+                      document.body
                     )}
                   </div>
                 )}
