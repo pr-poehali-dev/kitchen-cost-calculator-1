@@ -274,22 +274,25 @@ function loadState(): AppState {
         ? parsed.expenses.map(e => ({ ...e, enabled: e.enabled !== false }))
         : initialState.expenses;
 
-      // Мерджим материалы: пользовательские + новые из initialState которых ещё нет
-      const existingIds = new Set((parsed.materials || []).map((m: { id: string }) => m.id));
-      const newMaterials = initialState.materials.filter(m => !existingIds.has(m.id));
-      const mergedMaterials = [...(parsed.materials || []), ...newMaterials];
+      // Универсальный merge: берём пользовательские записи + добавляем из initialState те, которых нет по id
+      // Это гарантирует что новые позиции из обновлений кода всегда попадут к пользователю
+      function mergeById<T extends { id: string }>(saved: T[] | undefined, defaults: T[]): T[] {
+        const existing = saved || [];
+        const existingIds = new Set(existing.map(x => x.id));
+        const toAdd = defaults.filter(x => !existingIds.has(x.id));
+        return [...existing, ...toAdd];
+      }
 
       return {
         ...initialState,
         ...parsed,
-        manufacturers: parsed.manufacturers?.length ? parsed.manufacturers : initialState.manufacturers,
-        vendors: parsed.vendors?.length ? parsed.vendors : initialState.vendors,
-        materials: mergedMaterials,
-        templates: parsed.templates ?? initialState.templates,
-        savedBlocks: parsed.savedBlocks ?? initialState.savedBlocks,
+        manufacturers: mergeById(parsed.manufacturers, initialState.manufacturers),
+        vendors:       mergeById(parsed.vendors,       initialState.vendors),
+        materials:     mergeById(parsed.materials,     initialState.materials),
+        templates:     parsed.templates ?? initialState.templates,
+        savedBlocks:   parsed.savedBlocks ?? initialState.savedBlocks,
         projects: parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
-        // Группы расходов: берём пользовательские если есть, иначе дефолтные
-        expenseGroups: parsed.expenseGroups?.length ? parsed.expenseGroups : initialState.expenseGroups,
+        expenseGroups: mergeById(parsed.expenseGroups, initialState.expenseGroups),
         expenses: migratedExpenses,
         settings: {
           ...defaultSettings,
