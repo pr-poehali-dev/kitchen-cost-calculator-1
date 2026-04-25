@@ -32,7 +32,16 @@
       "path": "/",
       "body": { "series": "xyz" },
       "expectedStatus": 400,
-      "expectedBody": { "error": "Unknown" },
+      "expectedBody": { "error": "Unknown series" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST skat - parse СКАТ 1 кат",
+      "method": "POST",
+      "path": "/",
+      "body": { "series": "skat", "category": "1 кат" },
+      "expectedStatus": 200,
+      "expectedBody": { "ok": true, "series": "skat" },
       "bodyMatcher": "partial"
     }
   ]

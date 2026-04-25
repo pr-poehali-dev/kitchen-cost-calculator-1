@@ -2,19 +2,23 @@ import json
 import re
 import urllib.request
 
-SHEET_ID = '1iUXAMLxwavErr11pwQROnkZX22RAxhiVb1THG_xNwQM'
-
-SERIES = {
+# ─── Slotex ───────────────────────────────────────────────────────────────────
+SLOTEX_SHEET_ID = '1iUXAMLxwavErr11pwQROnkZX22RAxhiVb1THG_xNwQM'
+SLOTEX_SERIES = {
     'e1': {'gid': '1989291696', 'name': 'Elga E1'},
     'e2': {'gid': '1539284672', 'name': 'Elga E2'},
     'e3': {'gid': '1324647373', 'name': 'Elga E3'},
     'k3': {'gid': '557309721',  'name': 'kapso K3'},
 }
 
+# ─── СКАТ ─────────────────────────────────────────────────────────────────────
+SKAT_SHEET_ID = '1O9WjIlUzQ4czzWIwVVlM5G77rn-MgAgLh4tgsbXi6Hs'
+SKAT_GID      = '1829594300'
+SKAT_CATEGORIES = ['1 кат', '2 кат', '3 кат', '4 кат', '5 кат']
+
 
 def parse_price(s: str) -> float:
     cleaned = re.sub(r'[^\d.]', '', s.replace(',', '.').replace('\u202f', '').replace('\xa0', '').replace(' ', ''))
-    # убираем лишние точки (оставляем только последнюю как десятичную)
     parts = cleaned.split('.')
     if len(parts) > 2:
         cleaned = ''.join(parts[:-1]) + '.' + parts[-1]
@@ -26,22 +30,35 @@ def parse_price(s: str) -> float:
 
 def norm_size(s: str) -> str:
     s = s.strip()
-    # заменяем разделители на ×
     s = re.sub(r'\s*[xхх×]\s*', '×', s, flags=re.IGNORECASE)
-    # убираем точки-разделители тысяч: 4.200 → 4200
     s = re.sub(r'(\d)\.(\d{3})\b', r'\1\2', s)
     s = re.sub(r'\s+', '', s)
     return s
 
 
-def fetch_csv(gid: str) -> str:
-    url = f'https://docs.google.com/spreadsheets/d/{SHEET_ID}/export?format=csv&gid={gid}'
+def fetch_csv(sheet_id: str, gid: str) -> str:
+    url = f'https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}'
     req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
     with urllib.request.urlopen(req, timeout=20) as resp:
         return resp.read().decode('utf-8')
 
 
-def parse_csv_prices(csv_text: str) -> list:
+def split_csv_line(line: str) -> list:
+    cells, in_q, cell = [], False, ''
+    for ch in line:
+        if ch == '"':
+            in_q = not in_q
+        elif ch == ',' and not in_q:
+            cells.append(cell.strip())
+            cell = ''
+        else:
+            cell += ch
+    cells.append(cell.strip())
+    return cells
+
+
+# ─── Парсер Slotex ────────────────────────────────────────────────────────────
+def parse_slotex(csv_text: str) -> list:
     results = []
     lines = csv_text.splitlines()
     header_found = False
@@ -49,16 +66,7 @@ def parse_csv_prices(csv_text: str) -> list:
     current_product = None
 
     for line in lines:
-        cells, in_q, cell = [], False, ''
-        for ch in line:
-            if ch == '"':
-                in_q = not in_q
-            elif ch == ',' and not in_q:
-                cells.append(cell.strip())
-                cell = ''
-            else:
-                cell += ch
-        cells.append(cell.strip())
+        cells = split_csv_line(line)
 
         if not header_found:
             row_lower = ','.join(cells).lower()
@@ -66,18 +74,12 @@ def parse_csv_prices(csv_text: str) -> list:
                 header_found = True
                 for i, c in enumerate(cells):
                     cl = c.lower()
-                    if 'продукт' in cl and col_product is None:
-                        col_product = i
-                    elif 'формат' in cl and col_format is None:
-                        col_format = i
-                    elif 'толщина' in cl and col_thickness is None:
-                        col_thickness = i
-                    elif 'подгиб' in cl and col_params is None:
-                        col_params = i
-                    elif 'ед' in cl and col_unit is None:
-                        col_unit = i
-                    elif 'оптовая' in cl and col_price is None:
-                        col_price = i
+                    if 'продукт' in cl and col_product is None:      col_product = i
+                    elif 'формат' in cl and col_format is None:      col_format = i
+                    elif 'толщина' in cl and col_thickness is None:  col_thickness = i
+                    elif 'подгиб' in cl and col_params is None:      col_params = i
+                    elif 'ед' in cl and col_unit is None:            col_unit = i
+                    elif 'оптовая' in cl and col_price is None:      col_price = i
             continue
 
         def g(idx):
@@ -109,7 +111,6 @@ def parse_csv_prices(csv_text: str) -> list:
 
         thickness = None
         if thickness_raw:
-            # "4,5/10/18" → берём все значения, но предпочитаем 10 для стеновых
             parts = re.split(r'[/,]', thickness_raw)
             candidates = []
             for p in parts:
@@ -118,7 +119,6 @@ def parse_csv_prices(csv_text: str) -> list:
                 except ValueError:
                     pass
             if candidates:
-                # для стеновых панелей берём 10, иначе первое
                 thickness = 10.0 if 10.0 in candidates else candidates[0]
 
         results.append({
@@ -133,10 +133,107 @@ def parse_csv_prices(csv_text: str) -> list:
     return results
 
 
+# ─── Парсер СКАТ ──────────────────────────────────────────────────────────────
+def parse_skat(csv_text: str, category: str = '1 кат') -> list:
+    """
+    Парсит прайс СКАТ. Структура:
+    row 0: заголовок "А"
+    row 1: "прайс от ...", "", "ед.изм.", "1 кат", "2 кат", "3 кат", "4 кат", "5 кат"
+    Далее секции: МДФ 16 ММ / МДФ 19 ММ / ...
+    Подсекции: тип фрезеровки (строки без цены и без ед.изм.)
+    Строки с данными: название, "", "м²", цена1, цена2, ...
+    """
+    results = []
+    lines = csv_text.splitlines()
+
+    # Определяем индекс нужной категории
+    cat_idx = None
+    thickness_section = ''
+    subsection = ''
+
+    for line in lines:
+        cells = split_csv_line(line)
+        if not cells:
+            continue
+
+        # Строка-заголовок категорий
+        if any(c.strip() == '1 кат' for c in cells):
+            for i, c in enumerate(cells):
+                if c.strip() == category:
+                    cat_idx = i
+                    break
+            continue
+
+        if cat_idx is None:
+            continue
+
+        def g(i):
+            return cells[i].strip() if i < len(cells) else ''
+
+        col0 = g(0)
+        col1 = g(1)
+        col2 = g(2)
+
+        # Пропускаем пустые строки
+        if not col0:
+            continue
+
+        # Секция толщины: "МДФ 16 ММ", "МДФ 19 ММ" и т.д. — нет цены, нет ед.изм.
+        if col2 == '' and all(g(i) == '' for i in range(3, 8)):
+            # Проверяем что похоже на секцию материала
+            if re.search(r'(МДФ|ДСП|фанер|ЛДСП)', col0, re.IGNORECASE):
+                thickness_section = col0.strip()
+                subsection = ''
+                continue
+
+        # Подсекция (тип серии/фрезеровки) — нет цены, нет ед.изм., нет "м²"
+        if col2 == '' and all(g(i) == '' for i in range(3, 8)):
+            subsection = col0.strip()
+            continue
+
+        # Строка с ценой: col2 == "м²" и есть числовая цена
+        price_raw = g(cat_idx) if cat_idx < len(cells) else ''
+        price = parse_price(price_raw)
+
+        if col2 in ('м²', 'м2', 'мм²') and price > 0:
+            # Формируем имя: "МДФ 16мм / серия / тип фасада"
+            parts = []
+            if thickness_section:
+                parts.append(thickness_section)
+            if subsection:
+                parts.append(subsection)
+            parts.append(col0)
+            name = ' / '.join(parts)
+
+            # Извлекаем толщину из секции, например "МДФ 16 ММ" → 16
+            thickness = None
+            m = re.search(r'(\d+)\s*[мМmM][мМmM]', thickness_section)
+            if m:
+                try:
+                    thickness = float(m.group(1))
+                except ValueError:
+                    pass
+
+            results.append({
+                'name': name,
+                'thickness_section': thickness_section,
+                'subsection': subsection,
+                'facade_type': col0,
+                'unit': 'м²',
+                'thickness': thickness,
+                'price': price,
+                'category': category,
+            })
+
+    return results
+
+
+# ─── Handler ──────────────────────────────────────────────────────────────────
 def handler(event: dict, context) -> dict:
     """
-    Загружает и парсит прайс Slotex по серии.
-    POST: { "series": "e1"|"e2"|"e3"|"k3" }
+    Загружает и парсит прайсы поставщиков.
+    Slotex: POST { "series": "e1"|"e2"|"e3"|"k3" }
+    СКАТ:   POST { "series": "skat", "category": "1 кат"|...|"5 кат" }
     GET: возвращает список доступных серий
     """
     cors = {'Access-Control-Allow-Origin': '*'}
@@ -150,23 +247,41 @@ def handler(event: dict, context) -> dict:
 
     if event.get('httpMethod') == 'GET':
         return {'statusCode': 200, 'headers': hdrs,
-                'body': json.dumps({'series': SERIES})}
+                'body': json.dumps({
+                    'series': SLOTEX_SERIES,
+                    'skat_categories': SKAT_CATEGORIES,
+                })}
 
     try:
         body = json.loads(event.get('body') or '{}')
         series_key = body.get('series', '').strip().lower()
 
-        if series_key not in SERIES:
-            return {'statusCode': 400, 'headers': hdrs,
-                    'body': json.dumps({'error': f'Unknown series. Use: {list(SERIES.keys())}'})}
+        # ── СКАТ ──
+        if series_key == 'skat':
+            category = body.get('category', '1 кат').strip()
+            if category not in SKAT_CATEGORIES:
+                return {'statusCode': 400, 'headers': hdrs,
+                        'body': json.dumps({'error': f'Неизвестная категория. Доступны: {SKAT_CATEGORIES}'})}
+            csv_text = fetch_csv(SKAT_SHEET_ID, SKAT_GID)
+            items = parse_skat(csv_text, category)
+            return {'statusCode': 200, 'headers': hdrs,
+                    'body': json.dumps({'ok': True, 'series': 'skat',
+                                        'series_name': f'СКАТ ({category})',
+                                        'category': category,
+                                        'count': len(items), 'items': items})}
 
-        gid = SERIES[series_key]['gid']
-        csv_text = fetch_csv(gid)
-        items = parse_csv_prices(csv_text)
+        # ── Slotex ──
+        if series_key not in SLOTEX_SERIES:
+            return {'statusCode': 400, 'headers': hdrs,
+                    'body': json.dumps({'error': f'Unknown series. Use: {list(SLOTEX_SERIES.keys())} or skat'})}
+
+        gid = SLOTEX_SERIES[series_key]['gid']
+        csv_text = fetch_csv(SLOTEX_SHEET_ID, gid)
+        items = parse_slotex(csv_text)
 
         return {'statusCode': 200, 'headers': hdrs,
                 'body': json.dumps({'ok': True, 'series': series_key,
-                                    'series_name': SERIES[series_key]['name'],
+                                    'series_name': SLOTEX_SERIES[series_key]['name'],
                                     'count': len(items), 'items': items})}
 
     except Exception as e:
