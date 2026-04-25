@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useStore } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
 import { fmt } from './calc/constants';
@@ -21,6 +21,15 @@ export default function CalcPage() {
   const [confirmDeleteProject, setConfirmDeleteProject] = useState<string | null>(null);
   const [hiddenSummaryRows, setHiddenSummaryRows] = useState<Set<string>>(new Set());
   const [showSummarySettings, setShowSummarySettings] = useState(false);
+  const [refreshed, setRefreshed] = useState(false);
+  const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const handleRefreshPrices = () => {
+    store.refreshProjectPrices(project!.id);
+    setRefreshed(true);
+    if (refreshTimer.current) clearTimeout(refreshTimer.current);
+    refreshTimer.current = setTimeout(() => setRefreshed(false), 2500);
+  };
 
   if (!project) {
     return (
@@ -108,6 +117,25 @@ export default function CalcPage() {
           <Icon name="Plus" size={14} /> Добавить блок материалов
         </button>
 
+        {/* Кнопка обновления цен */}
+        <div className="flex items-center justify-between px-4 py-3 bg-[hsl(220,14%,11%)] rounded border border-border">
+          <div className="text-sm text-[hsl(var(--text-dim))]">
+            <span className="font-medium text-foreground">Обновить розничные цены</span>
+            <span className="ml-2 text-xs text-[hsl(var(--text-muted))]">— пересчитать по текущим наценкам из Расходов</span>
+          </div>
+          <button
+            onClick={handleRefreshPrices}
+            className={`flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium transition-all shrink-0 ${
+              refreshed
+                ? 'bg-[hsl(140,50%,35%)] text-white'
+                : 'bg-[hsl(220,12%,20%)] text-foreground hover:bg-gold hover:text-[hsl(220,16%,8%)]'
+            }`}
+          >
+            <Icon name={refreshed ? 'Check' : 'RefreshCw'} size={14} />
+            {refreshed ? 'Обновлено' : 'Применить'}
+          </button>
+        </div>
+
         {/* Summary */}
         {(() => {
           const cur = store.settings.currency;
@@ -126,65 +154,46 @@ export default function CalcPage() {
             return map;
           };
 
-          // 1. Блоки материалов
+          // 1. Блоки материалов (price = розничная, наценка уже внутри)
           totals.blockExtras.forEach(b => {
             if (b.base <= 0) return;
             rows.push({ id: `block-${b.blockId}`, label: b.blockName, value: b.base });
             if (b.extra > 0) {
-              rows.push({ id: `block-extra-${b.blockId}`, label: '+ наценка на блок', value: b.extra, sign: '+', color: 'gold', indent: true });
+              rows.push({ id: `block-extra-${b.blockId}`, label: '+ надбавка на блок', value: b.extra, sign: '+', color: 'gold', indent: true });
             }
           });
 
-          // 2. Наценка на материалы (по группам)
-          if (totals.matMarkupAmount > 0) {
-            const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'materials');
-            Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
-              const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
-              const pct = grpItems.reduce((s, e) => s + e.value, 0);
-              const amt = Math.round(totals.rawMaterials * pct / 100);
-              if (amt > 0) rows.push({ id: `matMarkup-${gid}`, label: `${grp?.name ?? 'Наценка на материалы'} (${pct}%)`, value: amt, sign: '+', color: 'gold' });
-            });
-          }
-
-          // 3. Услуги
+          // 2. Услуги (price = розничная, наценка уже внутри)
           if (totalServices > 0) {
             rows.push({ id: 'services', label: 'Услуги', value: totalServices });
           }
 
-          // 4. Наценка на услуги (по группам)
-          if (totals.svcMarkupAmount > 0) {
-            const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'services');
-            Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
-              const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
-              const pct = grpItems.reduce((s, e) => s + e.value, 0);
-              const amt = Math.round(totals.rawServices * pct / 100);
-              if (amt > 0) rows.push({ id: `svcMarkup-${gid}`, label: `${grp?.name ?? 'Наценка на услуги'} (${pct}%)`, value: amt, sign: '+', color: 'gold' });
-            });
-          }
-
-          // 5. Наценка на итог (по группам)
+          // 3. Надбавка на итог целиком (markup/total — применяется поверх всей суммы)
           if (totals.totalMarkupAmount > 0) {
             const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
             Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
               const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
               const pct = grpItems.reduce((s, e) => s + e.value, 0);
               const amt = Math.round(totals.base * pct / 100);
-              if (amt > 0) rows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? 'Наценка на итог'} (${pct}%)`, value: amt, sign: '+', color: 'gold' });
+              if (amt > 0) rows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? 'Надбавка на итог'} (${pct}%)`, value: amt, sign: '+', color: 'gold' });
             });
           }
 
-          // 6. Процентные расходы (по группам)
+          // База для накладных = материалы + услуги + надбавки на блоки + надбавка на итог
+          const baseForOverhead = totals.base + totals.totalMarkupAmount + totals.blockExtraTotal;
+
+          // 4. Процентные накладные расходы (по группам)
           const percentItems = activeExp.filter(e => e.type === 'percent');
           if (percentItems.length > 0) {
             Object.entries(groupByGid(percentItems)).forEach(([gid, items]) => {
               const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
               const pct = items.reduce((s, e) => s + e.value, 0);
-              const amt = items.reduce((s, e) => s + Math.round(totals.base * e.value / 100), 0);
+              const amt = items.reduce((s, e) => s + Math.round(baseForOverhead * e.value / 100), 0);
               if (amt > 0) rows.push({ id: `percent-${gid}`, label: `${grp?.name ?? 'Расходы'} (${pct}%)`, value: amt, sign: '+', color: 'blue' });
             });
           }
 
-          // 7. Фиксированные расходы (по группам)
+          // 5. Фиксированные накладные расходы (по группам)
           const fixedItems = activeExp.filter(e => e.type === 'fixed');
           if (fixedItems.length > 0) {
             Object.entries(groupByGid(fixedItems)).forEach(([gid, items]) => {

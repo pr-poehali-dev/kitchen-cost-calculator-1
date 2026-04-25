@@ -265,34 +265,28 @@ export function useStore() {
     return Math.round(basePrice * (1 + fallback / 100));
   };
 
-  // Считает полный итог проекта с учётом всех включённых расходов
+  // Считает полный итог проекта с учётом всех включённых расходов.
+  // ВАЖНО: CalcRow.price — это уже розничная цена (с наценкой на материалы/услуги).
+  // Наценки markup/materials и markup/services используются ТОЛЬКО при подборе из базы (calcPriceWithMarkup).
+  // В итоговом расчёте эти наценки НЕ применяются повторно — иначе будет двойное начисление.
   const calcProjectTotals = (project: Project) => {
     const activeExpenses = state.expenses.filter(e => e.enabled !== false);
 
-    // Базовые суммы из строк (цены уже включают наценку через calcPriceWithMarkup при выборе из базы)
+    // Суммы из строк: price — розничная (уже с наценкой на материалы/услуги)
     const rawMaterials = project.blocks.reduce((sum, b) =>
       sum + b.rows.reduce((s, r) => s + r.qty * r.price, 0), 0);
     const rawServices = project.serviceBlocks.reduce((sum, b) =>
       sum + b.rows.reduce((s, r) => s + r.qty * r.price, 0), 0);
 
-    // Наценка markup/materials от активных расходов — применяется к сумме материалов
-    const matMarkupItems = activeExpenses.filter(e => e.type === 'markup' && e.applyTo === 'materials');
-    const matMarkupPct = matMarkupItems.reduce((s, e) => s + e.value, 0);
-    const matMarkupAmount = Math.round(rawMaterials * matMarkupPct / 100);
+    // base = розничная стоимость материалов + услуг (наценка уже внутри)
+    const base = rawMaterials + rawServices;
 
-    // Наценка markup/services — применяется к сумме услуг
-    const svcMarkupItems = activeExpenses.filter(e => e.type === 'markup' && e.applyTo === 'services');
-    const svcMarkupPct = svcMarkupItems.reduce((s, e) => s + e.value, 0);
-    const svcMarkupAmount = Math.round(rawServices * svcMarkupPct / 100);
-
-    const base = rawMaterials + rawServices + matMarkupAmount + svcMarkupAmount;
-
-    // Наценка на итог (markup/total)
+    // Наценка на итог целиком (markup/total) — дополнительная надбавка поверх всего
     const totalMarkupItems = activeExpenses.filter(e => e.type === 'markup' && e.applyTo === 'total');
     const totalMarkupPct = totalMarkupItems.reduce((s, e) => s + e.value, 0);
     const totalMarkupAmount = Math.round(base * totalMarkupPct / 100);
 
-    // Наценки на конкретные блоки (markup/block)
+    // Наценки на конкретные блоки (markup/block) — дополнительная надбавка на блок
     const blockExtras = project.blocks.map(b => {
       const blockBase = b.rows.reduce((s, r) => s + r.qty * r.price, 0);
       const blockMarkups = activeExpenses.filter(e =>
@@ -303,24 +297,23 @@ export function useStore() {
       return { blockId: b.id, blockName: b.name, base: blockBase, extra };
     });
 
-    // Процентные расходы (percent — от base с наценками)
-    const percentExpenses = activeExpenses.filter(e => e.type === 'percent');
-    const percentAmount = percentExpenses.reduce((s, e) => s + Math.round(base * e.value / 100), 0);
+    // База для накладных расходов = base + наценка на итог + надбавки на блоки
+    const blockExtraTotal = blockExtras.reduce((s, b) => s + b.extra, 0);
+    const baseForOverhead = base + totalMarkupAmount + blockExtraTotal;
 
-    // Фиксированные расходы
+    // Процентные накладные расходы (percent) — от итоговой базы с наценками
+    const percentExpenses = activeExpenses.filter(e => e.type === 'percent');
+    const percentAmount = percentExpenses.reduce((s, e) => s + Math.round(baseForOverhead * e.value / 100), 0);
+
+    // Фиксированные накладные расходы
     const fixedExpenses = activeExpenses.filter(e => e.type === 'fixed');
     const fixedAmount = fixedExpenses.reduce((s, e) => s + e.value, 0);
 
-    const blockExtraTotal = blockExtras.reduce((s, b) => s + b.extra, 0);
-    const grandTotal = base + totalMarkupAmount + percentAmount + fixedAmount + blockExtraTotal;
+    const grandTotal = baseForOverhead + percentAmount + fixedAmount;
 
     return {
       rawMaterials,
       rawServices,
-      matMarkupAmount,
-      matMarkupPct,
-      svcMarkupAmount,
-      svcMarkupPct,
       base,
       totalMarkupAmount,
       totalMarkupPct,
@@ -409,6 +402,36 @@ export function useStore() {
       blocks: p.blocks.map(b =>
         b.id === blockId ? { ...b, rows: b.rows.filter(r => r.id !== rowId) } : b
       )
+    }));
+  };
+
+  // Обновляет розничные цены всех строк проекта по текущим наценкам из расходов.
+  // Обновляются только строки, привязанные к материалу из базы (materialId присутствует).
+  // Строки с ценой вручную (без materialId) не трогаются.
+  const refreshProjectPrices = (projectId: string) => {
+    updateProject(projectId, p => ({
+      ...p,
+      blocks: p.blocks.map(b => ({
+        ...b,
+        rows: b.rows.map(r => {
+          if (!r.materialId) return r; // ручная строка — не трогаем
+          const mat = state.materials.find(m => m.id === r.materialId);
+          if (!mat) return r;
+          const newBasePrice = mat.basePrice;
+          const newPrice = calcPriceWithMarkup(newBasePrice, 'materials');
+          return { ...r, basePrice: newBasePrice, price: newPrice };
+        }),
+      })),
+      serviceBlocks: p.serviceBlocks.map(sb => ({
+        ...sb,
+        rows: sb.rows.map(r => {
+          if (!r.serviceId) return r; // ручная строка — не трогаем
+          const svc = state.services.find(s => s.id === r.serviceId);
+          if (!svc) return r;
+          const newPrice = calcPriceWithMarkup(svc.basePrice, 'services');
+          return { ...r, price: newPrice };
+        }),
+      })),
     }));
   };
 
@@ -632,10 +655,11 @@ export function useStore() {
         id: blockId,
         name: tb.name,
         allowedTypeIds: tb.allowedTypeIds,
-        visibleColumns: tb.visibleColumns,
+        visibleColumns: tb.visibleColumns?.includes('baseprice') ? tb.visibleColumns : DEFAULT_VISIBLE_COLUMNS,
         rows: tb.rows.map(tr => {
           const mat = tr.materialId ? state.materials.find(m => m.id === tr.materialId) : undefined;
-          const price = mat ? Math.round(mat.basePrice * (1 + (state.expenses.find(e => e.type === 'markup' && e.applyTo === 'materials')?.value ?? state.settings.markupMaterial) / 100)) : 0;
+          const basePrice = mat ? mat.basePrice : 0;
+          const price = mat ? calcPriceWithMarkup(mat.basePrice, 'materials') : 0;
           return {
             id: `r${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
             name: tr.name,
@@ -648,31 +672,28 @@ export function useStore() {
             thickness: mat?.thickness,
             unit: tr.unit,
             qty: tr.qty,
+            basePrice,
             price,
           } as CalcRow;
         }),
       };
     });
-    const newServiceBlocks = template.serviceBlocks.map(tsb => {
-      const sv = tsb.rows[0]?.serviceId ? state.services.find(s => s.id === tsb.rows[0].serviceId) : undefined;
-      void sv;
-      return {
-        id: `sb${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
-        name: tsb.name,
-        rows: tsb.rows.map(tr => {
-          const service = tr.serviceId ? state.services.find(s => s.id === tr.serviceId) : undefined;
-          const price = service ? Math.round(service.basePrice * (1 + (state.expenses.find(e => e.type === 'markup' && e.applyTo === 'services')?.value ?? state.settings.markupService) / 100)) : 0;
-          return {
-            id: `sr${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
-            name: tr.name,
-            serviceId: tr.serviceId,
-            unit: tr.unit,
-            qty: tr.qty,
-            price,
-          };
-        }),
-      };
-    });
+    const newServiceBlocks = template.serviceBlocks.map(tsb => ({
+      id: `sb${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
+      name: tsb.name,
+      rows: tsb.rows.map(tr => {
+        const service = tr.serviceId ? state.services.find(s => s.id === tr.serviceId) : undefined;
+        const price = service ? calcPriceWithMarkup(service.basePrice, 'services') : 0;
+        return {
+          id: `sr${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
+          name: tr.name,
+          serviceId: tr.serviceId,
+          unit: tr.unit,
+          qty: tr.qty,
+          price,
+        };
+      }),
+    }));
     setState(s => ({
       ...s,
       projects: s.projects.map(p => p.id === projectId
@@ -775,6 +796,7 @@ export function useStore() {
     addService, updateService, deleteService,
     addExpense, updateExpense, deleteExpense,
     addExpenseGroup, updateExpenseGroup, deleteExpenseGroup,
+    refreshProjectPrices,
     updateSettings,
     addMaterialType, updateMaterialType, deleteMaterialType,
     addMaterialCategory, updateMaterialCategory, deleteMaterialCategory,

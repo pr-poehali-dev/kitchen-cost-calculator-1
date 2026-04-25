@@ -164,52 +164,45 @@ export default function ExpensesPage() {
             <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))] mb-3">Влияние на расчёт</div>
             <div className="space-y-1.5 text-sm">
               <div className="flex justify-between text-[hsl(var(--text-dim))]">
-                <span>Материалы</span>
+                <span>Материалы (розн.)</span>
                 <span className="font-mono">{fmt(totals.rawMaterials)} {store.settings.currency}</span>
               </div>
-              {totals.matMarkupAmount > 0 && (
-                <div className="flex justify-between text-gold">
-                  <span>Наценка на материалы ({totals.matMarkupPct}%)</span>
-                  <span className="font-mono">+{fmt(totals.matMarkupAmount)} {store.settings.currency}</span>
-                </div>
-              )}
               <div className="flex justify-between text-[hsl(var(--text-dim))]">
-                <span>Услуги</span>
+                <span>Услуги (розн.)</span>
                 <span className="font-mono">{fmt(totals.rawServices)} {store.settings.currency}</span>
               </div>
-              {totals.svcMarkupAmount > 0 && (
-                <div className="flex justify-between text-gold">
-                  <span>Наценка на услуги ({totals.svcMarkupPct}%)</span>
-                  <span className="font-mono">+{fmt(totals.svcMarkupAmount)} {store.settings.currency}</span>
-                </div>
-              )}
               {totals.blockExtraTotal > 0 && (
                 <div className="flex justify-between text-gold">
-                  <span>Наценки на блоки</span>
+                  <span>Надбавки на блоки</span>
                   <span className="font-mono">+{fmt(totals.blockExtraTotal)} {store.settings.currency}</span>
                 </div>
               )}
               {totals.totalMarkupAmount > 0 && (
                 <div className="flex justify-between text-gold">
-                  <span>Наценка на итог ({totals.totalMarkupPct}%)</span>
+                  <span>Надбавка на итог ({totals.totalMarkupPct}%)</span>
                   <span className="font-mono">+{fmt(totals.totalMarkupAmount)} {store.settings.currency}</span>
                 </div>
               )}
               {totals.percentAmount > 0 && (
                 <div className="flex justify-between text-[hsl(200,60%,70%)]">
-                  <span>Процентные расходы</span>
+                  <span>Накладные расходы (%)</span>
                   <span className="font-mono">+{fmt(totals.percentAmount)} {store.settings.currency}</span>
                 </div>
               )}
               {totals.fixedAmount > 0 && (
                 <div className="flex justify-between text-[hsl(var(--text-dim))]">
-                  <span>Постоянные расходы</span>
+                  <span>Фиксированные расходы</span>
                   <span className="font-mono">+{fmt(totals.fixedAmount)} {store.settings.currency}</span>
                 </div>
               )}
-              <div className="flex justify-between font-semibold text-base border-t border-border pt-2 mt-1">
-                <span>Итого с расходами</span>
-                <span className="font-mono text-gold">{fmt(totals.grandTotal)} {store.settings.currency}</span>
+              <div className="border-t border-border mt-2 pt-2 space-y-1">
+                <div className="flex justify-between text-xs text-[hsl(var(--text-muted))]">
+                  <span>Наценка на материалы/услуги заложена в розничные цены строк</span>
+                </div>
+                <div className="flex justify-between font-semibold text-base pt-1">
+                  <span>Итого с расходами</span>
+                  <span className="font-mono text-gold">{fmt(totals.grandTotal)} {store.settings.currency}</span>
+                </div>
               </div>
             </div>
           </div>
