@@ -1,6 +1,6 @@
 import Icon from '@/components/ui/icon';
 
-type Section = 'calc' | 'services' | 'base' | 'expenses' | 'settings';
+type Section = 'home' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings';
 
 interface LayoutProps {
   active: Section;
@@ -9,10 +9,12 @@ interface LayoutProps {
 }
 
 const NAV = [
-  { id: 'calc' as Section, label: 'Расчёт', icon: 'Calculator' },
-  { id: 'services' as Section, label: 'Услуги', icon: 'Wrench' },
-  { id: 'base' as Section, label: 'База', icon: 'Database' },
-  { id: 'expenses' as Section, label: 'Расходы', icon: 'TrendingUp' },
+  { id: 'home'     as Section, label: 'Главная',   icon: 'House' },
+  { id: 'calc'     as Section, label: 'Расчёт',    icon: 'Calculator' },
+  { id: 'blocks'   as Section, label: 'Блоки',     icon: 'Layers' },
+  { id: 'services' as Section, label: 'Услуги',    icon: 'Wrench' },
+  { id: 'base'     as Section, label: 'База',       icon: 'Database' },
+  { id: 'expenses' as Section, label: 'Расходы',   icon: 'TrendingUp' },
   { id: 'settings' as Section, label: 'Настройки', icon: 'Settings' },
 ];
 
@@ -44,7 +46,7 @@ export default function Layout({ active, onNav, children }: LayoutProps) {
           <div className="text-[hsl(var(--text-muted))] text-xs">v1.0 · 2026</div>
         </div>
       </aside>
-      <main className="flex-1 overflow-auto scrollbar-thin">
+      <main className="flex-1 overflow-hidden flex flex-col">
         {children}
       </main>
     </div>
