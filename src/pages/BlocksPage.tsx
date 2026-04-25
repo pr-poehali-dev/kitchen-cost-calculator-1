@@ -80,9 +80,20 @@ export default function BlocksPage() {
     setShowNewForm(false);
   };
 
-  const handleInsertToProject = (block: SavedBlock, targetProjectId: string) => {
-    store.insertSavedBlockToProject(targetProjectId, block.id);
+  const [pickerStep, setPickerStep] = useState<'project' | 'assembly'>('project');
+  const [pickerProjectId, setPickerProjectId] = useState<string | null>(null);
+
+  const handleInsertToProject = (block: SavedBlock, targetProjectId: string, assemblyId?: string) => {
+    store.insertSavedBlockToProject(targetProjectId, block.id, assemblyId);
     setShowProjectPicker(false);
+    setPickerStep('project');
+    setPickerProjectId(null);
+  };
+
+  const openProjectPicker = () => {
+    setPickerStep('project');
+    setPickerProjectId(null);
+    setShowProjectPicker(v => !v);
   };
 
   return (
@@ -157,7 +168,7 @@ export default function BlocksPage() {
                 {store.projects.length > 0 ? (
                   <div className="relative">
                     <button
-                      onClick={() => setShowProjectPicker(v => !v)}
+                      onClick={openProjectPicker}
                       className="flex items-center gap-1.5 px-3 py-1.5 bg-gold text-[hsl(220,16%,8%)] rounded text-xs font-semibold hover:opacity-90 transition-opacity"
                     >
                       <Icon name="FolderInput" size={13} />
@@ -166,22 +177,66 @@ export default function BlocksPage() {
                     </button>
                     {showProjectPicker && (
                       <>
-                        <div className="fixed inset-0 z-40" onClick={() => setShowProjectPicker(false)} />
-                        <div className="absolute right-0 top-full mt-1 z-50 bg-[hsl(220,14%,13%)] border border-border rounded-lg shadow-xl min-w-[200px] py-1 overflow-hidden">
-                          <div className="px-3 py-1.5 text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider border-b border-border mb-1">
-                            Выбери проект
-                          </div>
-                          {store.projects.map(p => (
-                            <button
-                              key={p.id}
-                              onClick={() => handleInsertToProject(selected, p.id)}
-                              className={`w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2 ${p.id === activeProjectId ? 'text-gold' : 'text-foreground'}`}
-                            >
-                              <Icon name="FolderOpen" size={13} className="shrink-0 opacity-60" />
-                              <span className="truncate">{p.object || p.client || 'Без названия'}</span>
-                              {p.id === activeProjectId && <span className="ml-auto text-xs opacity-60 shrink-0">активный</span>}
-                            </button>
-                          ))}
+                        <div className="fixed inset-0 z-40" onClick={() => { setShowProjectPicker(false); setPickerStep('project'); }} />
+                        <div className="absolute right-0 top-full mt-1 z-50 bg-[hsl(220,14%,13%)] border border-border rounded-lg shadow-xl min-w-[220px] py-1 overflow-hidden">
+
+                          {pickerStep === 'project' && (
+                            <>
+                              <div className="px-3 py-1.5 text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider border-b border-border mb-1">
+                                Выбери проект
+                              </div>
+                              {store.projects.map(p => (
+                                <button
+                                  key={p.id}
+                                  onClick={() => {
+                                    const assemblies = selected.assemblies || [];
+                                    if (assemblies.length > 0) {
+                                      setPickerProjectId(p.id);
+                                      setPickerStep('assembly');
+                                    } else {
+                                      handleInsertToProject(selected, p.id);
+                                    }
+                                  }}
+                                  className={`w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2 ${p.id === activeProjectId ? 'text-gold' : 'text-foreground'}`}
+                                >
+                                  <Icon name="FolderOpen" size={13} className="shrink-0 opacity-60" />
+                                  <span className="truncate">{p.object || p.client || 'Без названия'}</span>
+                                  {p.id === activeProjectId && <span className="ml-auto text-xs opacity-60 shrink-0">активный</span>}
+                                </button>
+                              ))}
+                            </>
+                          )}
+
+                          {pickerStep === 'assembly' && pickerProjectId && (
+                            <>
+                              <div className="px-3 py-1.5 text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider border-b border-border flex items-center gap-2">
+                                <button onClick={() => setPickerStep('project')} className="hover:text-foreground transition-colors">
+                                  <Icon name="ChevronLeft" size={12} />
+                                </button>
+                                Выбери сборку
+                              </div>
+                              <button
+                                onClick={() => handleInsertToProject(selected, pickerProjectId)}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2 text-[hsl(var(--text-dim))]"
+                              >
+                                <Icon name="Layers" size={13} className="shrink-0 opacity-60" />
+                                <span>Все строки блока</span>
+                              </button>
+                              <div className="border-t border-border my-1" />
+                              {(selected.assemblies || []).map(asm => (
+                                <button
+                                  key={asm.id}
+                                  onClick={() => handleInsertToProject(selected, pickerProjectId, asm.id)}
+                                  className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2 text-foreground"
+                                >
+                                  <Icon name="Package" size={13} className="shrink-0 opacity-60" />
+                                  <span className="truncate">{asm.name}</span>
+                                  <span className="ml-auto text-xs text-[hsl(var(--text-muted))] shrink-0">{asm.rows.length} стр.</span>
+                                </button>
+                              ))}
+                            </>
+                          )}
+
                         </div>
                       </>
                     )}
