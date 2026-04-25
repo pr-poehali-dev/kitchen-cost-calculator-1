@@ -134,22 +134,19 @@ def parse_slotex(csv_text: str) -> list:
 
 
 # ─── Парсер СКАТ ──────────────────────────────────────────────────────────────
-def parse_skat(csv_text: str, category: str = '1 кат') -> list:
+def parse_skat_all(csv_text: str) -> list:
     """
-    Парсит прайс СКАТ. Структура:
-    row 0: заголовок "А"
-    row 1: "прайс от ...", "", "ед.изм.", "1 кат", "2 кат", "3 кат", "4 кат", "5 кат"
-    Далее секции: МДФ 16 ММ / МДФ 19 ММ / ...
-    Подсекции: тип фрезеровки (строки без цены и без ед.изм.)
-    Строки с данными: название, "", "м²", цена1, цена2, ...
+    Парсит прайс СКАТ, возвращает все 5 категорий цен сразу.
+    Каждая запись содержит prices: {'1 кат': X, '2 кат': Y, ...}
     """
     results = []
     lines = csv_text.splitlines()
 
-    # Определяем индекс нужной категории
-    cat_idx = None
+    # Индексы колонок категорий
+    cat_indices = {}   # '1 кат' -> col_index
     thickness_section = ''
     subsection = ''
+    header_found = False
 
     for line in lines:
         cells = split_csv_line(line)
@@ -158,54 +155,48 @@ def parse_skat(csv_text: str, category: str = '1 кат') -> list:
 
         # Строка-заголовок категорий
         if any(c.strip() == '1 кат' for c in cells):
+            header_found = True
             for i, c in enumerate(cells):
-                if c.strip() == category:
-                    cat_idx = i
-                    break
+                if c.strip() in SKAT_CATEGORIES:
+                    cat_indices[c.strip()] = i
             continue
 
-        if cat_idx is None:
+        if not header_found:
             continue
 
         def g(i):
             return cells[i].strip() if i < len(cells) else ''
 
         col0 = g(0)
-        col1 = g(1)
         col2 = g(2)
 
-        # Пропускаем пустые строки
         if not col0:
             continue
 
-        # Секция толщины: "МДФ 16 ММ", "МДФ 19 ММ" и т.д. — нет цены, нет ед.изм.
+        # Секция толщины (МДФ 16 ММ и т.д.)
         if col2 == '' and all(g(i) == '' for i in range(3, 8)):
-            # Проверяем что похоже на секцию материала
             if re.search(r'(МДФ|ДСП|фанер|ЛДСП)', col0, re.IGNORECASE):
                 thickness_section = col0.strip()
                 subsection = ''
                 continue
 
-        # Подсекция (тип серии/фрезеровки) — нет цены, нет ед.изм., нет "м²"
+        # Подсекция (серия фрезеровки)
         if col2 == '' and all(g(i) == '' for i in range(3, 8)):
             subsection = col0.strip()
             continue
 
-        # Строка с ценой: col2 == "м²" и есть числовая цена
-        price_raw = g(cat_idx) if cat_idx < len(cells) else ''
-        price = parse_price(price_raw)
+        # Строка с ценами
+        if col2 in ('м²', 'м2', 'мм²'):
+            prices = {}
+            for cat, idx in cat_indices.items():
+                p = parse_price(g(idx))
+                if p > 0:
+                    prices[cat] = p
 
-        if col2 in ('м²', 'м2', 'мм²') and price > 0:
-            # Формируем имя: "МДФ 16мм / серия / тип фасада"
-            parts = []
-            if thickness_section:
-                parts.append(thickness_section)
-            if subsection:
-                parts.append(subsection)
-            parts.append(col0)
-            name = ' / '.join(parts)
+            if not prices:
+                continue
 
-            # Извлекаем толщину из секции, например "МДФ 16 ММ" → 16
+            # Толщина из секции
             thickness = None
             m = re.search(r'(\d+)\s*[мМmM][мМmM]', thickness_section)
             if m:
@@ -215,17 +206,35 @@ def parse_skat(csv_text: str, category: str = '1 кат') -> list:
                     pass
 
             results.append({
-                'name': name,
                 'thickness_section': thickness_section,
                 'subsection': subsection,
                 'facade_type': col0,
                 'unit': 'м²',
                 'thickness': thickness,
-                'price': price,
-                'category': category,
+                'prices': prices,   # {'1 кат': 4417, '2 кат': 4906, ...}
             })
 
     return results
+
+
+def parse_skat(csv_text: str, category: str = '1 кат') -> list:
+    """Обратная совместимость — возвращает позиции одной категории."""
+    all_items = parse_skat_all(csv_text)
+    result = []
+    for item in all_items:
+        price = item['prices'].get(category, 0)
+        if price > 0:
+            result.append({
+                'name': f"{item['thickness_section']} / {item['subsection']} / {item['facade_type']}".replace(' /  / ', ' / '),
+                'thickness_section': item['thickness_section'],
+                'subsection': item['subsection'],
+                'facade_type': item['facade_type'],
+                'unit': item['unit'],
+                'thickness': item['thickness'],
+                'price': price,
+                'category': category,
+            })
+    return result
 
 
 # ─── Handler ──────────────────────────────────────────────────────────────────
@@ -256,7 +265,15 @@ def handler(event: dict, context) -> dict:
         body = json.loads(event.get('body') or '{}')
         series_key = body.get('series', '').strip().lower()
 
-        # ── СКАТ ──
+        # ── СКАТ all categories ──
+        if series_key == 'skat_all':
+            csv_text = fetch_csv(SKAT_SHEET_ID, SKAT_GID)
+            items = parse_skat_all(csv_text)
+            return {'statusCode': 200, 'headers': hdrs,
+                    'body': json.dumps({'ok': True, 'series': 'skat_all',
+                                        'count': len(items), 'items': items})}
+
+        # ── СКАТ одна категория ──
         if series_key == 'skat':
             category = body.get('category', '1 кат').strip()
             if category not in SKAT_CATEGORIES:

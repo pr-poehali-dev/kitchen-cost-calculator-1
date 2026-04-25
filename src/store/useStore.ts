@@ -1,6 +1,6 @@
 import { useState, useCallback } from 'react';
 import type {
-  AppState, Manufacturer, Vendor, Material, Service, ExpenseItem, ExpenseGroup,
+  AppState, Manufacturer, Vendor, Material, MaterialVariant, Service, ExpenseItem, ExpenseGroup,
   CalcBlock, CalcRow, ServiceBlock, ServiceRow, Project, Settings,
   MaterialType, MaterialCategory, CalcColumnKey, CalcTemplate, SavedBlock
 } from './types';
@@ -813,20 +813,25 @@ export function useStore() {
     setState(s => ({ ...s, materials: [...s.materials, { ...material, id }] }));
   };
 
-  // Батчевый импорт СКАТ — всё в одном setState чтобы ID были согласованы
+  // Батчевый импорт СКАТ — все 141 материал с 5 вариантами цен в одном setState
   const importSkatBatch = (
     manufacturer: Omit<Manufacturer, 'id'> & { existingId?: string },
     categories: Array<Omit<MaterialCategory, 'id'> & { key: string }>,
-    materials: Array<Omit<Material, 'id' | 'manufacturerId' | 'categoryId'> & { categoryKey?: string }>
-  ): { created: number; skipped: number } => {
+    materials: Array<{
+      name: string; typeId: string; thickness?: number; article: string;
+      categoryKey?: string; unit: Unit;
+      variants: Array<{ variantId: string; params: string; basePrice: number }>;
+    }>
+  ): { created: number; updated: number; skipped: number } => {
     const ts = Date.now();
-    // Считаем результат по текущему state (до setState)
     const existingArticles = new Set(state.materials.map(m => m.article).filter(Boolean));
-    let created = 0;
-    let skipped = 0;
+    let created = 0; let updated = 0; let skipped = 0;
     materials.forEach(mat => {
-      if (mat.article && existingArticles.has(mat.article)) skipped++;
-      else created++;
+      const ex = state.materials.find(m => m.article === mat.article);
+      if (ex) {
+        if (ex.variants && ex.variants.length === mat.variants.length) skipped++;
+        else updated++;
+      } else created++;
     });
 
     setState(s => {
@@ -839,14 +844,13 @@ export function useStore() {
         next = { ...next, manufacturers: [...next.manufacturers, { ...manufacturer, id: mfrId }] };
       }
 
-      // 2. Категории
+      // 2. Категории серий (subsection)
       const catIdMap: Record<string, string> = {};
       const newCats = [...(next.settings.materialCategories || [])];
       categories.forEach((cat, i) => {
         const existing = newCats.find(c => c.note === cat.note);
-        if (existing) {
-          catIdMap[cat.key] = existing.id;
-        } else {
+        if (existing) { catIdMap[cat.key] = existing.id; }
+        else {
           const catId = `mc${ts}${i}`;
           catIdMap[cat.key] = catId;
           newCats.push({ ...cat, id: catId });
@@ -854,20 +858,56 @@ export function useStore() {
       });
       next = { ...next, settings: { ...next.settings, materialCategories: newCats } };
 
-      // 3. Материалы
-      const arts = new Set(next.materials.map(m => m.article).filter(Boolean));
+      // 3. Материалы с вариантами
+      const arts = new Map(next.materials.map((m, i) => [m.article, i]));
       const newMaterials = [...next.materials];
       materials.forEach((mat, i) => {
-        if (mat.article && arts.has(mat.article)) return;
         const catId = mat.categoryKey ? catIdMap[mat.categoryKey] : undefined;
-        newMaterials.push({ ...mat, id: `m${ts}${i}`, manufacturerId: mfrId, categoryId: catId });
+        const variants: MaterialVariant[] = mat.variants.map(v => ({
+          id: v.variantId, params: v.params, basePrice: v.basePrice,
+        }));
+        const basePrice = mat.variants[0]?.basePrice ?? 0;
+        if (arts.has(mat.article)) {
+          // Обновляем варианты существующего
+          const idx = arts.get(mat.article)!;
+          newMaterials[idx] = { ...newMaterials[idx], variants, basePrice };
+        } else {
+          newMaterials.push({
+            id: `m${ts}${i}`, manufacturerId: mfrId, categoryId: catId,
+            name: mat.name, typeId: mat.typeId, thickness: mat.thickness,
+            article: mat.article, unit: mat.unit, basePrice, variants,
+          });
+        }
       });
       next = { ...next, materials: newMaterials };
 
       return next;
     });
 
-    return { created, skipped };
+    return { created, updated, skipped };
+  };
+
+  // Батчевое обновление цен СКАТ (все варианты сразу)
+  const updateSkatPrices = (
+    updates: Array<{ article: string; variants: Array<{ variantId: string; basePrice: number }> }>
+  ): number => {
+    let count = 0;
+    setState(s => {
+      const matMap = new Map(s.materials.map(m => [m.article, m]));
+      const newMaterials = s.materials.map(m => {
+        if (!m.article) return m;
+        const upd = updates.find(u => u.article === m.article);
+        if (!upd) return m;
+        const newVariants = (m.variants || []).map(v => {
+          const vu = upd.variants.find(x => x.variantId === v.id);
+          return vu ? { ...v, basePrice: vu.basePrice } : v;
+        });
+        count++;
+        return { ...m, variants: newVariants, basePrice: newVariants[0]?.basePrice ?? m.basePrice };
+      });
+      return { ...s, materials: newMaterials };
+    });
+    return count;
   };
   const updateMaterial = (id: string, data: Partial<Material>) => {
     setState(s => ({ ...s, materials: s.materials.map(m => m.id === id ? { ...m, ...data } : m) }));
@@ -1268,7 +1308,7 @@ export function useStore() {
     createProject, deleteProject,
     addManufacturer, updateManufacturer, deleteManufacturer,
     addVendor, updateVendor, deleteVendor,
-    addMaterial, updateMaterial, deleteMaterial, importSkatBatch,
+    addMaterial, updateMaterial, deleteMaterial, importSkatBatch, updateSkatPrices,
     addService, updateService, deleteService,
     addExpense, updateExpense, deleteExpense,
     addExpenseGroup, updateExpenseGroup, deleteExpenseGroup,
