@@ -15,8 +15,10 @@ CORS = {
 def get_db():
     return psycopg2.connect(os.environ['DATABASE_URL'])
 
+JWT_SECRET = os.environ.get('JWT_SECRET', '1641Bd849poehali')
+
 def make_token(user_id: int, role: str) -> str:
-    secret = os.environ['JWT_SECRET']
+    secret = JWT_SECRET
     payload = {
         'sub': user_id,
         'role': role,
@@ -25,8 +27,7 @@ def make_token(user_id: int, role: str) -> str:
     return jwt.encode(payload, secret, algorithm='HS256')
 
 def verify_token(token: str) -> dict:
-    secret = os.environ['JWT_SECRET']
-    return jwt.decode(token, secret, algorithms=['HS256'])
+    return jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
 
 def ok(data: dict, status: int = 200) -> dict:
     return {'statusCode': status, 'headers': {**CORS, 'Content-Type': 'application/json'}, 'body': json.dumps(data)}

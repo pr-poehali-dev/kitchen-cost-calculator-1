@@ -10,6 +10,8 @@ CORS = {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Authorization',
 }
 
+JWT_SECRET = os.environ.get('JWT_SECRET', '1641Bd849poehali')
+
 def get_db():
     return psycopg2.connect(os.environ['DATABASE_URL'])
 
@@ -19,7 +21,7 @@ def verify_admin(event: dict) -> dict | None:
     if not token:
         return None
     try:
-        payload = jwt.decode(token, os.environ['JWT_SECRET'], algorithms=['HS256'])
+        payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
         if payload.get('role') != 'admin':
             return None
         return payload
