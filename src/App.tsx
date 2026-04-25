@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
-import { useStore } from '@/store/useStore';
+import { useStore, loadStateFromDb, setStoreToken, forceSetGlobalState, saveStateToDb } from '@/store/useStore';
 import HomePage from '@/pages/HomePage';
 import CalcPage from '@/pages/CalcPage';
 import BlocksPage from '@/pages/BlocksPage';
@@ -17,20 +17,40 @@ type Section = 'home' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | '
 
 export default function App() {
   const [section, setSection] = useState<Section>('home');
+  const [stateLoading, setStateLoading] = useState(false);
   const { state, login, logout, getToken } = useAuth();
   const store = useStore();
 
-  // Одноразовый патч: назначить всем материалам СКАТ тип МДФ и поставщика Специалист
+  // Когда пользователь авторизовался — грузим общий state из БД
   useEffect(() => {
-    store.patchSkatMaterials('mt2', 'v2');
-  }, []);
+    if (state.status !== 'authenticated') return;
+    const token = getToken();
+    if (!token) return;
 
+    setStoreToken(token);
+    setStateLoading(true);
+
+    loadStateFromDb(token).then(dbState => {
+      if (dbState) {
+        // В БД есть данные — применяем их всем пользователям
+        forceSetGlobalState(dbState);
+      } else {
+        // БД пустая — первый вход, сохраняем текущий localStorage в БД
+        saveStateToDb();
+      }
+      // Патч СКАТ после загрузки
+      store.patchSkatMaterials('mt2', 'v2');
+      setStateLoading(false);
+    });
+  }, [state.status]);
+
+  // Экран загрузки авторизации
   if (state.status === 'loading') {
     return (
       <div className="min-h-screen bg-[hsl(220,16%,7%)] flex items-center justify-center">
-        <div className="flex items-center gap-3 text-[hsl(var(--text-muted))]">
-          <Icon name="Loader2" size={20} className="animate-spin text-gold" />
-          <span className="text-sm">Загрузка...</span>
+        <div className="flex flex-col items-center gap-3">
+          <Icon name="Loader2" size={24} className="animate-spin text-gold" />
+          <span className="text-sm text-[hsl(var(--text-muted))]">Загрузка...</span>
         </div>
       </div>
     );
@@ -38,6 +58,18 @@ export default function App() {
 
   if (state.status === 'unauthenticated') {
     return <LoginPage onLogin={login} />;
+  }
+
+  // Экран загрузки данных из БД
+  if (stateLoading) {
+    return (
+      <div className="min-h-screen bg-[hsl(220,16%,7%)] flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <Icon name="Loader2" size={24} className="animate-spin text-gold" />
+          <span className="text-sm text-[hsl(var(--text-muted))]">Загрузка данных...</span>
+        </div>
+      </div>
+    );
   }
 
   const user = state.user;

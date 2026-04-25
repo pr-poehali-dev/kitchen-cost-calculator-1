@@ -432,46 +432,85 @@ function parseAndMerge(raw: string): AppState {
   };
 }
 
-function loadState(): AppState {
-  // Сначала пробуем актуальный ключ v4
+const STATE_URL = 'https://functions.poehali.dev/a257bd1a-a3a1-40e0-95b5-bbd561a371e4';
+
+// Загрузка из localStorage (синхронный кэш для быстрого старта)
+function loadLocalState(): AppState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) return parseAndMerge(saved);
-  } catch (e) {
-    console.error('[store] failed to load v4:', e);
-  }
-
-  // Если v4 нет — мигрируем из v3, сохраняем проекты пользователя
+  } catch (e) { void e; }
   try {
     const prev = localStorage.getItem(STORAGE_KEY_PREV);
-    if (prev) {
-      const state = parseAndMerge(prev);
-      // Сразу сохраняем под новым ключом
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-      return state;
-    }
-  } catch (e) {
-    console.error('[store] failed to migrate from v3:', e);
-  }
-
+    if (prev) return parseAndMerge(prev);
+  } catch (e) { void e; }
   return initialState;
 }
 
-function saveState(state: AppState) {
+function saveLocalState(state: AppState) {
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-  } catch (e) {
-    void e;
+  } catch (e) { void e; }
+}
+
+// Debounce сохранения в БД
+let saveTimer: ReturnType<typeof setTimeout> | null = null;
+let currentToken: string | null = null;
+
+export function setStoreToken(token: string) {
+  currentToken = token;
+}
+
+function scheduleSaveToDb(state: AppState) {
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    if (!currentToken) return;
+    fetch(`${STATE_URL}?token=${encodeURIComponent(currentToken)}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ state }),
+    }).catch(() => void 0);
+  }, 1500); // сохраняем через 1.5с после последнего изменения
+}
+
+export async function loadStateFromDb(token: string): Promise<AppState | null> {
+  try {
+    const res = await fetch(`${STATE_URL}?token=${encodeURIComponent(token)}`);
+    if (!res.ok) return null;
+    const data = await res.json();
+    if (!data.state) return null;
+    const state = parseAndMerge(JSON.stringify(data.state));
+    saveLocalState(state); // обновляем кэш
+    return state;
+  } catch {
+    return null;
   }
 }
 
-let globalState: AppState = loadState();
+let globalState: AppState = loadLocalState();
 const listeners: Set<() => void> = new Set();
 
 function setState(updater: (s: AppState) => AppState) {
   globalState = updater(globalState);
-  saveState(globalState);
+  saveLocalState(globalState);
+  scheduleSaveToDb(globalState);
   listeners.forEach(fn => fn());
+}
+
+export function forceSetGlobalState(state: AppState) {
+  globalState = state;
+  saveLocalState(state);
+  listeners.forEach(fn => fn());
+}
+
+// Немедленно сохранить текущий state в БД (без debounce)
+export function saveStateToDb() {
+  if (!currentToken) return;
+  fetch(`${STATE_URL}?token=${encodeURIComponent(currentToken)}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ state: globalState }),
+  }).catch(() => void 0);
 }
 
 export function useStore() {
