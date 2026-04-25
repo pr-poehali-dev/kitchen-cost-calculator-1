@@ -1,7 +1,7 @@
 import Icon from '@/components/ui/icon';
 import type { AuthUser } from '@/auth/useAuth';
 
-type Section = 'home' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings';
+type Section = 'home' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings' | 'users';
 
 interface LayoutProps {
   active: Section;
@@ -9,20 +9,20 @@ interface LayoutProps {
   children: React.ReactNode;
   user?: AuthUser;
   onLogout?: () => void;
-  onAdminPanel?: () => void;
 }
 
 const NAV = [
-  { id: 'home'     as Section, label: 'Главная',   icon: 'House' },
-  { id: 'calc'     as Section, label: 'Расчёт',    icon: 'Calculator' },
-  { id: 'blocks'   as Section, label: 'Блоки',     icon: 'Layers' },
-  { id: 'services' as Section, label: 'Услуги',    icon: 'Wrench' },
-  { id: 'base'     as Section, label: 'База',       icon: 'Database' },
-  { id: 'expenses' as Section, label: 'Расходы',   icon: 'TrendingUp' },
-  { id: 'settings' as Section, label: 'Настройки', icon: 'Settings' },
+  { id: 'home'     as Section, label: 'Главная',      icon: 'House' },
+  { id: 'calc'     as Section, label: 'Расчёт',       icon: 'Calculator' },
+  { id: 'blocks'   as Section, label: 'Блоки',        icon: 'Layers' },
+  { id: 'services' as Section, label: 'Услуги',       icon: 'Wrench' },
+  { id: 'base'     as Section, label: 'База',          icon: 'Database' },
+  { id: 'expenses' as Section, label: 'Расходы',      icon: 'TrendingUp' },
+  { id: 'settings' as Section, label: 'Настройки',    icon: 'Settings' },
+  { id: 'users'    as Section, label: 'Пользователи', icon: 'Users' },
 ];
 
-export default function Layout({ active, onNav, children, user, onLogout, onAdminPanel }: LayoutProps) {
+export default function Layout({ active, onNav, children, user, onLogout }: LayoutProps) {
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <aside className="w-56 flex flex-col border-r border-border bg-[hsl(220,16%,6%)] shrink-0">
@@ -59,16 +59,6 @@ export default function Layout({ active, onNav, children, user, onLogout, onAdmi
                 <div className="text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider">{user.role} · {user.plan}</div>
               </div>
             </div>
-          )}
-
-          {user?.role === 'admin' && onAdminPanel && (
-            <button
-              onClick={onAdminPanel}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[hsl(var(--text-dim))] hover:text-foreground hover:bg-[hsl(220,12%,14%)] rounded transition-colors"
-            >
-              <Icon name="Shield" size={12} className="text-gold" />
-              Пользователи
-            </button>
           )}
 
           {onLogout && (

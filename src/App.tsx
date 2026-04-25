@@ -12,11 +12,10 @@ import AdminPanel from '@/auth/AdminPanel';
 import { useAuth } from '@/auth/useAuth';
 import Icon from '@/components/ui/icon';
 
-type Section = 'home' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings';
+type Section = 'home' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings' | 'users';
 
 export default function App() {
   const [section, setSection] = useState<Section>('home');
-  const [showAdmin, setShowAdmin] = useState(false);
   const { state, login, register, logout, getToken } = useAuth();
 
   // Загрузка
@@ -47,7 +46,6 @@ export default function App() {
         onNav={setSection}
         user={user}
         onLogout={logout}
-        onAdminPanel={user.role === 'admin' ? () => setShowAdmin(true) : undefined}
       >
         {section === 'home'     && <HomePage />}
         {section === 'calc'     && <CalcPage />}
@@ -56,15 +54,8 @@ export default function App() {
         {section === 'base'     && <BasePage />}
         {section === 'expenses' && <ExpensesPage />}
         {section === 'settings' && <SettingsPage />}
+        {section === 'users'    && <AdminPanel currentUser={user} token={token} inline />}
       </Layout>
-
-      {showAdmin && (
-        <AdminPanel
-          currentUser={user}
-          token={token}
-          onClose={() => setShowAdmin(false)}
-        />
-      )}
     </>
   );
 }
