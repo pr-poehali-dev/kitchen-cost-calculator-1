@@ -1,0 +1,22 @@
+{
+  "tests": [
+    {
+      "name": "Parse Slotex pricelist",
+      "method": "POST",
+      "path": "/",
+      "body": { "url": "https://docs.google.com/spreadsheets/d/1iUXAMLxwavErr11pwQROnkZX22RAxhiVb1THG_xNwQM/edit#gid=1989291696" },
+      "expectedStatus": 200,
+      "expectedBody": { "ok": true },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Error on missing url",
+      "method": "POST",
+      "path": "/",
+      "body": {},
+      "expectedStatus": 400,
+      "expectedBody": { "error": "url is required" },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

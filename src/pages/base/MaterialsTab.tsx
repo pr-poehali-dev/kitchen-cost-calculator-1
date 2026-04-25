@@ -4,6 +4,224 @@ import type { Material } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { fmt, Field, Modal } from './BaseShared';
 import VariantsEditor from './VariantsEditor';
+import func2url from '../../../backend/func2url.json';
+
+const PARSE_URL = (func2url as Record<string, string>)['parse-pricelist'];
+
+// Элемент из прайса пришедший с бэкенда
+interface PriceItem { product: string; size: string; thickness: number | null; unit: string; price: number; }
+
+// Совпадение между позицией прайса и вариантом материала в базе
+interface Match {
+  materialId: string;
+  materialName: string;
+  variantId: string;
+  variantLabel: string;
+  oldPrice: number;
+  newPrice: number;
+  selected: boolean;
+}
+
+function PricelistUpdateModal({ onClose }: { onClose: () => void }) {
+  const store = useStore();
+  const [url, setUrl] = useState('https://docs.google.com/spreadsheets/d/1iUXAMLxwavErr11pwQROnkZX22RAxhiVb1THG_xNwQM/edit#gid=1989291696');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [matches, setMatches] = useState<Match[] | null>(null);
+  const [saved, setSaved] = useState(false);
+
+  const normalize = (s: string) =>
+    s.toLowerCase()
+     .replace(/\s+/g, '')
+     .replace(/[×хx]/g, '×')
+     .replace(/\.(\d{3})/g, '$1');
+
+  const findMatches = (items: PriceItem[]): Match[] => {
+    const result: Match[] = [];
+    for (const mat of store.materials) {
+      if (!mat.variants?.length) continue;
+      for (const v of mat.variants) {
+        const vSize = normalize(v.size || '');
+        const vThick = v.thickness;
+        // Ищем совпадение по размеру и толщине
+        const match = items.find(item => {
+          const iSize = normalize(item.size);
+          const thickMatch = vThick == null || item.thickness == null || Math.abs(vThick - item.thickness) < 0.1;
+          return iSize === vSize && thickMatch && item.price > 0;
+        });
+        if (match && match.price !== v.basePrice) {
+          const label = [v.size, v.thickness ? `${v.thickness}мм` : '', v.params].filter(Boolean).join(' ');
+          result.push({
+            materialId: mat.id,
+            materialName: mat.name,
+            variantId: v.id,
+            variantLabel: label,
+            oldPrice: v.basePrice,
+            newPrice: match.price,
+            selected: true,
+          });
+        }
+      }
+      // Для материалов без вариантов — совпадение по названию
+      if (!mat.variants?.length) {
+        const matName = normalize(mat.name);
+        const match = items.find(item => normalize(item.product).includes(matName) || matName.includes(normalize(item.product)));
+        if (match && match.price !== mat.basePrice && match.price > 0) {
+          result.push({
+            materialId: mat.id,
+            materialName: mat.name,
+            variantId: '',
+            variantLabel: 'базовая цена',
+            oldPrice: mat.basePrice,
+            newPrice: match.price,
+            selected: true,
+          });
+        }
+      }
+    }
+    return result;
+  };
+
+  const handleFetch = async () => {
+    setLoading(true);
+    setError('');
+    setMatches(null);
+    try {
+      const res = await fetch(PARSE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url }),
+      });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'Ошибка парсинга');
+      const found = findMatches(data.items as PriceItem[]);
+      setMatches(found);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const toggle = (idx: number) => {
+    setMatches(prev => prev ? prev.map((m, i) => i === idx ? { ...m, selected: !m.selected } : m) : null);
+  };
+
+  const handleSave = () => {
+    if (!matches) return;
+    matches.filter(m => m.selected).forEach(m => {
+      if (m.variantId) {
+        const mat = store.materials.find(x => x.id === m.materialId);
+        if (!mat?.variants) return;
+        const newVariants = mat.variants.map(v => v.id === m.variantId ? { ...v, basePrice: m.newPrice } : v);
+        store.updateMaterial(m.materialId, { variants: newVariants });
+      } else {
+        store.updateMaterial(m.materialId, { basePrice: m.newPrice });
+      }
+    });
+    setSaved(true);
+    setTimeout(onClose, 1200);
+  };
+
+  const selectedCount = matches?.filter(m => m.selected).length ?? 0;
+
+  return (
+    <Modal title="Обновить цены из прайса" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="text-xs text-[hsl(var(--text-muted))]">
+          Вставь ссылку на Google Sheets прайс. Система сравнит размеры и обновит цены совпавших вариантов.
+        </div>
+
+        <div className="flex gap-2">
+          <input
+            value={url}
+            onChange={e => setUrl(e.target.value)}
+            placeholder="https://docs.google.com/spreadsheets/..."
+            className="flex-1 bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm outline-none focus:border-gold transition-colors"
+          />
+          <button
+            onClick={handleFetch}
+            disabled={loading || !url.trim()}
+            className="flex items-center gap-2 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50 shrink-0"
+          >
+            {loading ? <Icon name="Loader" size={14} className="animate-spin" /> : <Icon name="Download" size={14} />}
+            {loading ? 'Загрузка...' : 'Загрузить'}
+          </button>
+        </div>
+
+        {error && (
+          <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded px-3 py-2">{error}</div>
+        )}
+
+        {saved && (
+          <div className="text-xs text-green-400 bg-green-400/10 border border-green-400/20 rounded px-3 py-2 flex items-center gap-2">
+            <Icon name="Check" size={13} /> Цены обновлены!
+          </div>
+        )}
+
+        {matches !== null && !saved && (
+          <>
+            {matches.length === 0 ? (
+              <div className="text-sm text-[hsl(var(--text-muted))] text-center py-4">
+                Совпадений не найдено — возможно цены уже актуальны
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-[hsl(var(--text-muted))]">Найдено изменений: <span className="text-gold font-medium">{matches.length}</span></span>
+                  <div className="flex gap-2">
+                    <button onClick={() => setMatches(m => m?.map(x => ({ ...x, selected: true })) ?? null)} className="text-xs text-[hsl(var(--text-muted))] hover:text-gold">выбрать все</button>
+                    <span className="text-[hsl(var(--text-muted))]">·</span>
+                    <button onClick={() => setMatches(m => m?.map(x => ({ ...x, selected: false })) ?? null)} className="text-xs text-[hsl(var(--text-muted))] hover:text-gold">снять все</button>
+                  </div>
+                </div>
+
+                <div className="max-h-72 overflow-auto scrollbar-thin bg-[hsl(220,12%,14%)] rounded border border-border">
+                  <div className="grid text-[10px] uppercase tracking-wider text-[hsl(var(--text-muted))] px-3 py-2 border-b border-border sticky top-0 bg-[hsl(220,12%,14%)]"
+                    style={{ gridTemplateColumns: '20px 1fr 1fr 70px 70px' }}>
+                    <span />
+                    <span>Материал</span>
+                    <span>Вариант</span>
+                    <span className="text-right">Было</span>
+                    <span className="text-right">Стало</span>
+                  </div>
+                  {matches.map((m, idx) => (
+                    <div key={idx}
+                      className="grid items-center gap-2 px-3 py-2 border-b border-[hsl(220,12%,17%)] last:border-0 cursor-pointer hover:bg-[hsl(220,12%,16%)]"
+                      style={{ gridTemplateColumns: '20px 1fr 1fr 70px 70px' }}
+                      onClick={() => toggle(idx)}
+                    >
+                      <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${m.selected ? 'bg-gold border-gold' : 'border-border'}`}>
+                        {m.selected && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
+                      </div>
+                      <span className="text-xs truncate">{m.materialName}</span>
+                      <span className="text-xs text-[hsl(var(--text-dim))] truncate">{m.variantLabel}</span>
+                      <span className="text-xs font-mono text-right text-[hsl(var(--text-dim))]">{fmt(m.oldPrice)}</span>
+                      <span className="text-xs font-mono text-right text-gold font-semibold">{fmt(m.newPrice)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleSave}
+                    disabled={selectedCount === 0}
+                    className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-semibold hover:opacity-90 disabled:opacity-40"
+                  >
+                    Обновить {selectedCount > 0 ? `(${selectedCount})` : ''} позиций
+                  </button>
+                  <button onClick={onClose} className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground">
+                    Отмена
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
+      </div>
+    </Modal>
+  );
+}
 
 function BulkPriceModal({ materials, onClose }: { materials: Material[]; onClose: () => void }) {
   const store = useStore();
@@ -91,6 +309,7 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
   const [editingMaterial, setEditingMaterial] = useState<Partial<Material> | null>(null);
   const [catFilter, setCatFilter] = useState<string>('all');
   const [showBulkPrice, setShowBulkPrice] = useState(false);
+  const [showPricelistUpdate, setShowPricelistUpdate] = useState(false);
 
   const allTypes = store.settings.materialTypes;
   const allCategories = store.settings.materialCategories || [];
@@ -128,6 +347,13 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
             ))}
           </div>
           <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => setShowPricelistUpdate(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
+              title="Обновить цены из Google Sheets прайса"
+            >
+              <Icon name="RefreshCw" size={14} /> Из прайса
+            </button>
             <button
               onClick={() => setShowBulkPrice(true)}
               className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
@@ -212,6 +438,11 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
           })}
         </div>
       </div>
+
+      {/* Modal: Pricelist update */}
+      {showPricelistUpdate && (
+        <PricelistUpdateModal onClose={() => setShowPricelistUpdate(false)} />
+      )}
 
       {/* Modal: Bulk price */}
       {showBulkPrice && (

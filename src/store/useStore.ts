@@ -46,6 +46,7 @@ const initialState: AppState = {
     { id: 'mfr3', name: 'Egger', contact: 'Менеджер Павел', phone: '+7 900 000-00-03', materialTypeIds: ['mt1', 'mt2', 'mt9'] },
     { id: 'mfr4', name: 'Boyard', contact: '', phone: '', materialTypeIds: ['mt10'] },
     { id: 'mfr5', name: 'Slotex', contact: '', phone: '', materialTypeIds: ['mt8', 'mt9', 'mt12'] },
+    { id: 'mfr6', name: 'kapso',  contact: '', phone: '', materialTypeIds: ['mt8', 'mt9', 'mt12'] },
   ],
   vendors: [
     { id: 'v1', name: 'МАРШАЛ', contact: 'Менеджер Сергей', phone: '+7 900 100-00-01', materialTypeIds: ['mt1', 'mt2', 'mt3'] },
@@ -216,17 +217,36 @@ const initialState: AppState = {
     {
       id: 'sl_kr1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Кромка HPL без клея', typeId: 'mt12', unit: 'шт', basePrice: 0,
       variants: [
-        { id: 'sl_kr1_v1', size: '45×3050',  params: 'без клея', basePrice: 310 },
-        { id: 'sl_kr1_v2', size: '45×4200',  params: 'без клея', basePrice: 430 },
-        { id: 'sl_kr1_v3', size: '32×3050',  params: 'без клея', basePrice: 230 },
+        { id: 'sl_kr1_v1', size: '45×3050', params: 'без клея', basePrice: 310 },
+        { id: 'sl_kr1_v2', size: '45×4200', params: 'без клея', basePrice: 430 },
+        { id: 'sl_kr1_v3', size: '32×3050', params: 'без клея', basePrice: 230 },
       ],
     },
     {
       id: 'sl_kr2', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Кромка HPL с клеем', typeId: 'mt12', unit: 'шт', basePrice: 0,
       variants: [
-        { id: 'sl_kr2_v1', size: '45×3050',  params: 'с клеем', basePrice: 420 },
-        { id: 'sl_kr2_v2', size: '45×4200',  params: 'с клеем', basePrice: 580 },
-        { id: 'sl_kr2_v3', size: '32×3050',  params: 'с клеем', basePrice: 350 },
+        { id: 'sl_kr2_v1', size: '45×3050', params: 'с клеем', basePrice: 420 },
+        { id: 'sl_kr2_v2', size: '45×4200', params: 'с клеем', basePrice: 580 },
+        { id: 'sl_kr2_v3', size: '32×3050', params: 'с клеем', basePrice: 350 },
+      ],
+    },
+
+    // ── kapso — Серия k3 — Столешница ────────────────────────────
+    {
+      id: 'kp_st1', manufacturerId: 'mfr6', vendorId: 'v2', name: 'Столешница kapso', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'kp_st1_v1', size: '4200×600',  thickness: 40, params: 'k3 / 00/W1/05', basePrice: 8390  },
+        { id: 'kp_st1_v2', size: '3000×600',  thickness: 40, params: 'k3 / 00/W1/05', basePrice: 6000  },
+        { id: 'kp_st1_v3', size: '3000×1200', thickness: 40, params: 'k3 / 00/W1/05', basePrice: 11680 },
+      ],
+    },
+
+    // ── kapso — Серия k3 — Стеновая панель ───────────────────────
+    {
+      id: 'kp_sp1', manufacturerId: 'mfr6', vendorId: 'v2', name: 'Стеновая панель kapso', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'kp_sp1_v1', size: '4200×600', thickness: 10,  params: 'k3', basePrice: 6780 },
+        { id: 'kp_sp1_v2', size: '3000×600', thickness: 10,  params: 'k3', basePrice: 4850 },
       ],
     },
   ],
