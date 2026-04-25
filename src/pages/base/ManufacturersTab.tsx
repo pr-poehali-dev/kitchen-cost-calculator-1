@@ -43,33 +43,56 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
     <>
       <div className="flex gap-6 h-full min-h-0">
         {/* Sidebar */}
-        <div className="w-60 shrink-0 space-y-1">
-          <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))] mb-2">Производители</div>
+        <div className="w-64 shrink-0 flex flex-col gap-2">
+          <div className="flex items-center justify-between mb-1">
+            <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))]">Производители</div>
+            <span className="text-xs text-[hsl(var(--text-muted))]">{store.manufacturers.length}</span>
+          </div>
           {store.manufacturers.map(m => {
             const matCount = store.materials.filter(mat => mat.manufacturerId === m.id).length;
+            const types = (m.materialTypeIds || []).slice(0, 4).map(tid => store.getTypeById(tid)).filter(Boolean);
+            const isActive = selectedId === m.id;
             return (
               <button
                 key={m.id}
                 onClick={() => onSelect(m.id)}
-                className={`w-full text-left px-3 py-2.5 rounded text-sm transition-colors ${
-                  selectedId === m.id
-                    ? 'bg-[hsl(220,12%,18%)] text-foreground border-l-2 border-gold pl-2.5'
-                    : 'hover:bg-[hsl(220,12%,14%)] text-[hsl(var(--text-dim))]'
+                className={`w-full text-left rounded-lg border transition-all duration-150 p-3 ${
+                  isActive
+                    ? 'bg-[hsl(220,12%,17%)] border-gold/50 shadow-sm'
+                    : 'bg-[hsl(220,14%,11%)] border-border hover:border-[hsl(220,12%,26%)] hover:bg-[hsl(220,12%,14%)]'
                 }`}
               >
-                <div className="font-medium">{m.name}</div>
-                <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5 flex gap-2">
-                  <span>{matCount} матер.</span>
-                  {m.materialTypeIds?.length > 0 && (
-                    <span className="text-gold">{m.materialTypeIds.length} тип.</span>
-                  )}
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-lg flex items-center justify-center text-sm font-bold shrink-0 ${isActive ? 'bg-gold text-[hsl(220,16%,8%)]' : 'bg-[hsl(220,12%,18%)] text-[hsl(var(--text-dim))]'}`}>
+                    {m.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className={`font-semibold text-sm truncate ${isActive ? 'text-gold' : 'text-foreground'}`}>{m.name}</div>
+                    <div className="flex items-center gap-2 mt-0.5">
+                      <span className="text-xs text-[hsl(var(--text-muted))]">{matCount} позиций</span>
+                      {types.length > 0 && (
+                        <div className="flex gap-0.5">
+                          {types.map(t => (
+                            <span key={t!.id} className="w-2 h-2 rounded-full" style={{ backgroundColor: t!.color || '#888' }} title={t!.name} />
+                          ))}
+                          {(m.materialTypeIds || []).length > 4 && (
+                            <span className="text-[10px] text-[hsl(var(--text-muted))] ml-0.5">+{(m.materialTypeIds || []).length - 4}</span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  {isActive && <Icon name="ChevronRight" size={14} className="text-gold shrink-0" />}
                 </div>
               </button>
             );
           })}
+          {store.manufacturers.length === 0 && (
+            <div className="text-center py-8 text-xs text-[hsl(var(--text-muted))] opacity-60">Нет производителей</div>
+          )}
           <button
             onClick={() => setEditingMfr({ name: '', contact: '', phone: '', materialTypeIds: [] })}
-            className="w-full flex items-center gap-2 px-3 py-2 text-xs text-[hsl(var(--text-muted))] hover:text-gold border border-dashed border-[hsl(var(--surface-3))] rounded hover:border-gold transition-all mt-2"
+            className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-xs text-[hsl(var(--text-muted))] hover:text-gold border border-dashed border-[hsl(var(--surface-3))] rounded-lg hover:border-gold transition-all mt-1"
           >
             <Icon name="Plus" size={12} /> Добавить производителя
           </button>
