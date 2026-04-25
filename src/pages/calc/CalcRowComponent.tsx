@@ -129,10 +129,13 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
 
   const filteredMaterials = store.materials.filter(m => {
     const typeOk = allowedTypeIds.length === 0 || allowedTypeIds.includes(m.typeId);
-    const textOk = nameFilter === '' ||
-      m.name.toLowerCase().includes(nameFilter.toLowerCase()) ||
-      (m.color || '').toLowerCase().includes(nameFilter.toLowerCase()) ||
-      (m.article || '').toLowerCase().includes(nameFilter.toLowerCase());
+    const q = nameFilter.toLowerCase();
+    const variantSizeMatch = q !== '' && m.variants?.some(v => (v.size || '').toLowerCase().includes(q));
+    const textOk = q === '' ||
+      m.name.toLowerCase().includes(q) ||
+      (m.color || '').toLowerCase().includes(q) ||
+      (m.article || '').toLowerCase().includes(q) ||
+      !!variantSizeMatch;
     return typeOk && textOk;
   });
 
@@ -230,23 +233,43 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
                     {filteredMaterials.slice(0, 20).map(m => {
                       const t = store.getTypeById(m.typeId);
                       const mfr = store.getManufacturerById(m.manufacturerId);
-                      const vendor = store.getVendorById(m.vendorId);
+                      const isSkat = m.article?.startsWith('skat__');
+                      const firstVariant = m.variants?.[0];
+                      // Для СКАТ берём полное описание из size первого варианта
+                      const skatSize = isSkat && firstVariant?.size ? firstVariant.size : null;
+                      const skatThickness = isSkat && firstVariant?.thickness ? `${firstVariant.thickness}мм` : null;
                       return (
                         <button
                           key={m.id}
                           onMouseDown={() => applyMaterial(m.id)}
-                          className="w-full text-left px-3 py-2.5 text-sm hover:bg-[hsl(220,12%,16%)] flex items-center gap-2"
+                          className="w-full text-left px-3 py-2 hover:bg-[hsl(220,12%,16%)] flex items-center gap-2 border-b border-[hsl(220,12%,14%)] last:border-0"
                         >
                           <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t?.color || '#888' }} />
-                          <span className="flex-1 text-foreground truncate">{m.name}</span>
-                          {m.variants && m.variants.length > 0 && (
+                          <div className="flex-1 min-w-0">
+                            {isSkat ? (
+                              // СКАТ: показываем тип · серия + толщина
+                              <>
+                                <div className="text-sm text-foreground truncate">{skatSize || m.name}</div>
+                                <div className="flex items-center gap-1.5 mt-0.5">
+                                  {skatThickness && (
+                                    <span className="text-[10px] bg-[hsl(220,12%,18%)] text-[hsl(var(--text-dim))] px-1.5 py-0.5 rounded font-medium">{skatThickness}</span>
+                                  )}
+                                  {mfr && <span className="text-[10px] text-[hsl(var(--text-muted))]">{mfr.name}</span>}
+                                  <span className="text-[10px] bg-gold/15 text-gold px-1.5 py-0.5 rounded">{m.variants!.length} кат.</span>
+                                </div>
+                              </>
+                            ) : (
+                              // Обычный материал
+                              <span className="text-sm text-foreground truncate block">{m.name}</span>
+                            )}
+                          </div>
+                          {!isSkat && m.variants && m.variants.length > 0 && (
                             <span className="text-[10px] bg-gold/20 text-gold px-1.5 py-0.5 rounded shrink-0">
                               {m.variants.length} разм.
                             </span>
                           )}
-                          {mfr && <span className="text-[hsl(var(--text-dim))] text-xs shrink-0">{mfr.name}</span>}
-                          {vendor && <span className="text-[hsl(var(--text-muted))] text-xs shrink-0">/ {vendor.name}</span>}
-                          {(!m.variants || m.variants.length === 0) && <>
+                          {!isSkat && mfr && <span className="text-[hsl(var(--text-dim))] text-xs shrink-0">{mfr.name}</span>}
+                          {!isSkat && (!m.variants || m.variants.length === 0) && <>
                             <span className="text-[hsl(var(--text-dim))] text-xs font-mono shrink-0">{fmt(m.basePrice)}</span>
                             <span className="text-gold text-xs font-mono shrink-0">→ {fmt(store.calcPriceWithMarkup(m.basePrice, 'materials'))}</span>
                           </>}
