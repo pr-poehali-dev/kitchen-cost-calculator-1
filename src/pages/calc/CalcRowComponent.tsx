@@ -198,10 +198,24 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
           }
           case 'article':
             return (
-              <div key={col} className="text-xs text-[hsl(var(--text-dim))] truncate pr-2">{row.article || '—'}</div>
+              <input
+                key={col}
+                value={row.article || ''}
+                onChange={e => store.updateRow(projectId, blockId, row.id, { article: e.target.value || undefined })}
+                placeholder="—"
+                className="bg-transparent text-xs text-[hsl(var(--text-dim))] w-full outline-none border-b border-transparent focus:border-gold transition-colors placeholder:text-[hsl(var(--text-muted))] pr-2"
+              />
             );
           case 'color':
-            return <div key={col} className="text-xs text-[hsl(var(--text-dim))] truncate pr-2">{row.color || '—'}</div>;
+            return (
+              <input
+                key={col}
+                value={row.color || ''}
+                onChange={e => store.updateRow(projectId, blockId, row.id, { color: e.target.value || undefined })}
+                placeholder="—"
+                className="bg-transparent text-xs text-[hsl(var(--text-dim))] w-full outline-none border-b border-transparent focus:border-gold transition-colors placeholder:text-[hsl(var(--text-muted))] pr-2"
+              />
+            );
           case 'thickness':
             return <div key={col} className="text-xs text-[hsl(var(--text-dim))] text-center">{row.thickness ? `${row.thickness}` : '—'}</div>;
           case 'unit':
