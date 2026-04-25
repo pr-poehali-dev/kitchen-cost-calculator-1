@@ -101,15 +101,15 @@ export default function SavedBlockRow({ block, rowId, visibleCols, gridCols, cur
                       className="bg-transparent text-sm text-foreground w-full outline-none placeholder:text-[hsl(var(--text-muted))] border-b border-transparent focus:border-gold transition-colors"
                     />
                     {showSuggest && filteredSuggestions.length > 0 && (
-                      <div className="absolute left-0 top-full z-50 bg-[hsl(220,16%,10%)] border border-border rounded shadow-xl w-96 max-h-52 overflow-auto scrollbar-thin">
-                        {filteredSuggestions.slice(0, 12).map(m => {
+                      <div className="absolute left-0 top-full z-50 bg-[hsl(220,16%,10%)] border border-border rounded shadow-xl w-[480px] max-h-80 overflow-auto scrollbar-thin">
+                        {filteredSuggestions.slice(0, 20).map(m => {
                           const t = store.getTypeById(m.typeId);
                           const mfr = store.getManufacturerById(m.manufacturerId);
                           return (
                             <button
                               key={m.id}
                               onMouseDown={() => selectMaterial(m.id)}
-                              className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,16%)] flex items-center gap-2"
+                              className="w-full text-left px-3 py-2.5 text-sm hover:bg-[hsl(220,12%,16%)] flex items-center gap-2"
                             >
                               <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t?.color || '#888' }} />
                               <span className="flex-1 text-foreground truncate">{m.name}</span>
