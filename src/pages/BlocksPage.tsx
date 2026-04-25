@@ -371,6 +371,7 @@ export default function BlocksPage() {
   const [settingsBlockId, setSettingsBlockId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [showNewForm, setShowNewForm] = useState(false);
+  const [showProjectPicker, setShowProjectPicker] = useState(false);
 
   const selected = savedBlocks.find(b => b.id === selectedId) ?? null;
   const currency = store.settings.currency;
@@ -384,9 +385,9 @@ export default function BlocksPage() {
     setShowNewForm(false);
   };
 
-  const handleInsertToProject = (block: SavedBlock) => {
-    if (!activeProjectId) return;
-    store.insertSavedBlockToProject(activeProjectId, block.id);
+  const handleInsertToProject = (block: SavedBlock, targetProjectId: string) => {
+    store.insertSavedBlockToProject(targetProjectId, block.id);
+    setShowProjectPicker(false);
   };
 
   return (
@@ -460,17 +461,40 @@ export default function BlocksPage() {
                 {selected.note && <span className="text-xs text-[hsl(var(--text-muted))]">{selected.note}</span>}
               </div>
               <div className="flex items-center gap-2">
-                {activeProjectId ? (
-                  <button
-                    onClick={() => handleInsertToProject(selected)}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-gold text-[hsl(220,16%,8%)] rounded text-xs font-semibold hover:opacity-90 transition-opacity"
-                    title="Добавить в текущий проект расчёта"
-                  >
-                    <Icon name="FolderInput" size={13} />
-                    В проект
-                  </button>
+                {store.projects.length > 0 ? (
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowProjectPicker(v => !v)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 bg-gold text-[hsl(220,16%,8%)] rounded text-xs font-semibold hover:opacity-90 transition-opacity"
+                    >
+                      <Icon name="FolderInput" size={13} />
+                      В проект
+                      <Icon name="ChevronDown" size={11} />
+                    </button>
+                    {showProjectPicker && (
+                      <>
+                        <div className="fixed inset-0 z-40" onClick={() => setShowProjectPicker(false)} />
+                        <div className="absolute right-0 top-full mt-1 z-50 bg-[hsl(220,14%,13%)] border border-border rounded-lg shadow-xl min-w-[200px] py-1 overflow-hidden">
+                          <div className="px-3 py-1.5 text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider border-b border-border mb-1">
+                            Выбери проект
+                          </div>
+                          {store.projects.map(p => (
+                            <button
+                              key={p.id}
+                              onClick={() => handleInsertToProject(selected, p.id)}
+                              className={`w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2 ${p.id === activeProjectId ? 'text-gold' : 'text-foreground'}`}
+                            >
+                              <Icon name="FolderOpen" size={13} className="shrink-0 opacity-60" />
+                              <span className="truncate">{p.object || p.client || 'Без названия'}</span>
+                              {p.id === activeProjectId && <span className="ml-auto text-xs opacity-60 shrink-0">активный</span>}
+                            </button>
+                          ))}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 ) : (
-                  <span className="text-xs text-[hsl(var(--text-muted))]">Нет активного проекта</span>
+                  <span className="text-xs text-[hsl(var(--text-muted))]">Нет проектов</span>
                 )}
                 <button
                   onClick={() => store.deleteSavedBlock(selected.id)}
