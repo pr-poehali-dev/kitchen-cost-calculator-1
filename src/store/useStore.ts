@@ -820,7 +820,7 @@ export function useStore() {
     materials: Array<{
       name: string; typeId: string; vendorId?: string; thickness?: number; article: string;
       categoryKey?: string; unit: Unit;
-      variants: Array<{ variantId: string; params: string; basePrice: number }>;
+      variants: Array<{ variantId: string; size?: string; thickness?: number; params: string; basePrice: number }>;
     }>
   ): { created: number; updated: number; skipped: number } => {
     const ts = Date.now();
@@ -864,7 +864,7 @@ export function useStore() {
       materials.forEach((mat, i) => {
         const catId = mat.categoryKey ? catIdMap[mat.categoryKey] : undefined;
         const variants: MaterialVariant[] = mat.variants.map(v => ({
-          id: v.variantId, params: v.params, basePrice: v.basePrice,
+          id: v.variantId, size: v.size, thickness: v.thickness, params: v.params, basePrice: v.basePrice,
         }));
         const basePrice = mat.variants[0]?.basePrice ?? 0;
         if (arts.has(mat.article)) {
@@ -901,20 +901,28 @@ export function useStore() {
     return count;
   };
 
-  // Батчевое обновление цен СКАТ (все варианты сразу)
+  // Батчевое обновление цен СКАТ (все варианты сразу) + опционально size/thickness
   const updateSkatPrices = (
-    updates: Array<{ article: string; variants: Array<{ variantId: string; basePrice: number }> }>
+    updates: Array<{
+      article: string;
+      variants: Array<{ variantId: string; basePrice: number; size?: string; thickness?: number }>;
+    }>
   ): number => {
     let count = 0;
     setState(s => {
-      const matMap = new Map(s.materials.map(m => [m.article, m]));
       const newMaterials = s.materials.map(m => {
         if (!m.article) return m;
         const upd = updates.find(u => u.article === m.article);
         if (!upd) return m;
         const newVariants = (m.variants || []).map(v => {
           const vu = upd.variants.find(x => x.variantId === v.id);
-          return vu ? { ...v, basePrice: vu.basePrice } : v;
+          if (!vu) return v;
+          return {
+            ...v,
+            basePrice: vu.basePrice,
+            ...(vu.size !== undefined ? { size: vu.size } : {}),
+            ...(vu.thickness !== undefined ? { thickness: vu.thickness } : {}),
+          };
         });
         count++;
         return { ...m, variants: newVariants, basePrice: newVariants[0]?.basePrice ?? m.basePrice };

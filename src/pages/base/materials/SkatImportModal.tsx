@@ -33,6 +33,10 @@ interface PreviewGroup {
   subsections: string[];
 }
 
+export function shortCatNameExport(subsection: string): string {
+  return shortCatName(subsection);
+}
+
 function shortCatName(subsection: string): string {
   if (subsection.includes('Без фрезер')) return 'Classic / Optima';
   if (subsection.includes('3D волна') || subsection.includes('Classic Plus')) return '3D волна';
@@ -91,14 +95,19 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
       note: `СКАТ: ${sub}`,
     }));
 
-    // Материалы с 5 вариантами
+    // Материалы с 5 вариантами — каждый вариант несёт полное описание для picker
     const materials = items.map(item => {
       const article = skatArticle(item.thickness_section, item.subsection, item.facade_type);
+      // size = серия · тип (показывается в первой колонке picker)
+      const seriesShort = shortCatName(item.subsection);
+      const sizeLabel = `${item.facade_type} · ${seriesShort}`;
       const variants = CATEGORIES
         .filter(cat => item.prices[cat] > 0)
         .map(cat => ({
           variantId: skatVariantId(article, cat),
-          params: cat,
+          size: sizeLabel,                          // "глухой · Classic/Optima"
+          thickness: item.thickness || undefined,   // 16, 19, 22...
+          params: cat,                              // "1 кат", "2 кат"...
           basePrice: item.prices[cat],
         }));
       return {

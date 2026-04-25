@@ -3,7 +3,7 @@ import { useStore } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
 import { fmt, Modal } from '../BaseShared';
 import func2url from '../../../../backend/func2url.json';
-import { skatArticle, skatVariantId } from './SkatImportModal';
+import { skatArticle, skatVariantId, shortCatNameExport } from './SkatImportModal';
 
 const PARSE_URL = (func2url as Record<string, string>)['parse-pricelist'];
 const CATEGORIES = ['1 кат', '2 кат', '3 кат', '4 кат', '5 кат'];
@@ -100,14 +100,28 @@ export default function SkatPriceModal({ onClose }: { onClose: () => void }) {
 
   const handleSave = () => {
     if (!changed) return;
+    // Строим карту article → item для получения size/thickness
+    const priceMap = new Map<string, SkatAllItem>();
+    for (const item of allItems) {
+      priceMap.set(skatArticle(item.thickness_section, item.subsection, item.facade_type), item);
+    }
+
     const selected = changed.filter(m => m.selected);
-    const updates = selected.map(m => ({
-      article: m.article,
-      variants: m.changedCats.map(c => ({
-        variantId: skatVariantId(m.article, c.cat),
-        basePrice: c.newPrice,
-      })),
-    }));
+    const updates = selected.map(m => {
+      const item = priceMap.get(m.article);
+      const seriesShort = item ? shortCatNameExport(item.subsection) : '';
+      const sizeLabel = item ? `${item.facade_type} · ${seriesShort}` : undefined;
+      const thickness = item?.thickness || undefined;
+      return {
+        article: m.article,
+        variants: m.changedCats.map(c => ({
+          variantId: skatVariantId(m.article, c.cat),
+          basePrice: c.newPrice,
+          size: sizeLabel,
+          thickness,
+        })),
+      };
+    });
     store.updateSkatPrices(updates);
     setSaved(true);
     setTimeout(onClose, 1500);
