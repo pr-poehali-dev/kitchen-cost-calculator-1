@@ -1,7 +1,7 @@
 import { useStore } from '@/store/useStore';
 import type { CalcBlock as CalcBlockType, CalcColumnKey } from '@/store/types';
 import Icon from '@/components/ui/icon';
-import { COLUMN_LABELS, COLUMN_WIDTHS, fmt } from './constants';
+import { COLUMN_LABELS_SHORT, COLUMN_ALIGN, COLUMN_WIDTHS, fmt } from './constants';
 import CalcRowComponent from './CalcRowComponent';
 
 interface Props {
@@ -113,15 +113,19 @@ export default function CalcBlock({
 
       {/* Column header */}
       <div
-        className="text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider px-4 py-1.5 bg-[hsl(220,14%,10%)] border-b border-border"
-        style={{ display: 'grid', gridTemplateColumns: gridCols }}
+        className="text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider px-4 py-1.5 bg-[hsl(220,14%,10%)] border-b border-border select-none"
+        style={{ display: 'grid', gridTemplateColumns: gridCols, alignItems: 'center' }}
       >
         {visibleCols.map(col => (
-          <span key={col} className={
-            col === 'qty' || col === 'price' ? 'text-right' :
-            col === 'thickness' || col === 'unit' ? 'text-center' : ''
-          }>
-            {COLUMN_LABELS[col]}
+          <span
+            key={col}
+            className={`truncate overflow-hidden ${
+              COLUMN_ALIGN[col] === 'right'  ? 'text-right'  :
+              COLUMN_ALIGN[col] === 'center' ? 'text-center' : ''
+            }`}
+            title={COLUMN_LABELS_SHORT[col]}
+          >
+            {COLUMN_LABELS_SHORT[col]}
           </span>
         ))}
         <span />
