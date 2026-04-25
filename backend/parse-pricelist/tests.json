@@ -1,21 +1,38 @@
 {
   "tests": [
     {
-      "name": "Parse Slotex pricelist",
-      "method": "POST",
+      "name": "GET - list series",
+      "method": "GET",
       "path": "/",
-      "body": { "url": "https://docs.google.com/spreadsheets/d/1iUXAMLxwavErr11pwQROnkZX22RAxhiVb1THG_xNwQM/edit#gid=1989291696" },
       "expectedStatus": 200,
-      "expectedBody": { "ok": true },
+      "expectedBody": { "series": {} },
       "bodyMatcher": "partial"
     },
     {
-      "name": "Error on missing url",
+      "name": "POST e1 - parse Elga E1",
       "method": "POST",
       "path": "/",
-      "body": {},
+      "body": { "series": "e1" },
+      "expectedStatus": 200,
+      "expectedBody": { "ok": true, "series": "e1" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST k3 - parse kapso K3",
+      "method": "POST",
+      "path": "/",
+      "body": { "series": "k3" },
+      "expectedStatus": 200,
+      "expectedBody": { "ok": true, "series": "k3" },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST unknown series - error",
+      "method": "POST",
+      "path": "/",
+      "body": { "series": "xyz" },
       "expectedStatus": 400,
-      "expectedBody": { "error": "url is required" },
+      "expectedBody": { "error": "Unknown" },
       "bodyMatcher": "partial"
     }
   ]

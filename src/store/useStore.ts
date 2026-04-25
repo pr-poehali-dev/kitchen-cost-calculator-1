@@ -46,7 +46,6 @@ const initialState: AppState = {
     { id: 'mfr3', name: 'Egger', contact: 'Менеджер Павел', phone: '+7 900 000-00-03', materialTypeIds: ['mt1', 'mt2', 'mt9'] },
     { id: 'mfr4', name: 'Boyard', contact: '', phone: '', materialTypeIds: ['mt10'] },
     { id: 'mfr5', name: 'Slotex', contact: '', phone: '', materialTypeIds: ['mt8', 'mt9', 'mt12'] },
-    { id: 'mfr6', name: 'kapso',  contact: '', phone: '', materialTypeIds: ['mt8', 'mt9', 'mt12'] },
   ],
   vendors: [
     { id: 'v1', name: 'МАРШАЛ', contact: 'Менеджер Сергей', phone: '+7 900 100-00-01', materialTypeIds: ['mt1', 'mt2', 'mt3'] },
@@ -100,153 +99,173 @@ const initialState: AppState = {
     { id: 'm5', manufacturerId: 'mfr1', vendorId: 'v1', name: 'МДФ фасад 18мм', typeId: 'mt2', thickness: 18, color: 'Белый матовый', unit: 'м²', basePrice: 8333 },
     { id: 'm6', manufacturerId: 'mfr4', vendorId: 'v2', name: 'Петля Boyard 35мм', typeId: 'mt10', unit: 'шт', basePrice: 120 },
 
-    // ── Slotex — Столешница Slotex ────────────────────────────────
+    // ══ Slotex / Серия Elga E1 (gid=1989291696) ══════════════════
     {
-      id: 'sl_st1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Столешница Slotex', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      id: 'e1_st1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Столешница Slotex E1', typeId: 'mt8', unit: 'шт', basePrice: 0,
       variants: [
-        { id: 'sl_st1_v1',  size: '4200×1200', thickness: 40, params: '00/U1/05', basePrice: 22810 },
-        { id: 'sl_st1_v2',  size: '4200×1200', thickness: 40, params: 'UU/05',    basePrice: 25090 },
-        { id: 'sl_st1_v3',  size: '4200×800',  thickness: 40, params: '00/U1/05', basePrice: 21740 },
-        { id: 'sl_st1_v4',  size: '4200×800',  thickness: 40, params: 'UU/05',    basePrice: 23910 },
-        { id: 'sl_st1_v5',  size: '4200×600',  thickness: 40, params: '00/U1/05', basePrice: 11410 },
-        { id: 'sl_st1_v6',  size: '3000×1200', thickness: 40, params: '00/U1/05', basePrice: 15950 },
-        { id: 'sl_st1_v7',  size: '3000×1200', thickness: 40, params: 'UU/05',    basePrice: 17540 },
-        { id: 'sl_st1_v8',  size: '3000×800',  thickness: 40, params: '00/U1/05', basePrice: 14880 },
-        { id: 'sl_st1_v9',  size: '3000×800',  thickness: 40, params: 'UU/05',    basePrice: 16370 },
-        { id: 'sl_st1_v10', size: '3000×600',  thickness: 40, params: '00/U1/05', basePrice: 8040  },
-        { id: 'sl_st1_v11', size: '3000×600',  thickness: 40, params: 'UU/05',    basePrice: 8840  },
-        { id: 'sl_st1_v12', size: '3000×1200', thickness: 27, params: '00/U1/05', basePrice: 13540 },
-        { id: 'sl_st1_v13', size: '3000×1200', thickness: 27, params: 'UU/05',    basePrice: 14890 },
-        { id: 'sl_st1_v14', size: '3000×800',  thickness: 27, params: '00/U1/05', basePrice: 12370 },
-        { id: 'sl_st1_v15', size: '3000×800',  thickness: 27, params: 'UU/05',    basePrice: 13610 },
-        { id: 'sl_st1_v16', size: '3000×600',  thickness: 27, params: '00/U1/05', basePrice: 6870  },
-        { id: 'sl_st1_v17', size: '3000×600',  thickness: 27, params: 'UU/05',    basePrice: 7550  },
+        { id: 'e1_st1_v1',  size: '4200×1200', thickness: 40, params: '00/U1/05', basePrice: 22810 },
+        { id: 'e1_st1_v2',  size: '4200×1200', thickness: 40, params: 'UU/05',    basePrice: 25090 },
+        { id: 'e1_st1_v3',  size: '4200×800',  thickness: 40, params: '00/U1/05', basePrice: 21740 },
+        { id: 'e1_st1_v4',  size: '4200×800',  thickness: 40, params: 'UU/05',    basePrice: 23910 },
+        { id: 'e1_st1_v5',  size: '4200×600',  thickness: 40, params: '00/U1/05', basePrice: 11410 },
+        { id: 'e1_st1_v6',  size: '3000×1200', thickness: 40, params: '00/U1/05', basePrice: 15950 },
+        { id: 'e1_st1_v7',  size: '3000×1200', thickness: 40, params: 'UU/05',    basePrice: 17540 },
+        { id: 'e1_st1_v8',  size: '3000×800',  thickness: 40, params: '00/U1/05', basePrice: 14880 },
+        { id: 'e1_st1_v9',  size: '3000×800',  thickness: 40, params: 'UU/05',    basePrice: 16370 },
+        { id: 'e1_st1_v10', size: '3000×600',  thickness: 40, params: '00/U1/05', basePrice: 8040  },
+        { id: 'e1_st1_v11', size: '3000×600',  thickness: 40, params: 'UU/05',    basePrice: 8840  },
+        { id: 'e1_st1_v12', size: '3000×1200', thickness: 27, params: '00/U1/05', basePrice: 13540 },
+        { id: 'e1_st1_v13', size: '3000×1200', thickness: 27, params: 'UU/05',    basePrice: 14890 },
+        { id: 'e1_st1_v14', size: '3000×800',  thickness: 27, params: '00/U1/05', basePrice: 12370 },
+        { id: 'e1_st1_v15', size: '3000×800',  thickness: 27, params: 'UU/05',    basePrice: 13610 },
+        { id: 'e1_st1_v16', size: '3000×600',  thickness: 27, params: '00/U1/05', basePrice: 6870  },
+        { id: 'e1_st1_v17', size: '3000×600',  thickness: 27, params: 'UU/05',    basePrice: 7550  },
+      ],
+    },
+    {
+      id: 'e1_st2', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Столешница Slotex DUO-X E1', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'e1_st2_v1',  size: '4200×1200', thickness: 40, params: '00/U1/05', basePrice: 34190 },
+        { id: 'e1_st2_v2',  size: '4200×1200', thickness: 40, params: 'UU/05',    basePrice: 37620 },
+        { id: 'e1_st2_v3',  size: '4200×800',  thickness: 40, params: '00/U1/05', basePrice: 32460 },
+        { id: 'e1_st2_v4',  size: '4200×800',  thickness: 40, params: 'UU/05',    basePrice: 35700 },
+        { id: 'e1_st2_v5',  size: '4200×600',  thickness: 40, params: '00/U1/05', basePrice: 17210 },
+        { id: 'e1_st2_v6',  size: '3000×1200', thickness: 40, params: '00/U1/05', basePrice: 23960 },
+        { id: 'e1_st2_v7',  size: '3000×1200', thickness: 40, params: 'UU/05',    basePrice: 26350 },
+        { id: 'e1_st2_v8',  size: '3000×800',  thickness: 40, params: '00/U1/05', basePrice: 22220 },
+        { id: 'e1_st2_v9',  size: '3000×800',  thickness: 40, params: 'UU/05',    basePrice: 24440 },
+        { id: 'e1_st2_v10', size: '3000×600',  thickness: 40, params: '00/U1/05', basePrice: 12080 },
+        { id: 'e1_st2_v11', size: '3000×600',  thickness: 40, params: 'UU/05',    basePrice: 13290 },
+        { id: 'e1_st2_v12', size: '3000×1200', thickness: 27, params: '00/U1/05', basePrice: 20190 },
+        { id: 'e1_st2_v13', size: '3000×1200', thickness: 27, params: 'UU/05',    basePrice: 22210 },
+        { id: 'e1_st2_v14', size: '3000×800',  thickness: 27, params: '00/U1/05', basePrice: 18550 },
+        { id: 'e1_st2_v15', size: '3000×800',  thickness: 27, params: 'UU/05',    basePrice: 20410 },
+        { id: 'e1_st2_v16', size: '3000×600',  thickness: 27, params: '00/U1/05', basePrice: 10240 },
+        { id: 'e1_st2_v17', size: '3000×600',  thickness: 27, params: 'UU/05',    basePrice: 11270 },
+      ],
+    },
+    {
+      id: 'e1_sp1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Стеновая панель Slotex E1', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'e1_sp1_v1', size: '4200×1215', thickness: 10, params: '0', basePrice: 15080 },
+        { id: 'e1_sp1_v2', size: '4200×600',  thickness: 10, params: '0', basePrice: 7630  },
+        { id: 'e1_sp1_v3', size: '3000×1215', thickness: 10, params: '0', basePrice: 10340 },
+        { id: 'e1_sp1_v4', size: '3000×600',  thickness: 10, params: '0', basePrice: 5220  },
       ],
     },
 
-    // ── Slotex — Столешница Slotex DUO-X ─────────────────────────
+    // ══ Slotex / Серия Elga E2 (gid=1539284672) ══════════════════
     {
-      id: 'sl_st2', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Столешница Slotex DUO-X', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      id: 'e2_st1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Столешница Slotex E2', typeId: 'mt8', unit: 'шт', basePrice: 0,
       variants: [
-        { id: 'sl_st2_v1',  size: '4200×1200', thickness: 40, params: '00/U1/05', basePrice: 34190 },
-        { id: 'sl_st2_v2',  size: '4200×1200', thickness: 40, params: 'UU/05',    basePrice: 37620 },
-        { id: 'sl_st2_v3',  size: '4200×800',  thickness: 40, params: '00/U1/05', basePrice: 32460 },
-        { id: 'sl_st2_v4',  size: '4200×800',  thickness: 40, params: 'UU/05',    basePrice: 35700 },
-        { id: 'sl_st2_v5',  size: '4200×600',  thickness: 40, params: '00/U1/05', basePrice: 17210 },
-        { id: 'sl_st2_v6',  size: '3000×1200', thickness: 40, params: '00/U1/05', basePrice: 23960 },
-        { id: 'sl_st2_v7',  size: '3000×1200', thickness: 40, params: 'UU/05',    basePrice: 26350 },
-        { id: 'sl_st2_v8',  size: '3000×800',  thickness: 40, params: '00/U1/05', basePrice: 22220 },
-        { id: 'sl_st2_v9',  size: '3000×800',  thickness: 40, params: 'UU/05',    basePrice: 24440 },
-        { id: 'sl_st2_v10', size: '3000×600',  thickness: 40, params: '00/U1/05', basePrice: 12080 },
-        { id: 'sl_st2_v11', size: '3000×600',  thickness: 40, params: 'UU/05',    basePrice: 13290 },
-        { id: 'sl_st2_v12', size: '3000×1200', thickness: 27, params: '00/U1/05', basePrice: 20190 },
-        { id: 'sl_st2_v13', size: '3000×1200', thickness: 27, params: 'UU/05',    basePrice: 22210 },
-        { id: 'sl_st2_v14', size: '3000×800',  thickness: 27, params: '00/U1/05', basePrice: 18550 },
-        { id: 'sl_st2_v15', size: '3000×800',  thickness: 27, params: 'UU/05',    basePrice: 20410 },
-        { id: 'sl_st2_v16', size: '3000×600',  thickness: 27, params: '00/U1/05', basePrice: 10240 },
-        { id: 'sl_st2_v17', size: '3000×600',  thickness: 27, params: 'UU/05',    basePrice: 11270 },
+        { id: 'e2_st1_v1',  size: '4200×1200', thickness: 40, params: '00/U1/05', basePrice: 28340 },
+        { id: 'e2_st1_v2',  size: '4200×1200', thickness: 40, params: 'UU/05',    basePrice: 31180 },
+        { id: 'e2_st1_v3',  size: '4200×800',  thickness: 40, params: '00/U1/05', basePrice: 27510 },
+        { id: 'e2_st1_v4',  size: '4200×800',  thickness: 40, params: 'UU/05',    basePrice: 30250 },
+        { id: 'e2_st1_v5',  size: '4200×600',  thickness: 40, params: '00/U1/05', basePrice: 14180 },
+        { id: 'e2_st1_v6',  size: '3000×1200', thickness: 40, params: '00/U1/05', basePrice: 19880 },
+        { id: 'e2_st1_v7',  size: '3000×1200', thickness: 40, params: 'UU/05',    basePrice: 21860 },
+        { id: 'e2_st1_v8',  size: '3000×800',  thickness: 40, params: '00/U1/05', basePrice: 18950 },
+        { id: 'e2_st1_v9',  size: '3000×800',  thickness: 40, params: 'UU/05',    basePrice: 20850 },
+        { id: 'e2_st1_v10', size: '3000×600',  thickness: 40, params: '00/U1/05', basePrice: 9950  },
+        { id: 'e2_st1_v11', size: '3000×600',  thickness: 40, params: 'UU/05',    basePrice: 10940 },
+        { id: 'e2_st1_v12', size: '3000×1200', thickness: 27, params: '00/U1/05', basePrice: 18560 },
+        { id: 'e2_st1_v13', size: '3000×1200', thickness: 27, params: 'UU/05',    basePrice: 20410 },
+        { id: 'e2_st1_v14', size: '3000×800',  thickness: 27, params: '00/U1/05', basePrice: 17650 },
+        { id: 'e2_st1_v15', size: '3000×800',  thickness: 27, params: 'UU/05',    basePrice: 19410 },
+        { id: 'e2_st1_v16', size: '3000×600',  thickness: 27, params: '00/U1/05', basePrice: 8490  },
+        { id: 'e2_st1_v17', size: '3000×600',  thickness: 27, params: 'UU/05',    basePrice: 9340  },
+      ],
+    },
+    {
+      id: 'e2_st2', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Столешница Slotex DUO-X E2', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'e2_st2_v1',  size: '4200×1200', thickness: 40, params: '00/U1/05', basePrice: 42510 },
+        { id: 'e2_st2_v2',  size: '4200×1200', thickness: 40, params: 'UU/05',    basePrice: 46770 },
+        { id: 'e2_st2_v3',  size: '4200×800',  thickness: 40, params: '00/U1/05', basePrice: 41130 },
+        { id: 'e2_st2_v4',  size: '4200×800',  thickness: 40, params: 'UU/05',    basePrice: 45250 },
+        { id: 'e2_st2_v5',  size: '4200×600',  thickness: 40, params: '00/U1/05', basePrice: 21340 },
+        { id: 'e2_st2_v6',  size: '3000×1200', thickness: 40, params: '00/U1/05', basePrice: 29660 },
+        { id: 'e2_st2_v7',  size: '3000×1200', thickness: 40, params: 'UU/05',    basePrice: 32630 },
+        { id: 'e2_st2_v8',  size: '3000×800',  thickness: 40, params: '00/U1/05', basePrice: 28350 },
+        { id: 'e2_st2_v9',  size: '3000×800',  thickness: 40, params: 'UU/05',    basePrice: 31190 },
+        { id: 'e2_st2_v10', size: '3000×600',  thickness: 40, params: '00/U1/05', basePrice: 14940 },
+        { id: 'e2_st2_v11', size: '3000×600',  thickness: 40, params: 'UU/05',    basePrice: 16430 },
+        { id: 'e2_st2_v12', size: '3000×1200', thickness: 27, params: '00/U1/05', basePrice: 27830 },
+        { id: 'e2_st2_v13', size: '3000×1200', thickness: 27, params: 'UU/05',    basePrice: 30610 },
+        { id: 'e2_st2_v14', size: '3000×800',  thickness: 27, params: '00/U1/05', basePrice: 26470 },
+        { id: 'e2_st2_v15', size: '3000×800',  thickness: 27, params: 'UU/05',    basePrice: 29120 },
+        { id: 'e2_st2_v16', size: '3000×600',  thickness: 27, params: '00/U1/05', basePrice: 12730 },
+        { id: 'e2_st2_v17', size: '3000×600',  thickness: 27, params: 'UU/05',    basePrice: 14010 },
+      ],
+    },
+    {
+      id: 'e2_sp1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Стеновая панель Slotex E2', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'e2_sp1_v1', size: '4200×1215', thickness: 10, params: '0', basePrice: 19250 },
+        { id: 'e2_sp1_v2', size: '4200×600',  thickness: 10, params: '0', basePrice: 9700  },
+        { id: 'e2_sp1_v3', size: '3000×1215', thickness: 10, params: '0', basePrice: 12720 },
+        { id: 'e2_sp1_v4', size: '3000×600',  thickness: 10, params: '0', basePrice: 6790  },
       ],
     },
 
-    // ── Slotex — Стеновая панель ──────────────────────────────────
+    // ══ Slotex / Серия Elga E3 (gid=1324647373) ══════════════════
     {
-      id: 'sl_sp1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Стеновая панель Slotex', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      id: 'e3_st1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Столешница Slotex E3', typeId: 'mt8', unit: 'шт', basePrice: 0,
       variants: [
-        { id: 'sl_sp1_v1', size: '4200×1215', thickness: 10,  params: 'без подгиба', basePrice: 15080 },
-        { id: 'sl_sp1_v2', size: '4200×600',  thickness: 10,  params: 'без подгиба', basePrice: 7630  },
-        { id: 'sl_sp1_v3', size: '3000×1215', thickness: 10,  params: 'без подгиба', basePrice: 10340 },
-        { id: 'sl_sp1_v4', size: '3000×600',  thickness: 10,  params: 'без подгиба', basePrice: 5220  },
+        { id: 'e3_st1_v1',  size: '4200×1200', thickness: 40, params: '00/U1/05', basePrice: 33970 },
+        { id: 'e3_st1_v2',  size: '4200×1200', thickness: 40, params: 'UU/05',    basePrice: 37380 },
+        { id: 'e3_st1_v3',  size: '4200×800',  thickness: 40, params: '00/U1/05', basePrice: 33140 },
+        { id: 'e3_st1_v4',  size: '4200×800',  thickness: 40, params: 'UU/05',    basePrice: 36450 },
+        { id: 'e3_st1_v5',  size: '4200×600',  thickness: 40, params: '00/U1/05', basePrice: 17060 },
+        { id: 'e3_st1_v6',  size: '3000×1200', thickness: 27, params: '00/U1/05', basePrice: 24920 },
+        { id: 'e3_st1_v7',  size: '3000×1200', thickness: 27, params: 'UU/05',    basePrice: 27410 },
+        { id: 'e3_st1_v8',  size: '3000×800',  thickness: 27, params: '00/U1/05', basePrice: 24010 },
+        { id: 'e3_st1_v9',  size: '3000×800',  thickness: 27, params: 'UU/05',    basePrice: 26420 },
+        { id: 'e3_st1_v10', size: '3000×600',  thickness: 27, params: '00/U1/05', basePrice: 12460 },
+        { id: 'e3_st1_v11', size: '3000×600',  thickness: 27, params: 'UU/05',    basePrice: 13710 },
+      ],
+    },
+    {
+      id: 'e3_st2', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Столешница Slotex DUO-X E3', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'e3_st2_v1',  size: '4200×1200', thickness: 40, params: '00/U1/05', basePrice: 51030 },
+        { id: 'e3_st2_v2',  size: '4200×1200', thickness: 40, params: 'UU/05',    basePrice: 56130 },
+        { id: 'e3_st2_v3',  size: '4200×800',  thickness: 40, params: '00/U1/05', basePrice: 49670 },
+        { id: 'e3_st2_v4',  size: '4200×800',  thickness: 40, params: 'UU/05',    basePrice: 54630 },
+        { id: 'e3_st2_v5',  size: '4200×600',  thickness: 40, params: '00/U1/05', basePrice: 25580 },
+        { id: 'e3_st2_v6',  size: '3000×1200', thickness: 27, params: '00/U1/05', basePrice: 37370 },
+        { id: 'e3_st2_v7',  size: '3000×1200', thickness: 27, params: 'UU/05',    basePrice: 41100 },
+        { id: 'e3_st2_v8',  size: '3000×800',  thickness: 27, params: '00/U1/05', basePrice: 36080 },
+        { id: 'e3_st2_v9',  size: '3000×800',  thickness: 27, params: 'UU/05',    basePrice: 39680 },
+        { id: 'e3_st2_v10', size: '3000×600',  thickness: 27, params: '00/U1/05', basePrice: 18730 },
+        { id: 'e3_st2_v11', size: '3000×600',  thickness: 27, params: 'UU/05',    basePrice: 20600 },
+      ],
+    },
+    {
+      id: 'e3_sp1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Стеновая панель Slotex E3', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'e3_sp1_v1', size: '4200×1215', thickness: 10, params: '0', basePrice: 23100 },
+        { id: 'e3_sp1_v2', size: '4200×600',  thickness: 10, params: '0', basePrice: 11630 },
+        { id: 'e3_sp1_v3', size: '3000×1215', thickness: 10, params: '0', basePrice: 16290 },
+        { id: 'e3_sp1_v4', size: '3000×600',  thickness: 10, params: '0', basePrice: 8530  },
       ],
     },
 
-    // ── Slotex — Фасадное полотно elga (ДСП) ─────────────────────
+    // ══ Slotex / Серия kapso K3 (gid=557309721) ══════════════════
     {
-      id: 'sl_fg1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Фасадное полотно elga (ДСП)', typeId: 'mt9', unit: 'шт', basePrice: 0,
+      id: 'k3_st1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Столешница kapso K3', typeId: 'mt8', unit: 'шт', basePrice: 0,
       variants: [
-        { id: 'sl_fg1_v1', size: '3000×1215', thickness: 18, params: 'без подгиба', basePrice: 10500 },
-      ],
-    },
-
-    // ── Slotex — Фасадное полотно elga DUO-X (ДСП) ───────────────
-    {
-      id: 'sl_fg2', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Фасадное полотно elga DUO-X (ДСП)', typeId: 'mt9', unit: 'шт', basePrice: 0,
-      variants: [
-        { id: 'sl_fg2_v1', size: '3000×1215', thickness: 18, params: 'без подгиба', basePrice: 12540 },
-      ],
-    },
-
-    // ── Slotex — Фасадное полотно elga (МДФ) ─────────────────────
-    {
-      id: 'sl_fg3', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Фасадное полотно elga (МДФ)', typeId: 'mt9', unit: 'шт', basePrice: 0,
-      variants: [
-        { id: 'sl_fg3_v1', size: '2800×1215', thickness: 20, params: 'без подгиба', basePrice: 17310 },
-      ],
-    },
-
-    // ── Slotex — Фасадное полотно elga DUO-X (МДФ) ───────────────
-    {
-      id: 'sl_fg4', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Фасадное полотно elga DUO-X (МДФ)', typeId: 'mt9', unit: 'шт', basePrice: 0,
-      variants: [
-        { id: 'sl_fg4_v1', size: '2800×1215', thickness: 20, params: 'без подгиба', basePrice: 20770 },
-      ],
-    },
-
-    // ── Slotex — Плита Solid Compact DUO-X ───────────────────────
-    {
-      id: 'sl_sc1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Плита Solid Compact DUO-X', typeId: 'mt8', unit: 'шт', basePrice: 0,
-      variants: [
-        { id: 'sl_sc1_v1', size: '4200×1320', thickness: 12, params: 'без подгиба', basePrice: 63120 },
-        { id: 'sl_sc1_v2', size: '4200×650',  thickness: 12, params: 'без подгиба', basePrice: 32610 },
-        { id: 'sl_sc1_v3', size: '3050×1320', thickness: 12, params: 'без подгиба', basePrice: 45840 },
-        { id: 'sl_sc1_v4', size: '3050×650',  thickness: 12, params: 'без подгиба', basePrice: 23690 },
-        { id: 'sl_sc1_v5', size: '4200×1320', thickness: 4,  params: 'без подгиба', basePrice: 32220 },
-        { id: 'sl_sc1_v6', size: '3050×1320', thickness: 4,  params: 'без подгиба', basePrice: 23400 },
-      ],
-    },
-
-    // ── Slotex — Столешница SolidTop DUO-X ───────────────────────
-    {
-      id: 'sl_stt', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Столешница SolidTop DUO-X', typeId: 'mt8', unit: 'шт', basePrice: 0,
-      variants: [
-        { id: 'sl_stt_v1', size: '3050×1320', thickness: 12, params: 'XX (2 фаски)', basePrice: 55010 },
-        { id: 'sl_stt_v2', size: '3050×650',  thickness: 12, params: 'X0 (1 фаска)', basePrice: 28270 },
-      ],
-    },
-
-    // ── Slotex — Кромка HPL ───────────────────────────────────────
-    {
-      id: 'sl_kr1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Кромка HPL без клея', typeId: 'mt12', unit: 'шт', basePrice: 0,
-      variants: [
-        { id: 'sl_kr1_v1', size: '45×3050', params: 'без клея', basePrice: 310 },
-        { id: 'sl_kr1_v2', size: '45×4200', params: 'без клея', basePrice: 430 },
-        { id: 'sl_kr1_v3', size: '32×3050', params: 'без клея', basePrice: 230 },
+        { id: 'k3_st1_v1', size: '4200×600',  thickness: 40, params: '00/W1/05', basePrice: 8390  },
+        { id: 'k3_st1_v2', size: '3000×600',  thickness: 40, params: '00/W1/05', basePrice: 6000  },
+        { id: 'k3_st1_v3', size: '3000×1200', thickness: 40, params: '00/W1/05', basePrice: 11680 },
       ],
     },
     {
-      id: 'sl_kr2', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Кромка HPL с клеем', typeId: 'mt12', unit: 'шт', basePrice: 0,
+      id: 'k3_sp1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Стеновая панель kapso K3', typeId: 'mt8', unit: 'шт', basePrice: 0,
       variants: [
-        { id: 'sl_kr2_v1', size: '45×3050', params: 'с клеем', basePrice: 420 },
-        { id: 'sl_kr2_v2', size: '45×4200', params: 'с клеем', basePrice: 580 },
-        { id: 'sl_kr2_v3', size: '32×3050', params: 'с клеем', basePrice: 350 },
-      ],
-    },
-
-    // ── kapso — Серия k3 — Столешница ────────────────────────────
-    {
-      id: 'kp_st1', manufacturerId: 'mfr6', vendorId: 'v2', name: 'Столешница kapso', typeId: 'mt8', unit: 'шт', basePrice: 0,
-      variants: [
-        { id: 'kp_st1_v1', size: '4200×600',  thickness: 40, params: 'k3 / 00/W1/05', basePrice: 8390  },
-        { id: 'kp_st1_v2', size: '3000×600',  thickness: 40, params: 'k3 / 00/W1/05', basePrice: 6000  },
-        { id: 'kp_st1_v3', size: '3000×1200', thickness: 40, params: 'k3 / 00/W1/05', basePrice: 11680 },
-      ],
-    },
-
-    // ── kapso — Серия k3 — Стеновая панель ───────────────────────
-    {
-      id: 'kp_sp1', manufacturerId: 'mfr6', vendorId: 'v2', name: 'Стеновая панель kapso', typeId: 'mt8', unit: 'шт', basePrice: 0,
-      variants: [
-        { id: 'kp_sp1_v1', size: '4200×600', thickness: 10,  params: 'k3', basePrice: 6780 },
-        { id: 'kp_sp1_v2', size: '3000×600', thickness: 10,  params: 'k3', basePrice: 4850 },
+        { id: 'k3_sp1_v1', size: '4200×600', thickness: 10, params: '0', basePrice: 6780 },
+        { id: 'k3_sp1_v2', size: '3000×600', thickness: 10, params: '0', basePrice: 4850 },
       ],
     },
   ],
