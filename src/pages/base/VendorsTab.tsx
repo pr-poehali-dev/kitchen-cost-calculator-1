@@ -463,17 +463,6 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
               <Field label="Артикул" value={editingMaterial.article || ''} onChange={v => setEditingMaterial(p => ({ ...p!, article: v }))} />
             </div>
             <Field label="Цена (без наценки)" value={String(editingMaterial.basePrice || '')} onChange={v => setEditingMaterial(p => ({ ...p!, basePrice: parseFloat(v) || 0 }))} type="number" required />
-            <div>
-              <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Фото декора (URL)</label>
-              <div className="flex gap-2 items-start">
-                <input type="url" value={editingMaterial.imageUrl || ''} onChange={e => setEditingMaterial(p => ({ ...p!, imageUrl: e.target.value || undefined }))}
-                  placeholder="https://..." className="flex-1 bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold transition-colors" />
-                {editingMaterial.imageUrl && (
-                  <img src={editingMaterial.imageUrl} alt="preview" className="w-10 h-10 rounded object-cover border border-border shrink-0"
-                    onError={e => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-                )}
-              </div>
-            </div>
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => {

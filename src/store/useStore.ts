@@ -53,46 +53,44 @@ const initialState: AppState = {
   ],
   materials: [
     // ── Lamarty ЛДСП 10мм ─────────────────────────────────────────
-    { id: 'lm10_01', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Белый снег', typeId: 'mt1', thickness: 10, color: 'Белый снег', article: 'U727 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/52e/u727st9.jpg' },
-    { id: 'lm10_02', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Кашемир', typeId: 'mt1', thickness: 10, color: 'Кашемир', article: 'U414 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/d9a/u414st9.jpg' },
-    { id: 'lm10_03', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Серый графит', typeId: 'mt1', thickness: 10, color: 'Серый графит', article: 'U741 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/b70/u741st9.jpg' },
+    { id: 'lm10_01', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Белый снег', typeId: 'mt1', thickness: 10, color: 'Белый снег', article: 'U727 ST9', unit: 'м²', basePrice: 0 },
+    { id: 'lm10_02', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Кашемир', typeId: 'mt1', thickness: 10, color: 'Кашемир', article: 'U414 ST9', unit: 'м²', basePrice: 0 },
+    { id: 'lm10_03', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Серый графит', typeId: 'mt1', thickness: 10, color: 'Серый графит', article: 'U741 ST9', unit: 'м²', basePrice: 0 },
 
     // ── Lamarty ЛДСП 16мм — Однотонные ───────────────────────────
-    { id: 'lm16_01', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Белый снег', typeId: 'mt1', thickness: 16, color: 'Белый снег', article: 'U727 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/52e/u727st9.jpg' },
-    { id: 'lm16_02', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Белый премиум', typeId: 'mt1', thickness: 16, color: 'Белый премиум', article: 'W1000 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/cf4/w1000st9.jpg' },
-    { id: 'lm16_03', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Кашемир', typeId: 'mt1', thickness: 16, color: 'Кашемир', article: 'U414 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/d9a/u414st9.jpg' },
-    { id: 'lm16_04', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Серый графит', typeId: 'mt1', thickness: 16, color: 'Серый графит', article: 'U741 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/b70/u741st9.jpg' },
-    { id: 'lm16_05', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Тёмно-серый', typeId: 'mt1', thickness: 16, color: 'Тёмно-серый', article: 'U732 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/2e0/u732st9.jpg' },
-    { id: 'lm16_06', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Антрацит', typeId: 'mt1', thickness: 16, color: 'Антрацит', article: 'U961 ST2', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/a16/u961st2.jpg' },
-    { id: 'lm16_07', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Чёрный', typeId: 'mt1', thickness: 16, color: 'Чёрный', article: 'U999 ST2', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/d71/u999st2.jpg' },
-    { id: 'lm16_08', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Латте', typeId: 'mt1', thickness: 16, color: 'Латте', article: 'U222 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/04f/u222st9.jpg' },
-    { id: 'lm16_09', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Аворио', typeId: 'mt1', thickness: 16, color: 'Аворио', article: 'U104 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/bb0/u104st9.jpg' },
-    { id: 'lm16_10', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Тёмный бежевый', typeId: 'mt1', thickness: 16, color: 'Тёмный бежевый', article: 'U312 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/cdf/u312st9.jpg' },
+    { id: 'lm16_01', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Белый снег', typeId: 'mt1', thickness: 16, color: 'Белый снег', article: 'U727 ST9', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_02', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Белый премиум', typeId: 'mt1', thickness: 16, color: 'Белый премиум', article: 'W1000 ST9', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_03', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Кашемир', typeId: 'mt1', thickness: 16, color: 'Кашемир', article: 'U414 ST9', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_04', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Серый графит', typeId: 'mt1', thickness: 16, color: 'Серый графит', article: 'U741 ST9', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_05', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Тёмно-серый', typeId: 'mt1', thickness: 16, color: 'Тёмно-серый', article: 'U732 ST9', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_06', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Антрацит', typeId: 'mt1', thickness: 16, color: 'Антрацит', article: 'U961 ST2', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_07', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Чёрный', typeId: 'mt1', thickness: 16, color: 'Чёрный', article: 'U999 ST2', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_08', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Латте', typeId: 'mt1', thickness: 16, color: 'Латте', article: 'U222 ST9', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_09', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Аворио', typeId: 'mt1', thickness: 16, color: 'Аворио', article: 'U104 ST9', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_10', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Тёмный бежевый', typeId: 'mt1', thickness: 16, color: 'Тёмный бежевый', article: 'U312 ST9', unit: 'м²', basePrice: 0 },
 
     // ── Lamarty ЛДСП 16мм — Дерево ────────────────────────────────
-    { id: 'lm16_11', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Сонома трюфель', typeId: 'mt1', thickness: 16, color: 'Дуб Сонома трюфель', article: 'H3406 ST38', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/b8b/h3406st38.jpg' },
-    { id: 'lm16_12', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Сонома натуральный', typeId: 'mt1', thickness: 16, color: 'Дуб Сонома натуральный', article: 'H3453 ST22', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/63a/h3453st22.jpg' },
-    { id: 'lm16_13', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Сонома светлый', typeId: 'mt1', thickness: 16, color: 'Дуб Сонома светлый', article: 'H1334 ST32', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/d56/h1334st32.jpg' },
-    { id: 'lm16_14', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Craft белый', typeId: 'mt1', thickness: 16, color: 'Дуб Craft белый', article: 'H1145 ST10', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/b44/h1145st10.jpg' },
-    { id: 'lm16_15', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Craft серый', typeId: 'mt1', thickness: 16, color: 'Дуб Craft серый', article: 'H1160 ST10', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/4e6/h1160st10.jpg' },
-    { id: 'lm16_16', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Craft золотой', typeId: 'mt1', thickness: 16, color: 'Дуб Craft золотой', article: 'H1156 ST10', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/7c6/h1156st10.jpg' },
-    { id: 'lm16_17', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Аутентик', typeId: 'mt1', thickness: 16, color: 'Дуб Аутентик', article: 'H3151 ST28', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/e0f/h3151st28.jpg' },
-    { id: 'lm16_18', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Орех Сорано', typeId: 'mt1', thickness: 16, color: 'Орех Сорано', article: 'H3734 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/c98/h3734st9.jpg' },
-    { id: 'lm16_19', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Орех Сорано тёмный', typeId: 'mt1', thickness: 16, color: 'Орех Сорано тёмный', article: 'H3702 ST10', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/3dc/h3702st10.jpg' },
-    { id: 'lm16_20', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Вяз Торонто', typeId: 'mt1', thickness: 16, color: 'Вяз Торонто', article: 'H3393 ST22', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/4cd/h3393st22.jpg' },
-    { id: 'lm16_21', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Сосна Айзен', typeId: 'mt1', thickness: 16, color: 'Сосна Айзен', article: 'H3840 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/3c5/h3840st9.jpg' },
-    { id: 'lm16_22', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Акация Молина', typeId: 'mt1', thickness: 16, color: 'Акация Молина', article: 'H3732 ST10', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/60d/h3732st10.jpg' },
-    { id: 'lm16_23', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Берёза Майами', typeId: 'mt1', thickness: 16, color: 'Берёза Майами', article: 'H1717 ST33', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/7dd/h1717st33.jpg' },
+    { id: 'lm16_11', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Сонома трюфель', typeId: 'mt1', thickness: 16, color: 'Дуб Сонома трюфель', article: 'H3406 ST38', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_12', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Сонома натуральный', typeId: 'mt1', thickness: 16, color: 'Дуб Сонома натуральный', article: 'H3453 ST22', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_13', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Сонома светлый', typeId: 'mt1', thickness: 16, color: 'Дуб Сонома светлый', article: 'H1334 ST32', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_14', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Craft белый', typeId: 'mt1', thickness: 16, color: 'Дуб Craft белый', article: 'H1145 ST10', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_15', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Craft серый', typeId: 'mt1', thickness: 16, color: 'Дуб Craft серый', article: 'H1160 ST10', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_16', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Craft золотой', typeId: 'mt1', thickness: 16, color: 'Дуб Craft золотой', article: 'H1156 ST10', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_17', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Аутентик', typeId: 'mt1', thickness: 16, color: 'Дуб Аутентик', article: 'H3151 ST28', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_18', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Орех Сорано', typeId: 'mt1', thickness: 16, color: 'Орех Сорано', article: 'H3734 ST9', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_19', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Орех Сорано тёмный', typeId: 'mt1', thickness: 16, color: 'Орех Сорано тёмный', article: 'H3702 ST10', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_20', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Вяз Торонто', typeId: 'mt1', thickness: 16, color: 'Вяз Торонто', article: 'H3393 ST22', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_21', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Сосна Айзен', typeId: 'mt1', thickness: 16, color: 'Сосна Айзен', article: 'H3840 ST9', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_22', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Акация Молина', typeId: 'mt1', thickness: 16, color: 'Акация Молина', article: 'H3732 ST10', unit: 'м²', basePrice: 0 },
+    { id: 'lm16_23', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Берёза Майами', typeId: 'mt1', thickness: 16, color: 'Берёза Майами', article: 'H1717 ST33', unit: 'м²', basePrice: 0 },
 
-    // ── Lamarty ЛДСП 25мм — Однотонные ───────────────────────────
-    { id: 'lm25_01', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Белый снег', typeId: 'mt1', thickness: 25, color: 'Белый снег', article: 'U727 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/52e/u727st9.jpg' },
-    { id: 'lm25_02', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Антрацит', typeId: 'mt1', thickness: 25, color: 'Антрацит', article: 'U961 ST2', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/a16/u961st2.jpg' },
-    { id: 'lm25_03', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Кашемир', typeId: 'mt1', thickness: 25, color: 'Кашемир', article: 'U414 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/d9a/u414st9.jpg' },
-
-    // ── Lamarty ЛДСП 25мм — Дерево ────────────────────────────────
-    { id: 'lm25_11', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Сонома натуральный', typeId: 'mt1', thickness: 25, color: 'Дуб Сонома натуральный', article: 'H3453 ST22', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/63a/h3453st22.jpg' },
-    { id: 'lm25_12', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Сонома трюфель', typeId: 'mt1', thickness: 25, color: 'Дуб Сонома трюфель', article: 'H3406 ST38', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/b8b/h3406st38.jpg' },
-    { id: 'lm25_13', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Орех Сорано', typeId: 'mt1', thickness: 25, color: 'Орех Сорано', article: 'H3734 ST9', unit: 'м²', basePrice: 0, imageUrl: 'https://www.lamarty.ru/upload/iblock/c98/h3734st9.jpg' },
+    // ── Lamarty ЛДСП 25мм ─────────────────────────────────────────
+    { id: 'lm25_01', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Белый снег', typeId: 'mt1', thickness: 25, color: 'Белый снег', article: 'U727 ST9', unit: 'м²', basePrice: 0 },
+    { id: 'lm25_02', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Антрацит', typeId: 'mt1', thickness: 25, color: 'Антрацит', article: 'U961 ST2', unit: 'м²', basePrice: 0 },
+    { id: 'lm25_03', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Кашемир', typeId: 'mt1', thickness: 25, color: 'Кашемир', article: 'U414 ST9', unit: 'м²', basePrice: 0 },
+    { id: 'lm25_11', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Сонома натуральный', typeId: 'mt1', thickness: 25, color: 'Дуб Сонома натуральный', article: 'H3453 ST22', unit: 'м²', basePrice: 0 },
+    { id: 'lm25_12', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Дуб Сонома трюфель', typeId: 'mt1', thickness: 25, color: 'Дуб Сонома трюфель', article: 'H3406 ST38', unit: 'м²', basePrice: 0 },
+    { id: 'lm25_13', manufacturerId: 'mfr1', vendorId: 'v1', name: 'ЛДСП Орех Сорано', typeId: 'mt1', thickness: 25, color: 'Орех Сорано', article: 'H3734 ST9', unit: 'м²', basePrice: 0 },
 
     // ── Прочие материалы ──────────────────────────────────────────
     { id: 'm3', manufacturerId: 'mfr2', vendorId: 'v1', name: 'ХДФ 3мм Белый', typeId: 'mt3', thickness: 3, color: 'Белый', unit: 'м²', basePrice: 917 },
@@ -235,11 +233,17 @@ function loadState(): AppState {
         ? parsed.expenses.map(e => ({ ...e, enabled: e.enabled !== false }))
         : initialState.expenses;
 
+      // Мерджим материалы: пользовательские + новые из initialState которых ещё нет
+      const existingIds = new Set((parsed.materials || []).map((m: { id: string }) => m.id));
+      const newMaterials = initialState.materials.filter(m => !existingIds.has(m.id));
+      const mergedMaterials = [...(parsed.materials || []), ...newMaterials];
+
       return {
         ...initialState,
         ...parsed,
         manufacturers: parsed.manufacturers?.length ? parsed.manufacturers : initialState.manufacturers,
         vendors: parsed.vendors?.length ? parsed.vendors : initialState.vendors,
+        materials: mergedMaterials,
         templates: parsed.templates ?? initialState.templates,
         savedBlocks: parsed.savedBlocks ?? initialState.savedBlocks,
         projects: parsed.projects ? migrateProjects(parsed.projects) : initialState.projects,
