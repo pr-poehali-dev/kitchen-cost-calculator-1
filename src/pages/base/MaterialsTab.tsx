@@ -6,6 +6,7 @@ import { fmt } from './BaseShared';
 import PricelistUpdateModal from './materials/PricelistUpdateModal';
 import BulkPriceModal from './materials/BulkPriceModal';
 import MaterialEditModal from './materials/MaterialEditModal';
+import ExcelPriceModal from './materials/ExcelPriceModal';
 
 interface Props {
   matTypeFilter: string;
@@ -18,6 +19,7 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
   const [catFilter, setCatFilter] = useState<string>('all');
   const [showBulkPrice, setShowBulkPrice] = useState(false);
   const [showPricelistUpdate, setShowPricelistUpdate] = useState(false);
+  const [showExcelPrice, setShowExcelPrice] = useState(false);
 
   const allTypes = store.settings.materialTypes;
   const allCategories = store.settings.materialCategories || [];
@@ -55,6 +57,13 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
             ))}
           </div>
           <div className="flex gap-2 shrink-0">
+            <button
+              onClick={() => setShowExcelPrice(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
+              title="Обновить цены из Excel файла"
+            >
+              <Icon name="FileSpreadsheet" size={14} /> Из Excel
+            </button>
             <button
               onClick={() => setShowPricelistUpdate(true)}
               className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
@@ -146,6 +155,11 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
           })}
         </div>
       </div>
+
+      {/* Modal: Excel price update */}
+      {showExcelPrice && (
+        <ExcelPriceModal onClose={() => setShowExcelPrice(false)} />
+      )}
 
       {/* Modal: Pricelist update */}
       {showPricelistUpdate && (
