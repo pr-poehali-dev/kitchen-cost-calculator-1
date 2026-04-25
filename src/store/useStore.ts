@@ -45,7 +45,7 @@ const initialState: AppState = {
     { id: 'mfr2', name: 'Kronospan', contact: 'Менеджер Анна', phone: '+7 900 000-00-02', materialTypeIds: ['mt1', 'mt4'] },
     { id: 'mfr3', name: 'Egger', contact: 'Менеджер Павел', phone: '+7 900 000-00-03', materialTypeIds: ['mt1', 'mt2', 'mt9'] },
     { id: 'mfr4', name: 'Boyard', contact: '', phone: '', materialTypeIds: ['mt10'] },
-    { id: 'mfr5', name: 'Slotex', contact: '', phone: '', materialTypeIds: ['mt8', 'mt12'] },
+    { id: 'mfr5', name: 'Slotex', contact: '', phone: '', materialTypeIds: ['mt8', 'mt9', 'mt12'] },
   ],
   vendors: [
     { id: 'v1', name: 'МАРШАЛ', contact: 'Менеджер Сергей', phone: '+7 900 100-00-01', materialTypeIds: ['mt1', 'mt2', 'mt3'] },
@@ -99,7 +99,7 @@ const initialState: AppState = {
     { id: 'm5', manufacturerId: 'mfr1', vendorId: 'v1', name: 'МДФ фасад 18мм', typeId: 'mt2', thickness: 18, color: 'Белый матовый', unit: 'м²', basePrice: 8333 },
     { id: 'm6', manufacturerId: 'mfr4', vendorId: 'v2', name: 'Петля Boyard 35мм', typeId: 'mt10', unit: 'шт', basePrice: 120 },
 
-    // ── Slotex Столешницы ──────────────────────────────────────────
+    // ── Slotex — Столешница Slotex ────────────────────────────────
     {
       id: 'sl_st1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Столешница Slotex', typeId: 'mt8', unit: 'шт', basePrice: 0,
       variants: [
@@ -122,6 +122,8 @@ const initialState: AppState = {
         { id: 'sl_st1_v17', size: '3000×600',  thickness: 27, params: 'UU/05',    basePrice: 7550  },
       ],
     },
+
+    // ── Slotex — Столешница Slotex DUO-X ─────────────────────────
     {
       id: 'sl_st2', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Столешница Slotex DUO-X', typeId: 'mt8', unit: 'шт', basePrice: 0,
       variants: [
@@ -136,34 +138,95 @@ const initialState: AppState = {
         { id: 'sl_st2_v9',  size: '3000×800',  thickness: 40, params: 'UU/05',    basePrice: 24440 },
         { id: 'sl_st2_v10', size: '3000×600',  thickness: 40, params: '00/U1/05', basePrice: 12080 },
         { id: 'sl_st2_v11', size: '3000×600',  thickness: 40, params: 'UU/05',    basePrice: 13290 },
-        { id: 'sl_st2_v12', size: '3000×1200', thickness: 27, params: '00/U1/05', basePrice: 23210 },
-        { id: 'sl_st2_v13', size: '3000×1200', thickness: 27, params: 'UU/05',    basePrice: 25530 },
-        { id: 'sl_st2_v14', size: '3000×800',  thickness: 27, params: '00/U1/05', basePrice: 21590 },
-        { id: 'sl_st2_v15', size: '3000×800',  thickness: 27, params: 'UU/05',    basePrice: 23750 },
-        { id: 'sl_st2_v16', size: '3000×600',  thickness: 27, params: '00/U1/05', basePrice: 11700 },
-        { id: 'sl_st2_v17', size: '3000×600',  thickness: 27, params: 'UU/05',    basePrice: 12870 },
+        { id: 'sl_st2_v12', size: '3000×1200', thickness: 27, params: '00/U1/05', basePrice: 20190 },
+        { id: 'sl_st2_v13', size: '3000×1200', thickness: 27, params: 'UU/05',    basePrice: 22210 },
+        { id: 'sl_st2_v14', size: '3000×800',  thickness: 27, params: '00/U1/05', basePrice: 18550 },
+        { id: 'sl_st2_v15', size: '3000×800',  thickness: 27, params: 'UU/05',    basePrice: 20410 },
+        { id: 'sl_st2_v16', size: '3000×600',  thickness: 27, params: '00/U1/05', basePrice: 10240 },
+        { id: 'sl_st2_v17', size: '3000×600',  thickness: 27, params: 'UU/05',    basePrice: 11270 },
       ],
     },
 
-    // ── Slotex Стеновые панели ─────────────────────────────────────
+    // ── Slotex — Стеновая панель ──────────────────────────────────
     {
       id: 'sl_sp1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Стеновая панель Slotex', typeId: 'mt8', unit: 'шт', basePrice: 0,
       variants: [
-        { id: 'sl_sp1_v1', size: '3000×600', thickness: 6, params: 'PF+', basePrice: 3200 },
-        { id: 'sl_sp1_v2', size: '3000×600', thickness: 6, params: 'PF+ глянец', basePrice: 3800 },
-        { id: 'sl_sp1_v3', size: '4200×600', thickness: 6, params: 'PF+', basePrice: 4400 },
-        { id: 'sl_sp1_v4', size: '4200×600', thickness: 6, params: 'PF+ глянец', basePrice: 5200 },
+        { id: 'sl_sp1_v1', size: '4200×1215', thickness: 10,  params: 'без подгиба', basePrice: 15080 },
+        { id: 'sl_sp1_v2', size: '4200×600',  thickness: 10,  params: 'без подгиба', basePrice: 7630  },
+        { id: 'sl_sp1_v3', size: '3000×1215', thickness: 10,  params: 'без подгиба', basePrice: 10340 },
+        { id: 'sl_sp1_v4', size: '3000×600',  thickness: 10,  params: 'без подгиба', basePrice: 5220  },
       ],
     },
 
-    // ── Slotex Кромка ──────────────────────────────────────────────
+    // ── Slotex — Фасадное полотно elga (ДСП) ─────────────────────
     {
-      id: 'sl_kr1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Кромка Slotex для столешниц', typeId: 'mt12', unit: 'м.п.', basePrice: 0,
+      id: 'sl_fg1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Фасадное полотно elga (ДСП)', typeId: 'mt9', unit: 'шт', basePrice: 0,
       variants: [
-        { id: 'sl_kr1_v1', size: 'торец прямой',   params: '40мм', basePrice: 320 },
-        { id: 'sl_kr1_v2', size: 'торец скошенный', params: '40мм', basePrice: 380 },
-        { id: 'sl_kr1_v3', size: 'торец прямой',   params: '27мм', basePrice: 270 },
-        { id: 'sl_kr1_v4', size: 'торец скошенный', params: '27мм', basePrice: 320 },
+        { id: 'sl_fg1_v1', size: '3000×1215', thickness: 18, params: 'без подгиба', basePrice: 10500 },
+      ],
+    },
+
+    // ── Slotex — Фасадное полотно elga DUO-X (ДСП) ───────────────
+    {
+      id: 'sl_fg2', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Фасадное полотно elga DUO-X (ДСП)', typeId: 'mt9', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'sl_fg2_v1', size: '3000×1215', thickness: 18, params: 'без подгиба', basePrice: 12540 },
+      ],
+    },
+
+    // ── Slotex — Фасадное полотно elga (МДФ) ─────────────────────
+    {
+      id: 'sl_fg3', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Фасадное полотно elga (МДФ)', typeId: 'mt9', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'sl_fg3_v1', size: '2800×1215', thickness: 20, params: 'без подгиба', basePrice: 17310 },
+      ],
+    },
+
+    // ── Slotex — Фасадное полотно elga DUO-X (МДФ) ───────────────
+    {
+      id: 'sl_fg4', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Фасадное полотно elga DUO-X (МДФ)', typeId: 'mt9', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'sl_fg4_v1', size: '2800×1215', thickness: 20, params: 'без подгиба', basePrice: 20770 },
+      ],
+    },
+
+    // ── Slotex — Плита Solid Compact DUO-X ───────────────────────
+    {
+      id: 'sl_sc1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Плита Solid Compact DUO-X', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'sl_sc1_v1', size: '4200×1320', thickness: 12, params: 'без подгиба', basePrice: 63120 },
+        { id: 'sl_sc1_v2', size: '4200×650',  thickness: 12, params: 'без подгиба', basePrice: 32610 },
+        { id: 'sl_sc1_v3', size: '3050×1320', thickness: 12, params: 'без подгиба', basePrice: 45840 },
+        { id: 'sl_sc1_v4', size: '3050×650',  thickness: 12, params: 'без подгиба', basePrice: 23690 },
+        { id: 'sl_sc1_v5', size: '4200×1320', thickness: 4,  params: 'без подгиба', basePrice: 32220 },
+        { id: 'sl_sc1_v6', size: '3050×1320', thickness: 4,  params: 'без подгиба', basePrice: 23400 },
+      ],
+    },
+
+    // ── Slotex — Столешница SolidTop DUO-X ───────────────────────
+    {
+      id: 'sl_stt', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Столешница SolidTop DUO-X', typeId: 'mt8', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'sl_stt_v1', size: '3050×1320', thickness: 12, params: 'XX (2 фаски)', basePrice: 55010 },
+        { id: 'sl_stt_v2', size: '3050×650',  thickness: 12, params: 'X0 (1 фаска)', basePrice: 28270 },
+      ],
+    },
+
+    // ── Slotex — Кромка HPL ───────────────────────────────────────
+    {
+      id: 'sl_kr1', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Кромка HPL без клея', typeId: 'mt12', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'sl_kr1_v1', size: '45×3050',  params: 'без клея', basePrice: 310 },
+        { id: 'sl_kr1_v2', size: '45×4200',  params: 'без клея', basePrice: 430 },
+        { id: 'sl_kr1_v3', size: '32×3050',  params: 'без клея', basePrice: 230 },
+      ],
+    },
+    {
+      id: 'sl_kr2', manufacturerId: 'mfr5', vendorId: 'v2', name: 'Кромка HPL с клеем', typeId: 'mt12', unit: 'шт', basePrice: 0,
+      variants: [
+        { id: 'sl_kr2_v1', size: '45×3050',  params: 'с клеем', basePrice: 420 },
+        { id: 'sl_kr2_v2', size: '45×4200',  params: 'с клеем', basePrice: 580 },
+        { id: 'sl_kr2_v3', size: '32×3050',  params: 'с клеем', basePrice: 350 },
       ],
     },
   ],
