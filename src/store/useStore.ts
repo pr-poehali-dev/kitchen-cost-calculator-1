@@ -1017,6 +1017,14 @@ export function useStore() {
     setState(s => ({ ...s, savedBlocks: (s.savedBlocks || []).filter(b => b.id !== blockId) }));
   };
 
+  const reorderSavedBlocks = (orderedIds: string[]) => {
+    setState(s => {
+      const map = new Map((s.savedBlocks || []).map(b => [b.id, b]));
+      const reordered = orderedIds.map(id => map.get(id)).filter(Boolean) as typeof s.savedBlocks;
+      return { ...s, savedBlocks: reordered };
+    });
+  };
+
   const addSavedBlockRow = (blockId: string) => {
     const id = `r${Date.now()}`;
     const newRow: CalcRow = { id, name: '', unit: 'м²', qty: 1, price: 0 };
@@ -1128,7 +1136,7 @@ export function useStore() {
     addUnit, deleteUnit,
     moveBlock, moveServiceBlock,
     saveTemplate, loadTemplate, deleteTemplate, updateTemplate, overwriteTemplate,
-    createSavedBlock, updateSavedBlock, deleteSavedBlock,
+    createSavedBlock, updateSavedBlock, deleteSavedBlock, reorderSavedBlocks,
     addSavedBlockRow, updateSavedBlockRow, deleteSavedBlockRow,
     insertSavedBlockToProject,
     setState: (updater: (s: AppState) => AppState) => setState(updater),

@@ -1,13 +1,67 @@
 import { useState } from 'react';
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { useStore } from '@/store/useStore';
 import type { SavedBlock } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import SavedBlockEditor from './blocks/SavedBlockEditor';
 import SavedBlockSettingsPanel from './blocks/SavedBlockSettingsPanel';
 
+function SortableBlockItem({ block, isSelected, onClick }: {
+  block: SavedBlock;
+  isSelected: boolean;
+  onClick: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: block.id });
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      className={`w-full flex items-center gap-1 text-sm transition-all duration-150 ${
+        isSelected
+          ? 'text-gold bg-[hsl(220,12%,14%)] border-r-2 border-gold'
+          : 'text-[hsl(var(--text-dim))] hover:text-foreground hover:bg-[hsl(220,12%,12%)]'
+      }`}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="pl-2 py-2.5 text-[hsl(var(--text-muted))] hover:text-gold cursor-grab active:cursor-grabbing touch-none shrink-0"
+        tabIndex={-1}
+      >
+        <Icon name="GripVertical" size={12} />
+      </button>
+      <button
+        onClick={onClick}
+        className="flex-1 text-left flex items-center gap-2 pr-4 py-2.5 min-w-0"
+      >
+        <Icon name="Layers" size={13} className="shrink-0 opacity-60" />
+        <span className="truncate font-medium">{block.name}</span>
+      </button>
+    </div>
+  );
+}
+
 export default function BlocksPage() {
   const store = useStore();
   const savedBlocks = store.savedBlocks || [];
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIdx = savedBlocks.findIndex(b => b.id === active.id);
+    const newIdx = savedBlocks.findIndex(b => b.id === over.id);
+    const reordered = arrayMove(savedBlocks, oldIdx, newIdx);
+    store.reorderSavedBlocks(reordered.map(b => b.id));
+  };
   const [selectedId, setSelectedId] = useState<string | null>(savedBlocks[0]?.id ?? null);
   const [settingsBlockId, setSettingsBlockId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
@@ -68,20 +122,18 @@ export default function BlocksPage() {
               Нет блоков.<br />Нажми + чтобы создать
             </div>
           ) : (
-            savedBlocks.map(block => (
-              <button
-                key={block.id}
-                onClick={() => setSelectedId(block.id)}
-                className={`w-full text-left px-4 py-2.5 text-sm transition-all duration-150 flex items-center gap-2 ${
-                  selectedId === block.id
-                    ? 'text-gold bg-[hsl(220,12%,14%)] border-r-2 border-gold'
-                    : 'text-[hsl(var(--text-dim))] hover:text-foreground hover:bg-[hsl(220,12%,12%)]'
-                }`}
-              >
-                <Icon name="Layers" size={13} className="shrink-0 opacity-60" />
-                <span className="truncate font-medium">{block.name}</span>
-              </button>
-            ))
+            <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+              <SortableContext items={savedBlocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                {savedBlocks.map(block => (
+                  <SortableBlockItem
+                    key={block.id}
+                    block={block}
+                    isSelected={selectedId === block.id}
+                    onClick={() => setSelectedId(block.id)}
+                  />
+                ))}
+              </SortableContext>
+            </DndContext>
           )}
         </div>
       </div>
