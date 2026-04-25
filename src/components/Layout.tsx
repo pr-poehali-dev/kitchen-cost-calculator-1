@@ -11,18 +11,21 @@ interface LayoutProps {
   onLogout?: () => void;
 }
 
-const NAV = [
-  { id: 'home'     as Section, label: 'Главная',      icon: 'House' },
-  { id: 'calc'     as Section, label: 'Расчёт',       icon: 'Calculator' },
-  { id: 'blocks'   as Section, label: 'Блоки',        icon: 'Layers' },
-  { id: 'services' as Section, label: 'Услуги',       icon: 'Wrench' },
-  { id: 'base'     as Section, label: 'База',          icon: 'Database' },
-  { id: 'expenses' as Section, label: 'Расходы',      icon: 'TrendingUp' },
-  { id: 'settings' as Section, label: 'Настройки',    icon: 'Settings' },
-  { id: 'users'    as Section, label: 'Пользователи', icon: 'Users' },
+const NAV_BASE = [
+  { id: 'home'     as Section, label: 'Главная',   icon: 'House' },
+  { id: 'calc'     as Section, label: 'Расчёт',    icon: 'Calculator' },
+  { id: 'blocks'   as Section, label: 'Блоки',     icon: 'Layers' },
+  { id: 'services' as Section, label: 'Услуги',    icon: 'Wrench' },
+  { id: 'base'     as Section, label: 'База',       icon: 'Database' },
+  { id: 'expenses' as Section, label: 'Расходы',   icon: 'TrendingUp' },
+  { id: 'settings' as Section, label: 'Настройки', icon: 'Settings' },
 ];
 
+const NAV_ADMIN = { id: 'users' as Section, label: 'Пользователи', icon: 'Users' };
+
 export default function Layout({ active, onNav, children, user, onLogout }: LayoutProps) {
+  const nav = user?.role === 'admin' ? [...NAV_BASE, NAV_ADMIN] : NAV_BASE;
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
       <aside className="w-56 flex flex-col border-r border-border bg-[hsl(220,16%,6%)] shrink-0">
@@ -31,7 +34,7 @@ export default function Layout({ active, onNav, children, user, onLogout }: Layo
           <div className="text-[hsl(var(--text-muted))] text-xs mt-0.5 tracking-wider uppercase">Калькулятор мебели</div>
         </div>
         <nav className="flex-1 py-3">
-          {NAV.map(item => (
+          {nav.map(item => (
             <button
               key={item.id}
               onClick={() => onNav(item.id)}

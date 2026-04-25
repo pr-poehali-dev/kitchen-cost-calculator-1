@@ -45,7 +45,8 @@ export default function App() {
       {section === 'base'     && <BasePage />}
       {section === 'expenses' && <ExpensesPage />}
       {section === 'settings' && <SettingsPage />}
-      {section === 'users'    && <AdminPanel currentUser={user} token={token} inline />}
+      {section === 'users'    && user.role === 'admin' && <AdminPanel currentUser={user} token={token} inline />}
+      {section === 'users'    && user.role !== 'admin' && <HomePage />}
     </Layout>
   );
 }
