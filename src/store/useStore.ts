@@ -254,15 +254,20 @@ export function useStore() {
 
   const state = globalState;
 
-  // Суммирует все активные наценки нужного типа
+  // Суммирует все активные наценки нужного типа.
+  // Если наценок нет вообще или все выключены — возвращает basePrice без изменений.
   const calcPriceWithMarkup = (basePrice: number, applyTo: 'materials' | 'services' = 'materials') => {
-    const markupItems = state.expenses.filter(e =>
-      e.type === 'markup' && e.applyTo === applyTo && (e.enabled !== false)
+    const allMarkupItems = state.expenses.filter(e =>
+      e.type === 'markup' && e.applyTo === applyTo
     );
-    if (markupItems.length > 0) {
-      const totalMarkupPct = markupItems.reduce((s, e) => s + e.value, 0);
+    const activeMarkupItems = allMarkupItems.filter(e => e.enabled !== false);
+    // Если есть хотя бы одна наценка этого типа — применяем только активные
+    if (allMarkupItems.length > 0) {
+      if (activeMarkupItems.length === 0) return basePrice;
+      const totalMarkupPct = activeMarkupItems.reduce((s, e) => s + e.value, 0);
       return Math.round(basePrice * (1 + totalMarkupPct / 100));
     }
+    // Нет ни одной наценки — используем fallback из настроек
     const fallback = applyTo === 'materials' ? state.settings.markupMaterial : state.settings.markupService;
     return Math.round(basePrice * (1 + fallback / 100));
   };
