@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
 import { useStore, loadStateFromDb, setStoreToken, forceSetGlobalState, saveStateToDb } from '@/store/useStore';
 import HomePage from '@/pages/HomePage';
+import ClientsPage from '@/clients/ClientsPage';
 import CalcPage from '@/pages/CalcPage';
 import BlocksPage from '@/pages/BlocksPage';
 import ServicesPage from '@/pages/ServicesPage';
@@ -13,7 +14,7 @@ import AdminPanel from '@/auth/AdminPanel';
 import { useAuth } from '@/auth/useAuth';
 import Icon from '@/components/ui/icon';
 
-type Section = 'home' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings' | 'users';
+type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings' | 'users';
 
 export default function App() {
   const [section, setSection] = useState<Section>('home');
@@ -78,6 +79,7 @@ export default function App() {
   return (
     <Layout active={section} onNav={setSection} user={user} onLogout={logout}>
       {section === 'home'     && <HomePage />}
+      {section === 'clients'  && <ClientsPage />}
       {section === 'calc'     && <CalcPage />}
       {section === 'blocks'   && <BlocksPage />}
       {section === 'services' && <ServicesPage />}

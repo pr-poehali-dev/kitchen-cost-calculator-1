@@ -1,7 +1,7 @@
 import Icon from '@/components/ui/icon';
 import type { AuthUser } from '@/auth/useAuth';
 
-type Section = 'home' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings' | 'users';
+type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings' | 'users';
 
 interface LayoutProps {
   active: Section;
@@ -13,6 +13,7 @@ interface LayoutProps {
 
 const NAV_BASE = [
   { id: 'home'     as Section, label: 'Главная',   icon: 'House' },
+  { id: 'clients'  as Section, label: 'Клиенты',   icon: 'Users' },
   { id: 'calc'     as Section, label: 'Расчёт',    icon: 'Calculator' },
   { id: 'blocks'   as Section, label: 'Блоки',     icon: 'Layers' },
   { id: 'services' as Section, label: 'Услуги',    icon: 'Wrench' },
@@ -21,7 +22,7 @@ const NAV_BASE = [
   { id: 'settings' as Section, label: 'Настройки', icon: 'Settings' },
 ];
 
-const NAV_ADMIN = { id: 'users' as Section, label: 'Пользователи', icon: 'Users' };
+const NAV_ADMIN = { id: 'users' as Section, label: 'Пользователи', icon: 'ShieldCheck' };
 
 export default function Layout({ active, onNav, children, user, onLogout }: LayoutProps) {
   const nav = user?.role === 'admin' ? [...NAV_BASE, NAV_ADMIN] : NAV_BASE;
@@ -33,7 +34,7 @@ export default function Layout({ active, onNav, children, user, onLogout }: Layo
           <div className="text-gold font-semibold text-base tracking-wide">КухниПро</div>
           <div className="text-[hsl(var(--text-muted))] text-xs mt-0.5 tracking-wider uppercase">Калькулятор мебели</div>
         </div>
-        <nav className="flex-1 py-3">
+        <nav className="flex-1 py-3 overflow-y-auto scrollbar-thin">
           {nav.map(item => (
             <button
               key={item.id}
@@ -50,7 +51,6 @@ export default function Layout({ active, onNav, children, user, onLogout }: Layo
           ))}
         </nav>
 
-        {/* User block */}
         <div className="px-4 py-4 border-t border-border space-y-2">
           {user && (
             <div className="flex items-center gap-2 px-1 mb-1">
@@ -63,7 +63,6 @@ export default function Layout({ active, onNav, children, user, onLogout }: Layo
               </div>
             </div>
           )}
-
           {onLogout && (
             <button
               onClick={onLogout}
@@ -73,10 +72,7 @@ export default function Layout({ active, onNav, children, user, onLogout }: Layo
               Выйти
             </button>
           )}
-
-          {!user && (
-            <div className="text-[hsl(var(--text-muted))] text-xs px-1">v1.0 · 2026</div>
-          )}
+          {!user && <div className="text-[hsl(var(--text-muted))] text-xs px-1">v1.0 · 2026</div>}
         </div>
       </aside>
       <main className="flex-1 overflow-hidden flex flex-col">
