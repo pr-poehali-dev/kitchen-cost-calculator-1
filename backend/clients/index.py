@@ -155,7 +155,7 @@ def handler(event: dict, context) -> dict:
                 prepaid_amount, balance_due, custom_payment_scheme,
                 delivery_date, production_days, assembly_days,
                 delivery_cost, assembly_cost,
-                designer, measurer, project_ids, reminder_date, reminder_note, comment,
+                designer, measurer, manager_name, project_ids, reminder_date, reminder_note, comment,
                 created_by, updated_by
             ) VALUES (
                 %s,%s,%s,%s,%s,%s,%s,%s,
@@ -167,7 +167,7 @@ def handler(event: dict, context) -> dict:
                 %s,%s,%s,
                 %s,%s,%s,
                 %s,%s,
-                %s,%s,%s,%s,%s,%s,
+                %s,%s,%s,%s,%s,%s,%s,
                 %s,%s
             ) RETURNING id
         ''', (
@@ -186,7 +186,7 @@ def handler(event: dict, context) -> dict:
             c.get('prepaid_amount', 0), c.get('balance_due', 0), c.get('custom_payment_scheme', ''),
             c.get('delivery_date', ''), c.get('production_days', 0), c.get('assembly_days', 0),
             c.get('delivery_cost', 0), c.get('assembly_cost', 0),
-            c.get('designer', ''), c.get('measurer', ''),
+            c.get('designer', ''), c.get('measurer', ''), c.get('manager_name', ''),
             json.dumps(c.get('project_ids', [])),
             c.get('reminder_date', ''), c.get('reminder_note', ''), c.get('comment', ''),
             payload.get('sub'), payload.get('sub'),
@@ -226,7 +226,7 @@ def handler(event: dict, context) -> dict:
                 total_amount=%s, payment_type=%s, prepaid_amount=%s, balance_due=%s,
                 custom_payment_scheme=%s, delivery_date=%s, production_days=%s, assembly_days=%s,
                 delivery_cost=%s, assembly_cost=%s,
-                designer=%s, measurer=%s, project_ids=%s,
+                designer=%s, measurer=%s, manager_name=%s, project_ids=%s,
                 reminder_date=%s, reminder_note=%s, comment=%s,
                 updated_at=NOW(), updated_by=%s
             WHERE id=%s
@@ -246,7 +246,7 @@ def handler(event: dict, context) -> dict:
             c.get('prepaid_amount', 0), c.get('balance_due', 0), c.get('custom_payment_scheme', ''),
             c.get('delivery_date', ''), c.get('production_days', 0), c.get('assembly_days', 0),
             c.get('delivery_cost', 0), c.get('assembly_cost', 0),
-            c.get('designer', ''), c.get('measurer', ''),
+            c.get('designer', ''), c.get('measurer', ''), c.get('manager_name', ''),
             json.dumps(c.get('project_ids', [])),
             c.get('reminder_date', ''), c.get('reminder_note', ''), c.get('comment', ''),
             payload.get('sub'), cid,
