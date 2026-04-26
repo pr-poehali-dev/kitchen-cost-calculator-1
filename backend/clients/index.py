@@ -721,40 +721,64 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 
     elif doc_type == 'act':
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Акт выполненных работ к договору №{contract_num}</title>{style}</head><body><div class="page">
-<p class="no-indent" style="text-align:right">Приложение № 4 к договору бытового подряда<br>на изготовление мебели от {contract_date_full}</p>
+<p class="no-indent" style="text-align:right">Приложение № 4 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
 <h1>«Акт выполненных работ»</h1>
-<div class="city-date"><span>г. Саратов</span><span>«____» ______________ 20____г.</span></div>
-<p class="no-indent">ООО «Интерьерные решения», в лице менеджера <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, действующего на основании доверенности № <span class="ul" style="min-width:40px">&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, именуемый в дальнейшем «Подрядчик», и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», подписали настоящий Акт выполненных работ о нижеследующем:</p>
-<p>1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда на изготовление мебели от {contract_date_full}:</p>
-<table><tr><th style="width:5%">№</th><th>Наименование мебели, включая её элементы</th><th style="width:12%">Ед. изм.</th><th style="width:10%">Кол-во</th><th style="width:18%">Стоимость, руб.</th></tr>
+<p class="center">от «____» ______________ 20____ г.</p>
+<p class="center">(ФОРМА)</p>
+<p class="no-indent">ООО «Интерьерные решения», в лице менеджера <strong>{manager_line}</strong>, действующего на основании доверенности № <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, именуемый в дальнейшем «Подрядчик», и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», подписали настоящий Акт выполненных работ о нижеследующем:</p>
+<p class="no-indent">1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}:</p>
+<table><tr><th style="width:5%">№</th><th>Наименование мебели, включая ее элементы</th><th style="width:13%">Ед. измерения</th><th style="width:12%">Кол-во изделий</th><th style="width:18%">Стоимость в руб.</th></tr>
 {products_rows}
-<tr><td colspan="4" style="text-align:right;font-weight:bold">ИТОГО:</td><td style="text-align:right;font-weight:bold">{total:,.0f}</td></tr></table>
-<p class="center">({total_words})</p>
-<p>2. Комплектность, количество, вид, характеристики мебели соответствуют условиям договора. Визуальный осмотр мебели на предмет повреждений, царапин, сколов, трещин и других недостатков произведён Заказчиком. Фурнитура (петли, выдвижные механизмы, подъёмники) проверена на предмет работоспособности.</p>
-<p>3. Заказчик принял результат выполненных работ. Претензий к качеству и комплектности мебели не имеет.</p>
-<p>4. Обязательства Подрядчика по Договору выполнены в полном объёме. Оплата по Договору произведена Заказчиком в полном объёме.</p>
-<table style="margin-top:30px"><tr><th style="width:50%">Подрядчик</th><th style="width:50%">Заказчик</th></tr>
-<tr><td>ООО «Интерьерные решения»<br><br>Менеджер: <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><br>М.П.</td>
-<td>{fname}<br>Паспорт: {_passport_str(c)}<br>Телефон: {c.get("phone") or "___________"}<br><br>Подпись: <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr></table>
+</table>
+<p style="margin:20px 0 30px 0">&nbsp;</p>
+<p class="no-indent">2. Комплектность, количество, вид, характеристики мебели соответствуют условиям договора. Визуальный осмотр мебели на предмет повреждений, царапин, сколов, трещин и других недостатков произведен Заказчиком. Фурнитура (петли, выдвижные механизмы, подъемные механизмы и т.д.) работает исправно. Заказчик претензий по объему, качеству, результату и срокам выполнения работ: <strong>не имеет / имеет (ненужное зачеркнуть)</strong>.</p>
+<p style="margin:20px 0">&nbsp;</p>
+<p style="margin:20px 0">&nbsp;</p>
+<p style="margin:20px 0">&nbsp;</p>
+<p class="no-indent">3. В случае наличия замечаний Заказчик, после подписания акта, в праве требовать устранения замечаний отраженных в данном акте.</p>
+<p class="no-indent">4. Настоящий акт подписан в 2 (двух) экземплярах по одному для каждой из Сторон.</p>
+<table style="margin-top:30px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
+<tr><td style="height:50px">&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td style="height:50px">&nbsp;</td><td>&nbsp;</td></tr>
+</table>
+<p class="center" style="margin-top:30px">М.П.</p>
 </div></body></html>'''
 
     elif doc_type == 'tech':
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Технический проект к договору №{contract_num}</title>{style}</head><body><div class="page">
-<p class="no-indent" style="text-align:right">Приложение № 1 к договору бытового подряда<br>на изготовление мебели от {contract_date_full}</p>
+<p class="no-indent" style="text-align:right">Приложение № 1 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
 <h1>«Технический проект»</h1>
-<table style="margin-top:16px"><tr><th colspan="2">Характеристики изделия</th></tr>
-<tr><td style="width:30%;font-weight:bold">Корпус:</td><td style="min-height:30px">&nbsp;</td></tr>
-<tr><td style="font-weight:bold">Фасад 1:</td><td>&nbsp;</td></tr>
-<tr><td style="font-weight:bold">Фасад 2:</td><td>&nbsp;</td></tr>
-<tr><td style="font-weight:bold">Столешница:</td><td>&nbsp;</td></tr>
-<tr><td style="font-weight:bold">Стеновая панель:</td><td>&nbsp;</td></tr>
-<tr><td style="font-weight:bold">Подсветка:</td><td>Тип: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Свет: </td></tr>
-<tr><td style="font-weight:bold">Фрезеровка:</td><td>&nbsp;</td></tr></table>
-<p style="margin-top:20px;text-indent:0">Место для схемы / эскиза:</p>
-<div style="border:1px solid #000;min-height:120mm;margin-top:8px"></div>
-<table style="margin-top:30px"><tr><th style="width:50%">Подрядчик</th><th style="width:50%">Заказчик</th></tr>
-<tr><td>ООО «Интерьерные решения»<br><br>Менеджер: <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><br>М.П.</td>
-<td>{fname}<br><br>Подпись: <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr></table>
+<table style="margin-top:16px;font-size:10pt">
+<tr>
+  <td style="width:15%;font-weight:bold;border:1px solid #000;padding:4px 6px">Корпус:</td>
+  <td style="width:35%;border:1px solid #000;padding:4px 6px">&nbsp;</td>
+  <td style="width:15%;font-weight:bold;border:1px solid #000;padding:4px 6px">Столешница:</td>
+  <td style="width:35%;border:1px solid #000;padding:4px 6px">&nbsp;</td>
+</tr>
+<tr>
+  <td style="font-weight:bold;border:1px solid #000;padding:4px 6px">Фасад 1:</td>
+  <td style="border:1px solid #000;padding:4px 6px">&nbsp;</td>
+  <td style="font-weight:bold;border:1px solid #000;padding:4px 6px">Стеновая панель:</td>
+  <td style="border:1px solid #000;padding:4px 6px">&nbsp;</td>
+</tr>
+<tr>
+  <td style="font-weight:bold;border:1px solid #000;padding:4px 6px">Фасад 2:</td>
+  <td style="border:1px solid #000;padding:4px 6px">&nbsp;</td>
+  <td style="font-weight:bold;border:1px solid #000;padding:4px 6px">Подсветка &nbsp; Тип:</td>
+  <td style="border:1px solid #000;padding:4px 6px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Свет: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+</tr>
+<tr>
+  <td style="font-weight:bold;border:1px solid #000;padding:4px 6px">Фрезеровка:</td>
+  <td colspan="3" style="border:1px solid #000;padding:4px 6px">&nbsp;</td>
+</tr>
+</table>
+<div style="border:1px solid #000;min-height:150mm;margin-top:10px"></div>
+<p style="margin-top:20px;font-style:italic;text-indent:0">Подписывая Технический проект, Заказчик подтверждает, что ознакомлен с наименованием, качественными характеристиками, количеством, дизайном мебели и ему полностью понятны выполняемые Подрядчиком работы. Стороны согласовали, что мебель изготовлена специально для Заказчика по его индивидуальным параметрам. Приложение: бланк замера.</p>
+<table style="margin-top:16px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
+<tr><td style="padding:6px">Менеджер</td><td>&nbsp;</td></tr>
+<tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+</table>
 </div></body></html>'''
 
     elif doc_type == 'delivery':
@@ -862,7 +886,7 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 
     elif doc_type == 'rules':
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Правила эксплуатации мебели</title>{style}</head><body><div class="page">
-<p class="no-indent" style="text-align:right">Приложение № 3 к договору бытового подряда на изготовление мебели от {contract_date_full}</p>
+<p class="no-indent" style="text-align:right">Приложение № 3 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
 <h1>«Правила эксплуатации корпусной мебели»</h1>
 
 <p class="sec">1. ОБЩИЕ РЕКОМЕНДАЦИИ</p>
@@ -933,9 +957,12 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 <p style="margin-top:16px;font-style:italic">Соблюдая эти несложные правила, вы сохраните безупречный вид и функциональность вашей мебели на долгие годы. Помните: что несоблюдение правил эксплуатации может привести к сокращению сроков службы и преждевременному выходу из строя элементов кухонной мебели.</p>
 <p style="margin-top:12px;font-weight:bold">ВНИМАНИЕ! Подрядчик не несет ответственность за последствия от несоблюдения установленных норм и правил по уходу и эксплуатации корпусной мебели.</p>
 
-<table style="margin-top:30px"><tr><th style="width:50%">Подрядчик</th><th style="width:50%">Заказчик</th></tr>
-<tr><td>ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»<br><br><br><br>М.П.</td>
-<td>&nbsp;<br><br><br><br>&nbsp;</td></tr></table>
+<table style="margin-top:30px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
+<tr><td style="height:50px">&nbsp;</td><td>&nbsp;</td></tr>
+<tr><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td style="height:50px">&nbsp;</td><td>&nbsp;</td></tr>
+</table>
+<p class="center" style="margin-top:30px">М.П.</p>
 </div></body></html>'''
 
     elif doc_type == 'act_delivery':
@@ -985,6 +1012,20 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 <table style="margin-top:30px"><tr><th style="width:50%">Исполнитель</th><th style="width:50%">Заказчик</th></tr>
 <tr><td>ООО «Интерьерные решения»<br><br>Менеджер: <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><br>М.П.</td>
 <td>{fname}<br>Паспорт: {_passport_str(c)}<br>Телефон: {c.get("phone") or "___________"}<br><br>Подпись: <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr></table>
+</div></body></html>'''
+
+    elif doc_type == 'measure':
+        measurer = c.get('measurer') or ''
+        measurer_line = measurer if measurer else ''
+        return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Бланк замера к договору №{contract_num}</title>{style}<style>
+.measure-area{{border:1px solid #000;min-height:180mm;margin:10px 0;position:relative;background:#fff}}
+</style></head><body><div class="page">
+<p class="no-indent" style="text-align:right">Бланк замера помещения к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
+<div class="measure-area"></div>
+<table style="margin-top:16px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
+<tr><td style="padding:6px">Замерщик</td><td>&nbsp;</td></tr>
+<tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+</table>
 </div></body></html>'''
 
     return '<html><body><p>Неизвестный тип документа</p></body></html>'
