@@ -318,6 +318,18 @@ function TabContract({ client, onChange }: { client: Client; onChange: (f: keyof
           </Field>
         </div>
       </Section>
+
+      {/* Стоимость услуг */}
+      <Section title="Стоимость доставки и монтажа" icon="Truck">
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Стоимость доставки (₽)">
+            <input type="number" min={0} className={INPUT} value={client.delivery_cost || ''} onChange={e => onChange('delivery_cost', parseFloat(e.target.value) || 0)} placeholder="0" />
+          </Field>
+          <Field label="Стоимость монтажа (₽)">
+            <input type="number" min={0} className={INPUT} value={client.assembly_cost || ''} onChange={e => onChange('assembly_cost', parseFloat(e.target.value) || 0)} placeholder="0" />
+          </Field>
+        </div>
+      </Section>
     </div>
   );
 }
