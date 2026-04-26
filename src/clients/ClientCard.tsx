@@ -3,6 +3,7 @@ import Icon from '@/components/ui/icon';
 import { useClient } from './useClients';
 import { CLIENT_STATUSES, clientFullName } from './types';
 import type { Client, ClientStatus } from './types';
+import TabDocuments from './TabDocuments';
 
 const INPUT = 'w-full bg-[hsl(220,12%,14%)] border border-border rounded px-3 py-2 text-sm outline-none focus:border-gold transition-colors placeholder:text-[hsl(var(--text-muted))]';
 const SELECT = 'w-full bg-[hsl(220,12%,14%)] border border-border rounded px-3 py-2 text-sm outline-none focus:border-gold transition-colors';
@@ -477,14 +478,15 @@ function TabHistory({ history }: { history: import('./types').ClientHistoryItem[
 }
 
 // ── Главный компонент карточки ─────────────────────────────────
-type Tab = 'overview' | 'data' | 'contract' | 'photos' | 'history';
+type Tab = 'overview' | 'data' | 'contract' | 'photos' | 'documents' | 'history';
 
 const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'overview',  label: 'Сводка',   icon: 'LayoutDashboard' },
-  { id: 'data',      label: 'Данные',   icon: 'User' },
-  { id: 'contract',  label: 'Договор',  icon: 'FileText' },
-  { id: 'photos',    label: 'Фото',     icon: 'Image' },
-  { id: 'history',   label: 'История',  icon: 'Clock' },
+  { id: 'overview',   label: 'Сводка',     icon: 'LayoutDashboard' },
+  { id: 'data',       label: 'Данные',     icon: 'User' },
+  { id: 'contract',   label: 'Договор',    icon: 'FileText' },
+  { id: 'photos',     label: 'Фото',       icon: 'Image' },
+  { id: 'documents',  label: 'Документы',  icon: 'BookOpen' },
+  { id: 'history',    label: 'История',    icon: 'Clock' },
 ];
 
 export default function ClientCard({ clientId, onBack }: { clientId: string; onBack: () => void }) {
@@ -597,11 +599,12 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
       {/* Tab content */}
       <div className="flex-1 overflow-auto scrollbar-thin">
         <div className="px-6 py-6 max-w-3xl mx-auto">
-          {tab === 'overview'  && <TabOverview client={current} onChange={onChange} onStatusChange={handleStatusChange} />}
-          {tab === 'data'      && <TabData client={current} onChange={onChange} />}
-          {tab === 'contract'  && <TabContract client={current} onChange={onChange} />}
-          {tab === 'photos'    && <TabPhotos clientId={clientId} photos={photos} onUpload={uploadPhoto} onDelete={deletePhoto} />}
-          {tab === 'history'   && <TabHistory history={history} />}
+          {tab === 'overview'   && <TabOverview client={current} onChange={onChange} onStatusChange={handleStatusChange} />}
+          {tab === 'data'       && <TabData client={current} onChange={onChange} />}
+          {tab === 'contract'   && <TabContract client={current} onChange={onChange} />}
+          {tab === 'photos'     && <TabPhotos clientId={clientId} photos={photos} onUpload={uploadPhoto} onDelete={deletePhoto} />}
+          {tab === 'documents'  && <TabDocuments client={current} />}
+          {tab === 'history'    && <TabHistory history={history} />}
         </div>
       </div>
     </div>
