@@ -14,7 +14,7 @@ function apiUrl(action: string, clientId: string, doc: string) {
   return `${API}/?action=${action}&client_id=${clientId}&doc=${doc}&token=${encodeURIComponent(getToken())}`;
 }
 
-type DocType = 'contract' | 'act' | 'tech';
+type DocType = 'contract' | 'act' | 'tech' | 'delivery' | 'assembly';
 
 interface DocDef {
   id: DocType;
@@ -22,6 +22,7 @@ interface DocDef {
   subtitle: string;
   icon: string;
   appendix: string;
+  group: string;
 }
 
 const DOCS: DocDef[] = [
@@ -31,13 +32,7 @@ const DOCS: DocDef[] = [
     subtitle: 'Основной договор на изготовление мебели',
     icon: 'FileText',
     appendix: '',
-  },
-  {
-    id: 'act',
-    title: 'Акт выполненных работ',
-    subtitle: 'Приложение № 4 — приёмка мебели',
-    icon: 'ClipboardCheck',
-    appendix: 'Прил. №4',
+    group: 'Изготовление',
   },
   {
     id: 'tech',
@@ -45,6 +40,31 @@ const DOCS: DocDef[] = [
     subtitle: 'Приложение № 1 — характеристики изделия',
     icon: 'Ruler',
     appendix: 'Прил. №1',
+    group: 'Изготовление',
+  },
+  {
+    id: 'act',
+    title: 'Акт выполненных работ',
+    subtitle: 'Приложение № 4 — приёмка мебели',
+    icon: 'ClipboardCheck',
+    appendix: 'Прил. №4',
+    group: 'Изготовление',
+  },
+  {
+    id: 'delivery',
+    title: 'Договор доставки',
+    subtitle: 'Договор на оказание услуг по доставке мебели',
+    icon: 'Truck',
+    appendix: '',
+    group: 'Доставка и монтаж',
+  },
+  {
+    id: 'assembly',
+    title: 'Договор монтажа',
+    subtitle: 'Договор на сборку и монтаж мебели',
+    icon: 'Wrench',
+    appendix: '',
+    group: 'Доставка и монтаж',
   },
 ];
 
@@ -269,11 +289,19 @@ export default function TabDocuments({ client }: { client: Client }) {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-3">
-        {DOCS.map(doc => (
-          <DocCard key={doc.id} doc={doc} clientId={client.id} clientName={clientName} />
-        ))}
-      </div>
+      {['Изготовление', 'Доставка и монтаж'].map(group => (
+        <div key={group}>
+          <div className="flex items-center gap-2 mb-2 text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider">
+            <Icon name={group === 'Изготовление' ? 'Package' : 'Truck'} size={12} />
+            {group}
+          </div>
+          <div className="grid grid-cols-1 gap-3">
+            {DOCS.filter(d => d.group === group).map(doc => (
+              <DocCard key={doc.id} doc={doc} clientId={client.id} clientName={clientName} />
+            ))}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
