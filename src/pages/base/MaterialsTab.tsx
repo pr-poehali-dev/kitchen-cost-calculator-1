@@ -268,7 +268,11 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
 
       {/* Модалки */}
       {editingMaterial !== null && (
-        <MaterialEditModal material={editingMaterial} onClose={() => setEditingMaterial(null)} />
+        <MaterialEditModal
+          editingMaterial={editingMaterial}
+          onChange={setEditingMaterial}
+          onClose={() => setEditingMaterial(null)}
+        />
       )}
       {showBulkPrice && <BulkPriceModal onClose={() => setShowBulkPrice(false)} />}
       {showPricelistUpdate && <PricelistUpdateModal onClose={() => setShowPricelistUpdate(false)} />}
