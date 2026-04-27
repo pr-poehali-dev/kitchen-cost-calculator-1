@@ -208,24 +208,6 @@ function DocCard({ doc, clientId, clientName }: { doc: DocDef; clientId: string;
     }
   }
 
-  async function shareWhatsApp() {
-    setLoading('wa');
-    try {
-      const res = await fetch(apiUrl('doc_link', clientId, doc.id));
-      const data = await res.json();
-      if (data.url) {
-        const text = encodeURIComponent(`${doc.title}: ${data.url}`);
-        window.open(`https://wa.me/?text=${text}`, '_blank');
-      } else {
-        toast.error('Ошибка создания ссылки');
-      }
-    } catch {
-      toast.error('Ошибка');
-    } finally {
-      setLoading(null);
-    }
-  }
-
   async function shareTelegram() {
     setLoading('tg');
     try {
@@ -245,16 +227,54 @@ function DocCard({ doc, clientId, clientName }: { doc: DocDef; clientId: string;
     }
   }
 
+  async function shareVK() {
+    setLoading('vk');
+    try {
+      const res = await fetch(apiUrl('doc_link', clientId, doc.id));
+      const data = await res.json();
+      if (data.url) {
+        const url = encodeURIComponent(data.url);
+        const title = encodeURIComponent(doc.title);
+        window.open(`https://vk.com/share.php?url=${url}&title=${title}`, '_blank');
+      } else {
+        toast.error('Ошибка создания ссылки');
+      }
+    } catch {
+      toast.error('Ошибка');
+    } finally {
+      setLoading(null);
+    }
+  }
+
+  async function shareMax() {
+    setLoading('max');
+    try {
+      const res = await fetch(apiUrl('doc_link', clientId, doc.id));
+      const data = await res.json();
+      if (data.url) {
+        const text = encodeURIComponent(`${doc.title}: ${data.url}`);
+        window.open(`https://max.ru/share?text=${text}`, '_blank');
+      } else {
+        toast.error('Ошибка создания ссылки');
+      }
+    } catch {
+      toast.error('Ошибка');
+    } finally {
+      setLoading(null);
+    }
+  }
+
   const Btn = ({
     action, icon, label, color = 'default',
-  }: { action: string; icon: string; label: string; color?: 'default' | 'green' | 'blue' | 'wa' | 'tg' }) => {
+  }: { action: string; icon: string; label: string; color?: 'default' | 'green' | 'blue' | 'tg' | 'vk' | 'max' }) => {
     const isLoading = loading === action;
     const colors = {
       default: 'border-border text-[hsl(var(--text-muted))] hover:border-gold hover:text-gold',
       green: 'border-emerald-500/40 text-emerald-400 hover:border-emerald-500 hover:text-emerald-300',
       blue: 'border-blue-500/40 text-blue-400 hover:border-blue-500 hover:text-blue-300',
-      wa: 'border-green-500/40 text-green-400 hover:border-green-500 hover:text-green-300',
       tg: 'border-sky-500/40 text-sky-400 hover:border-sky-500 hover:text-sky-300',
+      vk: 'border-blue-600/40 text-blue-400 hover:border-blue-600 hover:text-blue-300',
+      max: 'border-purple-500/40 text-purple-400 hover:border-purple-500 hover:text-purple-300',
     };
     return (
       <button
@@ -263,8 +283,9 @@ function DocCard({ doc, clientId, clientName }: { doc: DocDef; clientId: string;
           else if (action === 'docx') downloadDocx();
           else if (action === 'pdf') printPdf();
           else if (action === 'link') copyLink();
-          else if (action === 'wa') shareWhatsApp();
           else if (action === 'tg') shareTelegram();
+          else if (action === 'vk') shareVK();
+          else if (action === 'max') shareMax();
         }}
         disabled={!!loading}
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-medium transition-all disabled:opacity-50 ${colors[color]}`}
@@ -305,9 +326,10 @@ function DocCard({ doc, clientId, clientName }: { doc: DocDef; clientId: string;
 
         <div className="text-[10px] uppercase tracking-wider text-[hsl(var(--text-muted))] mt-3 mb-1">Отправить клиенту</div>
         <div className="flex flex-wrap gap-2">
-          <Btn action="link" icon="Link" label="Скопировать ссылку" color="default" />
-          <Btn action="wa" icon="MessageCircle" label="WhatsApp" color="wa" />
+          <Btn action="link" icon="Link" label="Ссылка" color="default" />
           <Btn action="tg" icon="Send" label="Telegram" color="tg" />
+          <Btn action="vk" icon="Users" label="VK" color="vk" />
+          <Btn action="max" icon="Zap" label="Max" color="max" />
         </div>
       </div>
 
@@ -361,19 +383,28 @@ export default function TabDocuments({ client }: { client: Client }) {
         </div>
       </div>
 
-      {['Изготовление', 'Доставка и монтаж'].map(group => (
-        <div key={group}>
-          <div className="flex items-center gap-2 mb-2 text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider">
-            <Icon name={group === 'Изготовление' ? 'Package' : 'Truck'} size={12} />
-            {group}
+      {[
+        { name: 'Изготовление', icon: 'Package' },
+        { name: 'Доставка и монтаж', icon: 'Truck' },
+        { name: 'Сборка', icon: 'Wrench' },
+        { name: 'Прочее', icon: 'FolderOpen' },
+      ].map(({ name: group, icon }) => {
+        const docs = DOCS.filter(d => d.group === group);
+        if (!docs.length) return null;
+        return (
+          <div key={group}>
+            <div className="flex items-center gap-2 mb-2 text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider">
+              <Icon name={icon} size={12} />
+              {group}
+            </div>
+            <div className="grid grid-cols-1 gap-3">
+              {docs.map(doc => (
+                <DocCard key={doc.id} doc={doc} clientId={client.id} clientName={clientName} />
+              ))}
+            </div>
           </div>
-          <div className="grid grid-cols-1 gap-3">
-            {DOCS.filter(d => d.group === group).map(doc => (
-              <DocCard key={doc.id} doc={doc} clientId={client.id} clientName={clientName} />
-            ))}
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
