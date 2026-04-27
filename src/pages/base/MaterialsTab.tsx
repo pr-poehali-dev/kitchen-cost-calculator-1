@@ -42,14 +42,20 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
       ? typeFiltered.filter(m => !m.categoryId)
       : typeFiltered.filter(m => m.categoryId === catFilter);
 
+  const [showImportMenu, setShowImportMenu] = useState(false);
+
+  const visibleCategories = allCategories.filter(c => typeFiltered.some(m => m.categoryId === c.id));
+  const hasNoCat = typeFiltered.some(m => !m.categoryId);
+
   return (
     <>
       <div>
-        <div className="flex items-center justify-between mb-4 gap-4">
-          <div className="flex gap-1 flex-wrap">
+        {/* Строка 1: фильтр по типу + кнопки действий */}
+        <div className="flex items-center justify-between mb-3 gap-3">
+          <div className="flex gap-1 flex-wrap items-center min-w-0">
             <button
               onClick={() => onFilterChange('all')}
-              className={`px-3 py-1.5 rounded text-xs transition-colors ${matTypeFilter === 'all' ? 'bg-gold text-[hsl(220,16%,8%)] font-medium' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
+              className={`px-3 py-1.5 rounded text-xs transition-colors shrink-0 ${matTypeFilter === 'all' ? 'bg-gold text-[hsl(220,16%,8%)] font-medium' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
             >
               Все ({store.materials.length})
             </button>
@@ -57,98 +63,100 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
               <button
                 key={t.id}
                 onClick={() => onFilterChange(t.id)}
-                className={`px-3 py-1.5 rounded text-xs transition-colors font-medium ${matTypeFilter === t.id ? 'text-[hsl(220,16%,8%)]' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
+                className={`px-3 py-1.5 rounded text-xs transition-colors font-medium shrink-0 ${matTypeFilter === t.id ? 'text-[hsl(220,16%,8%)]' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
                 style={matTypeFilter === t.id ? { backgroundColor: t.color || '#c8a96e' } : {}}
               >
                 {t.name} ({store.materials.filter(m => m.typeId === t.id).length})
               </button>
             ))}
           </div>
+
           <div className="flex gap-2 shrink-0">
-            <button
-              onClick={() => setShowSkatImport(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
-              title="Импортировать все материалы СКАТ в базу"
-            >
-              <Icon name="PackagePlus" size={14} /> Импорт СКАТ
-            </button>
-            <button
-              onClick={() => setShowSkatPrice(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
-              title="Обновить цены из прайса СКАТ"
-            >
-              <Icon name="RefreshCw" size={14} /> Цены СКАТ
-            </button>
-            <button
-              onClick={() => setShowBoyardImport(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
-              title="Импортировать фурнитуру BOYARD в базу"
-            >
-              <Icon name="PackagePlus" size={14} /> Импорт BOYARD
-            </button>
-            <button
-              onClick={() => setShowBoyardPrice(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
-              title="Обновить цены из прайса BOYARD"
-            >
-              <Icon name="RefreshCw" size={14} /> Цены BOYARD
-            </button>
-            <button
-              onClick={() => setShowExcelPrice(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
-              title="Обновить цены из Excel файла"
-            >
-              <Icon name="FileSpreadsheet" size={14} /> Из Excel
-            </button>
-            <button
-              onClick={() => setShowPricelistUpdate(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
-              title="Обновить цены из Google Sheets прайса"
-            >
-              <Icon name="RefreshCw" size={14} /> Из прайса
-            </button>
-            <button
-              onClick={() => setShowBulkPrice(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
-              title="Задать цены сразу нескольким позициям"
-            >
-              <Icon name="Tags" size={14} /> Цены списком
-            </button>
+            {/* Dropdown: импорт и обновление цен */}
+            <div className="relative">
+              <button
+                onClick={() => setShowImportMenu(v => !v)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
+              >
+                <Icon name="RefreshCw" size={14} /> Прайсы
+                <Icon name="ChevronDown" size={12} className={`transition-transform ${showImportMenu ? 'rotate-180' : ''}`} />
+              </button>
+              {showImportMenu && (
+                <>
+                  <div className="fixed inset-0 z-40" onClick={() => setShowImportMenu(false)} />
+                  <div className="absolute right-0 top-full mt-1 z-50 bg-[hsl(220,14%,13%)] border border-border rounded-lg shadow-xl w-52 py-1">
+                    <div className="px-3 py-1 text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider border-b border-border mb-1">СКАТ</div>
+                    <button onClick={() => { setShowSkatImport(true); setShowImportMenu(false); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
+                      <Icon name="PackagePlus" size={13} className="text-[hsl(var(--text-muted))]" /> Импорт СКАТ
+                    </button>
+                    <button onClick={() => { setShowSkatPrice(true); setShowImportMenu(false); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
+                      <Icon name="RefreshCw" size={13} className="text-[hsl(var(--text-muted))]" /> Цены СКАТ
+                    </button>
+                    <div className="px-3 py-1 text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider border-b border-t border-border my-1">BOYARD</div>
+                    <button onClick={() => { setShowBoyardImport(true); setShowImportMenu(false); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
+                      <Icon name="PackagePlus" size={13} className="text-[hsl(var(--text-muted))]" /> Импорт BOYARD
+                    </button>
+                    <button onClick={() => { setShowBoyardPrice(true); setShowImportMenu(false); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
+                      <Icon name="RefreshCw" size={13} className="text-[hsl(var(--text-muted))]" /> Цены BOYARD
+                    </button>
+                    <div className="px-3 py-1 text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider border-b border-t border-border my-1">Другие</div>
+                    <button onClick={() => { setShowPricelistUpdate(true); setShowImportMenu(false); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
+                      <Icon name="RefreshCw" size={13} className="text-[hsl(var(--text-muted))]" /> Из прайса (Slotex)
+                    </button>
+                    <button onClick={() => { setShowExcelPrice(true); setShowImportMenu(false); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
+                      <Icon name="FileSpreadsheet" size={13} className="text-[hsl(var(--text-muted))]" /> Из Excel
+                    </button>
+                    <button onClick={() => { setShowBulkPrice(true); setShowImportMenu(false); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
+                      <Icon name="Tags" size={13} className="text-[hsl(var(--text-muted))]" /> Цены списком
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
+
             <button
               onClick={() => setEditingMaterial({ unit: 'м²', typeId: allTypes[0]?.id, basePrice: 0 })}
               className="flex items-center gap-2 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90"
             >
-              <Icon name="Plus" size={14} /> Добавить материал
+              <Icon name="Plus" size={14} /> Добавить
             </button>
           </div>
         </div>
 
-        {/* Category filter row */}
-        {allCategories.filter(c => typeFiltered.some(m => m.categoryId === c.id)).length > 0 && (
-          <div className="flex gap-1.5 flex-wrap mb-3">
-            <span className="text-xs text-[hsl(var(--text-muted))] self-center mr-1">Категория:</span>
-            <button onClick={() => setCatFilter('all')}
-              className={`px-2.5 py-1 rounded text-xs transition-colors ${catFilter === 'all' ? 'bg-gold text-[hsl(220,16%,8%)] font-medium' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}>
-              Все
-            </button>
-            {allCategories.filter(c => typeFiltered.some(m => m.categoryId === c.id)).map(c => {
-              const ct = c.typeId ? store.getTypeById(c.typeId) : null;
-              return (
-                <button key={c.id} onClick={() => setCatFilter(c.id)}
-                  className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${catFilter === c.id ? 'text-[hsl(220,16%,8%)]' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
-                  style={catFilter === c.id ? { backgroundColor: ct?.color || '#c8a96e' } : {}}>
-                  {c.name}
-                </button>
-              );
-            })}
-            {typeFiltered.some(m => !m.categoryId) && (
-              <button onClick={() => setCatFilter('none')}
-                className={`px-2.5 py-1 rounded text-xs transition-colors ${catFilter === 'none' ? 'bg-[hsl(220,12%,30%)] text-foreground font-medium' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}>
-                Без категории
+        {/* Строка 2: фильтр по категории — select вместо кучи кнопок */}
+        {(visibleCategories.length > 0 || hasNoCat) && (
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-xs text-[hsl(var(--text-muted))] shrink-0">Категория:</span>
+            <select
+              value={catFilter}
+              onChange={e => setCatFilter(e.target.value)}
+              className="bg-[hsl(220,12%,14%)] border border-border rounded px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors cursor-pointer"
+            >
+              <option value="all">Все категории</option>
+              {visibleCategories.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+              {hasNoCat && <option value="none">Без категории</option>}
+            </select>
+            {catFilter !== 'all' && (
+              <button onClick={() => setCatFilter('all')} className="text-xs text-[hsl(var(--text-muted))] hover:text-foreground transition-colors flex items-center gap-1">
+                <Icon name="X" size={12} /> Сбросить
               </button>
             )}
+            <span className="text-xs text-[hsl(var(--text-muted))]">
+              {filteredMaterials.length} позиций
+            </span>
           </div>
         )}
+
+
 
         <div className="bg-[hsl(220,14%,11%)] rounded border border-border">
           <div className="grid text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider px-4 py-2.5 border-b border-border"
