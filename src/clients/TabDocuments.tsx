@@ -174,10 +174,17 @@ function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterShare }: 
       const res = await fetch(apiUrl('doc_docx', clientId, doc.id));
       const data = await res.json();
       if (data.url) {
+        // Скачиваем через fetch→blob чтобы браузер не открывал файл онлайн
+        const fileRes = await fetch(data.url);
+        const blob = await fileRes.blob();
+        const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = data.url;
+        a.href = blobUrl;
         a.download = `${doc.title} — ${clientName}.docx`;
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
         toast.success('Word-файл готов');
       } else {
         toast.error('Ошибка генерации файла');
@@ -397,15 +404,20 @@ export default function TabDocuments({ client, hasDraft, onSave }: {
     setDownloadingAll(true);
     try {
       if (hasDraft && onSave) await onSave();
-      // Скачиваем все docx последовательно
       for (const doc of DOCS) {
         const res = await fetch(apiUrl('doc_docx', client.id, doc.id));
         const data = await res.json();
         if (data.url) {
+          const fileRes = await fetch(data.url);
+          const blob = await fileRes.blob();
+          const blobUrl = URL.createObjectURL(blob);
           const a = document.createElement('a');
-          a.href = data.url;
+          a.href = blobUrl;
           a.download = `${doc.title} — ${clientName}.docx`;
+          document.body.appendChild(a);
           a.click();
+          document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
           await new Promise(r => setTimeout(r, 400));
         }
       }
