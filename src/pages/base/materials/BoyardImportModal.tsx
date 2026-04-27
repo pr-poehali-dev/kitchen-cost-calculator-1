@@ -38,7 +38,7 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
   const [result, setResult] = useState({ created: 0, updated: 0, skipped: 0 });
 
   const existingArticles = new Set(store.materials.map(m => m.article).filter(Boolean));
-  const toCreate = items.filter(i => !existingArticles.has(boyardArticle(i.article))).length;
+  const toCreate = items.filter(i => !existingArticles.has(i.article)).length;
   const toUpdate = items.length - toCreate;
 
   const handleFetch = async () => {
@@ -79,23 +79,26 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
     }));
 
     // Каждый товар — один материал с одним вариантом (розница руб)
-    const materials = items.map(item => {
-      const internalId = boyardArticle(item.article); // для variantId и матчинга
-      return {
-        name: item.name,
-        typeId: item.type_id,
-        vendorId: BOYARD_VENDOR_ID,
-        article: item.article, // оригинальный артикул из прайса (K100BN.12)
-        categoryKey: item.category,
-        unit: item.unit as 'шт',
-        variants: [{
-          variantId: `${internalId}__retail`,
-          size: item.article,
-          params: 'розница',
-          basePrice: item.price_retail,
-        }],
-      };
-    });
+    const materials = items
+      .filter(item => item.article && item.article.trim()) // только позиции с артикулом
+      .map(item => {
+        const article = item.article.trim();
+        const internalId = boyardArticle(article); // для variantId и матчинга
+        return {
+          name: item.name,
+          typeId: item.type_id,
+          vendorId: BOYARD_VENDOR_ID,
+          article, // оригинальный артикул из прайса (K100BN.12)
+          categoryKey: item.category,
+          unit: item.unit as 'шт',
+          variants: [{
+            variantId: `${internalId}__retail`,
+            size: article,
+            params: 'розница',
+            basePrice: item.price_retail,
+          }],
+        };
+      });
 
     const res = store.importSkatBatch(
       { name: 'BOYARD', note: 'Производитель фурнитуры', materialTypeIds: ['mt10', 'mt11', 'mt12'], existingId: existingMfr?.id },

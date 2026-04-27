@@ -368,17 +368,26 @@ def parse_boyard(csv_text: str) -> dict:
 
         # Строка товара
         if col0 and col1:
+            # Пропускаем строки где col0 — не артикул (число типа курса, заголовок)
+            if not header_passed:
+                continue
+
             price = parse_price(g(5))   # розница руб
             if price <= 0:
                 price = parse_price(g(3))  # опт руб запасной
             if price <= 0:
                 continue
 
+            # Очищаем артикул от лишних пробелов и невидимых символов
+            article = col0.strip().replace('\xa0', '').replace('\u200b', '')
+            if not article:
+                continue
+
             cat = current_category or root_category
             type_cat = root_category or current_category
 
             items.append({
-                'article': col0,
+                'article': article,
                 'name': col1,
                 'category': cat,
                 'type_id': boyard_type(type_cat),
