@@ -14,15 +14,22 @@ interface Props {
   visibleColumns: CalcColumnKey[];
   currency: string;
   allowedTypeIds: string[];
+  otherBlocks: { id: string; name: string }[];
   onDelete: () => void;
+  onDuplicate: () => void;
+  onCopyTo: (toBlockId: string) => void;
 }
 
-export default function CalcRowComponent({ row, projectId, blockId, visibleColumns, currency, allowedTypeIds, onDelete }: Props) {
+export default function CalcRowComponent({
+  row, projectId, blockId, visibleColumns, currency, allowedTypeIds,
+  otherBlocks, onDelete, onDuplicate, onCopyTo,
+}: Props) {
   const store = useStore();
   const [showSuggest, setShowSuggest] = useState(false);
   const [nameFilter, setNameFilter] = useState(row.name);
   const [variantPickerMat, setVariantPickerMat] = useState<Material | null>(null);
   const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0 });
+  const [showCopyMenu, setShowCopyMenu] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => { setNameFilter(row.name); }, [row.name]);
@@ -50,7 +57,6 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
 
   const applyMaterialWithVariant = (mat: Material, variant: MaterialVariant) => {
     const retailPrice = store.calcPriceWithMarkup(variant.basePrice, 'materials');
-    // Для СКАТ: "глухой 16мм · Classic/Optima (2 кат)"
     const isSkat = /^\d\s*кат$/.test((variant.params || '').trim());
     const label = isSkat
       ? [variant.size, variant.params ? `(${variant.params})` : ''].filter(Boolean).join(' ')
@@ -77,7 +83,6 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
   const applyMaterial = (matId: string) => {
     const mat = store.materials.find(m => m.id === matId);
     if (!mat) return;
-    // Если у материала есть варианты — показываем выбор размера
     if (mat.variants && mat.variants.length > 0) {
       setShowSuggest(false);
       setVariantPickerMat(mat);
@@ -101,7 +106,7 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
     setShowSuggest(false);
   };
 
-  const gridCols = [...visibleColumns.map(c => COLUMN_WIDTHS[c]), '28px'].join(' ');
+  const gridCols = [...visibleColumns.map(c => COLUMN_WIDTHS[c]), '56px'].join(' ');
 
   return (
     <div
@@ -235,12 +240,59 @@ export default function CalcRowComponent({ row, projectId, blockId, visibleColum
         }
       })}
 
-      <button
-        onClick={onDelete}
-        className="opacity-0 group-hover:opacity-100 text-[hsl(var(--text-muted))] hover:text-destructive transition-all ml-1"
-      >
-        <Icon name="X" size={13} />
-      </button>
+      {/* Действия со строкой */}
+      <div className="flex items-center justify-end gap-0.5 opacity-0 group-hover:opacity-100 transition-all">
+        {/* Дублировать */}
+        <button
+          onClick={onDuplicate}
+          title="Дублировать строку"
+          className="w-6 h-6 flex items-center justify-center text-[hsl(var(--text-muted))] hover:text-gold transition-colors"
+        >
+          <Icon name="Copy" size={11} />
+        </button>
+
+        {/* Копировать в блок */}
+        {otherBlocks.length > 0 && (
+          <div className="relative">
+            <button
+              onClick={() => setShowCopyMenu(v => !v)}
+              title="Копировать в другой блок"
+              className="w-6 h-6 flex items-center justify-center text-[hsl(var(--text-muted))] hover:text-gold transition-colors"
+            >
+              <Icon name="ArrowRightFromLine" size={11} />
+            </button>
+            {showCopyMenu && (
+              <>
+                <div className="fixed inset-0 z-40" onClick={() => setShowCopyMenu(false)} />
+                <div className="absolute right-0 bottom-full mb-1 z-50 bg-[hsl(220,14%,13%)] border border-border rounded-lg shadow-xl min-w-[160px] py-1">
+                  <div className="px-3 py-1 text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider border-b border-border mb-1">
+                    Скопировать в блок
+                  </div>
+                  {otherBlocks.map(b => (
+                    <button
+                      key={b.id}
+                      onClick={() => { onCopyTo(b.id); setShowCopyMenu(false); }}
+                      className="w-full text-left px-3 py-2 text-xs hover:bg-[hsl(220,12%,18%)] transition-colors text-foreground flex items-center gap-2"
+                    >
+                      <Icon name="Layers" size={11} className="text-[hsl(var(--text-muted))] shrink-0" />
+                      <span className="truncate">{b.name}</span>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* Удалить */}
+        <button
+          onClick={onDelete}
+          title="Удалить строку"
+          className="w-6 h-6 flex items-center justify-center text-[hsl(var(--text-muted))] hover:text-destructive transition-colors"
+        >
+          <Icon name="X" size={13} />
+        </button>
+      </div>
 
       {variantPickerMat && createPortal(
         <VariantPicker

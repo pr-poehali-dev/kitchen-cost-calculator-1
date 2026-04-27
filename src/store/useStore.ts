@@ -191,6 +191,48 @@ export function useStore() {
     }));
   };
 
+  const duplicateRow = (projectId: string, blockId: string, rowId: string) => {
+    updateProject(projectId, p => ({
+      ...p,
+      blocks: p.blocks.map(b => {
+        if (b.id !== blockId) return b;
+        const idx = b.rows.findIndex(r => r.id === rowId);
+        if (idx < 0) return b;
+        const cloned = { ...b.rows[idx], id: `r${Date.now()}${Math.random().toString(36).slice(2)}` };
+        const rows = [...b.rows];
+        rows.splice(idx + 1, 0, cloned);
+        return { ...b, rows };
+      })
+    }));
+  };
+
+  const copyRowToBlock = (projectId: string, fromBlockId: string, rowId: string, toBlockId: string) => {
+    updateProject(projectId, p => {
+      const srcBlock = p.blocks.find(b => b.id === fromBlockId);
+      const row = srcBlock?.rows.find(r => r.id === rowId);
+      if (!row) return p;
+      const cloned = { ...row, id: `r${Date.now()}${Math.random().toString(36).slice(2)}` };
+      return {
+        ...p,
+        blocks: p.blocks.map(b =>
+          b.id === toBlockId ? { ...b, rows: [...b.rows, cloned] } : b
+        )
+      };
+    });
+  };
+
+  const reorderRows = (projectId: string, blockId: string, orderedIds: string[]) => {
+    updateProject(projectId, p => ({
+      ...p,
+      blocks: p.blocks.map(b => {
+        if (b.id !== blockId) return b;
+        const map = new Map(b.rows.map(r => [r.id, r]));
+        const rows = orderedIds.map(id => map.get(id)!).filter(Boolean);
+        return { ...b, rows };
+      })
+    }));
+  };
+
   // Обновляет розничные цены всех строк проекта по текущим наценкам из расходов.
   // Обновляются только строки, привязанные к материалу из базы (materialId присутствует).
   // Строки с ценой вручную (без materialId) не трогаются.
@@ -946,7 +988,7 @@ export function useStore() {
     getManufacturerById, getVendorById,
     getCategoryById, getCategoriesForType,
     addBlock, updateBlock, deleteBlock,
-    addRow, updateRow, deleteRow,
+    addRow, updateRow, deleteRow, duplicateRow, copyRowToBlock, reorderRows,
     addServiceBlock, updateServiceBlock, deleteServiceBlock,
     addServiceRow, updateServiceRow, deleteServiceRow,
     reorderServiceRows, duplicateServiceBlock,

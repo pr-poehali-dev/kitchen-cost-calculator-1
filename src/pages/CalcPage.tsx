@@ -33,6 +33,7 @@ function SortableBlock({ block, ...props }: {
   isLast: boolean;
   isEditingName: boolean;
   editingName: string;
+  allBlocks: { id: string; name: string }[];
   onStartEditName: () => void;
   onEditNameChange: (v: string) => void;
   onFinishEditName: () => void;
@@ -174,6 +175,7 @@ export default function CalcPage() {
                 isLast={idx === project.blocks.length - 1}
                 isEditingName={editingBlockId === block.id}
                 editingName={editingBlockName}
+                allBlocks={project.blocks.map(b => ({ id: b.id, name: b.name }))}
                 onStartEditName={() => { setEditingBlockId(block.id); setEditingBlockName(block.name); }}
                 onEditNameChange={setEditingBlockName}
                 onFinishEditName={() => handleFinishEditName(block.id, block.name)}
