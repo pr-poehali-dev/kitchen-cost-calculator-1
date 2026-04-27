@@ -170,10 +170,31 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
                             </div>
                           )}
                           {manufacturer.phone && (
-                            <div className="flex items-center gap-1.5 text-sm text-[hsl(var(--text-dim))]">
+                            <a href={`tel:${manufacturer.phone.replace(/\D/g,'')}`} className="flex items-center gap-1.5 text-sm text-[hsl(var(--text-dim))] hover:text-gold transition-colors">
                               <Icon name="Phone" size={12} className="text-[hsl(var(--text-muted))] shrink-0" />
                               {manufacturer.phone}
-                            </div>
+                            </a>
+                          )}
+                          {(manufacturer as Manufacturer).email && (
+                            <a href={`mailto:${(manufacturer as Manufacturer).email}`} className="flex items-center gap-1.5 text-sm text-[hsl(var(--text-dim))] hover:text-gold transition-colors">
+                              <Icon name="Mail" size={12} className="text-[hsl(var(--text-muted))] shrink-0" />
+                              {(manufacturer as Manufacturer).email}
+                            </a>
+                          )}
+                          {(manufacturer as Manufacturer).telegram && (
+                            <a href={`https://t.me/${((manufacturer as Manufacturer).telegram || '').replace('@','')}`}
+                              target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-1.5 text-sm text-[hsl(var(--text-dim))] hover:text-sky-400 transition-colors">
+                              <Icon name="Send" size={12} className="text-[hsl(var(--text-muted))] shrink-0" />
+                              {(manufacturer as Manufacturer).telegram}
+                            </a>
+                          )}
+                          {(manufacturer as Manufacturer).website && (
+                            <a href={(manufacturer as Manufacturer).website} target="_blank" rel="noopener noreferrer"
+                              className="flex items-center gap-1.5 text-sm text-[hsl(var(--text-dim))] hover:text-gold transition-colors">
+                              <Icon name="Globe" size={12} className="text-[hsl(var(--text-muted))] shrink-0" />
+                              {(manufacturer as Manufacturer).website}
+                            </a>
                           )}
                         </div>
                       </div>
@@ -362,6 +383,13 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Телефон" value={editingMfr.phone || ''} onChange={v => setEditingMfr(p => ({ ...p!, phone: v }))} />
+              <Field label="Email" value={(editingMfr as Manufacturer).email || ''} onChange={v => setEditingMfr(p => ({ ...p!, email: v }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Telegram" value={(editingMfr as Manufacturer).telegram || ''} onChange={v => setEditingMfr(p => ({ ...p!, telegram: v }))} placeholder="@username" />
+              <Field label="Сайт" value={(editingMfr as Manufacturer).website || ''} onChange={v => setEditingMfr(p => ({ ...p!, website: v }))} placeholder="https://..." />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <Field label="Примечание" value={editingMfr.note || ''} onChange={v => setEditingMfr(p => ({ ...p!, note: v }))} />
             </div>
             <div>

@@ -3,6 +3,53 @@ import { useStore } from '@/store/useStore';
 import type { ServiceBlock } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import ServiceRowComponent from './services/ServiceRowComponent';
+
+// Предустановленные шаблоны блоков услуг
+const SERVICE_BLOCK_TEMPLATES = [
+  {
+    id: 'assembly',
+    label: 'Монтаж',
+    icon: 'Wrench',
+    rows: [
+      { name: 'Сборка и монтаж корпусной мебели', unit: 'м²', qty: 1, price: 0 },
+      { name: 'Установка фасадов', unit: 'шт', qty: 1, price: 0 },
+      { name: 'Установка столешницы', unit: 'пог.м', qty: 1, price: 0 },
+      { name: 'Установка мойки', unit: 'шт', qty: 1, price: 0 },
+      { name: 'Установка смесителя', unit: 'шт', qty: 1, price: 0 },
+    ],
+  },
+  {
+    id: 'delivery',
+    label: 'Доставка',
+    icon: 'Truck',
+    rows: [
+      { name: 'Доставка по городу', unit: 'рейс', qty: 1, price: 0 },
+      { name: 'Подъём на этаж', unit: 'этаж', qty: 1, price: 0 },
+      { name: 'Разгрузка', unit: 'час', qty: 1, price: 0 },
+    ],
+  },
+  {
+    id: 'extra',
+    label: 'Доп. работы',
+    icon: 'ListPlus',
+    rows: [
+      { name: 'Демонтаж старой мебели', unit: 'шт', qty: 1, price: 0 },
+      { name: 'Вывоз мусора', unit: 'рейс', qty: 1, price: 0 },
+      { name: 'Выезд замерщика', unit: 'выезд', qty: 1, price: 0 },
+    ],
+  },
+  {
+    id: 'appliances',
+    label: 'Встроенная техника',
+    icon: 'Zap',
+    rows: [
+      { name: 'Установка духового шкафа', unit: 'шт', qty: 1, price: 0 },
+      { name: 'Установка варочной панели', unit: 'шт', qty: 1, price: 0 },
+      { name: 'Установка посудомоечной машины', unit: 'шт', qty: 1, price: 0 },
+      { name: 'Установка вытяжки', unit: 'шт', qty: 1, price: 0 },
+    ],
+  },
+] as const;
 import {
   DndContext,
   closestCenter,
@@ -187,6 +234,7 @@ function ServiceBlockCard({ block, projectId }: { block: ServiceBlock; projectId
 export default function ServicesPage() {
   const store = useStore();
   const project = store.getActiveProject();
+  const [showTemplates, setShowTemplates] = useState(false);
 
   if (!project) {
     return (
@@ -218,12 +266,80 @@ export default function ServicesPage() {
           <ServiceBlockCard key={block.id} block={block} projectId={project.id} />
         ))}
 
-        <button
-          onClick={() => store.addServiceBlock(project.id)}
-          className="flex items-center gap-2 px-4 py-2.5 border border-dashed border-[hsl(var(--surface-3))] rounded text-sm text-[hsl(var(--text-muted))] hover:text-gold hover:border-gold transition-all w-full justify-center"
-        >
-          <Icon name="Plus" size={14} /> Добавить блок услуг
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => store.addServiceBlock(project.id)}
+            className="flex items-center gap-2 px-4 py-2.5 border border-dashed border-[hsl(var(--surface-3))] rounded text-sm text-[hsl(var(--text-muted))] hover:text-gold hover:border-gold transition-all flex-1 justify-center"
+          >
+            <Icon name="Plus" size={14} /> Добавить блок
+          </button>
+
+          {/* Шаблоны блоков */}
+          <div className="relative">
+            <button
+              onClick={() => setShowTemplates(v => !v)}
+              className={`flex items-center gap-2 px-4 py-2.5 border rounded text-sm transition-all ${
+                showTemplates ? 'border-gold/50 text-gold' : 'border-dashed border-[hsl(var(--surface-3))] text-[hsl(var(--text-muted))] hover:text-gold hover:border-gold'
+              }`}
+            >
+              <Icon name="Sparkles" size={14} /> Из шаблона
+            </button>
+            {showTemplates && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowTemplates(false)} />
+                <div className="absolute bottom-full mb-1 right-0 z-20 bg-[hsl(220,14%,13%)] border border-border rounded-lg shadow-xl w-64 py-1">
+                  <div className="px-3 py-1.5 text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider border-b border-border mb-1">
+                    Готовые блоки услуг
+                  </div>
+                  {SERVICE_BLOCK_TEMPLATES.map(tpl => (
+                    <button
+                      key={tpl.id}
+                      onClick={() => {
+                        const blockId = `sb${Date.now()}`;
+                        store.addServiceBlock(project.id);
+                        // Получаем только что добавленный блок и обновляем имя + строки
+                        setTimeout(() => {
+                          const updatedProject = store.getActiveProject();
+                          if (!updatedProject) return;
+                          const newBlock = updatedProject.serviceBlocks[updatedProject.serviceBlocks.length - 1];
+                          if (!newBlock) return;
+                          store.updateServiceBlock(project.id, newBlock.id, { name: tpl.label });
+                          tpl.rows.forEach((row, i) => {
+                            setTimeout(() => {
+                              store.addServiceRow(project.id, newBlock.id);
+                              setTimeout(() => {
+                                const p2 = store.getActiveProject();
+                                if (!p2) return;
+                                const b2 = p2.serviceBlocks.find(b => b.id === newBlock.id);
+                                if (!b2) return;
+                                const r = b2.rows[b2.rows.length - 1];
+                                if (!r) return;
+                                store.updateServiceRow(project.id, newBlock.id, r.id, {
+                                  name: row.name, unit: row.unit, qty: row.qty, price: row.price,
+                                });
+                              }, 10);
+                            }, i * 20);
+                          });
+                        }, 10);
+                        setShowTemplates(false);
+                        void blockId;
+                      }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-[hsl(220,12%,18%)] transition-colors text-left"
+                    >
+                      <div className="w-7 h-7 rounded-lg bg-[hsl(220,12%,20%)] flex items-center justify-center shrink-0">
+                        <Icon name={tpl.icon} size={13} className="text-[hsl(var(--text-muted))]" />
+                      </div>
+                      <div>
+                        <div className="text-sm text-foreground font-medium">{tpl.label}</div>
+                        <div className="text-xs text-[hsl(var(--text-muted))]">{tpl.rows.length} строк</div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );

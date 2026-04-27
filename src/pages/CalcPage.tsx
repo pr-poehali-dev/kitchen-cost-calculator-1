@@ -24,6 +24,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import type { CalcBlock as CalcBlockType } from '@/store/types';
+import ComparePanel from './calc/ComparePanel';
 
 function SortableBlock({ block, ...props }: {
   block: CalcBlockType;
@@ -81,6 +82,7 @@ export default function CalcPage() {
   const [hiddenSummaryRows, setHiddenSummaryRows] = useState<Set<string>>(new Set());
   const [showSummarySettings, setShowSummarySettings] = useState(false);
   const [refreshed, setRefreshed] = useState(false);
+  const [showCompare, setShowCompare] = useState(false);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const sensors = useSensors(
@@ -157,6 +159,7 @@ export default function CalcPage() {
         onOpenTemplates={() => setShowTemplates(true)}
         onExportPdf={handleExportPdf}
         onOpenClientView={() => setShowClientView(true)}
+        onOpenCompare={store.projects.length > 1 ? () => setShowCompare(true) : undefined}
         onRequestDeleteProject={setConfirmDeleteProject}
         onConfirmDeleteProject={handleDeleteProject}
         onCancelDeleteProject={() => setConfirmDeleteProject(null)}
@@ -231,6 +234,9 @@ export default function CalcPage() {
       )}
       {showClientView && (
         <ClientViewPanel projectId={project.id} onClose={() => setShowClientView(false)} onExportPdf={handleExportPdf} />
+      )}
+      {showCompare && (
+        <ComparePanel currentProjectId={project.id} onClose={() => setShowCompare(false)} />
       )}
     </div>
   );

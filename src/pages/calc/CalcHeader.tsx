@@ -17,6 +17,7 @@ interface Props {
   onOpenTemplates: () => void;
   onExportPdf: () => void;
   onOpenClientView: () => void;
+  onOpenCompare?: () => void;
   onRequestDeleteProject: (id: string) => void;
   onConfirmDeleteProject: (id: string) => void;
   onCancelDeleteProject: () => void;
@@ -39,7 +40,7 @@ export default function CalcHeader({
   project, totalMaterials, totalServices, total, grandTotal, totalPurchase,
   showProjects, confirmDeleteProject,
   onToggleProjects, onStopPropagation,
-  onOpenTemplates, onExportPdf, onOpenClientView,
+  onOpenTemplates, onExportPdf, onOpenClientView, onOpenCompare,
   onRequestDeleteProject, onConfirmDeleteProject, onCancelDeleteProject,
 }: Props) {
   const store = useStore();
@@ -145,6 +146,16 @@ export default function CalcHeader({
               <Icon name="Eye" size={13} />
               <span>Клиенту</span>
             </button>
+            {onOpenCompare && (
+              <button
+                onClick={onOpenCompare}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[hsl(var(--text-dim))] hover:text-foreground border border-border rounded hover:border-[hsl(var(--text-dim))] transition-colors"
+                title="Сравнить с другим вариантом"
+              >
+                <Icon name="GitCompare" size={13} />
+                <span>Сравнить</span>
+              </button>
+            )}
             <button
               onClick={onExportPdf}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[hsl(var(--text-dim))] hover:text-foreground border border-border rounded hover:border-[hsl(var(--text-dim))] transition-colors"

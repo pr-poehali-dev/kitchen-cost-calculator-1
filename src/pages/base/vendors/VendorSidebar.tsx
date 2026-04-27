@@ -64,7 +64,7 @@ export default function VendorSidebar({
               </div>
               <div className="min-w-0 flex-1">
                 <div className={`font-semibold text-sm truncate ${isActive ? 'text-gold' : 'text-foreground'}`}>{v.name}</div>
-                <div className="flex items-center gap-2 mt-0.5">
+                <div className="flex items-center gap-2 mt-0.5 flex-wrap">
                   <span className="text-xs text-[hsl(var(--text-muted))]">{matCount} позиций</span>
                   {mfrCount > 0 && <span className="text-xs text-[hsl(var(--text-muted))]">· {mfrCount} бренд.</span>}
                   {types.length > 0 && (
@@ -75,6 +75,30 @@ export default function VendorSidebar({
                     </div>
                   )}
                 </div>
+                {/* Контакты в карточке */}
+                {isActive && (v.phone || (v as typeof v & { email?: string }).email || (v as typeof v & { telegram?: string }).telegram) && (
+                  <div className="flex flex-col gap-0.5 mt-1.5">
+                    {v.phone && (
+                      <a href={`tel:${v.phone.replace(/\D/g,'')}`} onClick={e => e.stopPropagation()}
+                        className="flex items-center gap-1 text-[10px] text-[hsl(var(--text-muted))] hover:text-gold transition-colors">
+                        <Icon name="Phone" size={9} />{v.phone}
+                      </a>
+                    )}
+                    {(v as typeof v & { email?: string }).email && (
+                      <a href={`mailto:${(v as typeof v & { email?: string }).email}`} onClick={e => e.stopPropagation()}
+                        className="flex items-center gap-1 text-[10px] text-[hsl(var(--text-muted))] hover:text-gold transition-colors truncate">
+                        <Icon name="Mail" size={9} />{(v as typeof v & { email?: string }).email}
+                      </a>
+                    )}
+                    {(v as typeof v & { telegram?: string }).telegram && (
+                      <a href={`https://t.me/${((v as typeof v & { telegram?: string }).telegram || '').replace('@','')}`}
+                        target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+                        className="flex items-center gap-1 text-[10px] text-[hsl(var(--text-muted))] hover:text-sky-400 transition-colors">
+                        <Icon name="Send" size={9} />{(v as typeof v & { telegram?: string }).telegram}
+                      </a>
+                    )}
+                  </div>
+                )}
               </div>
               {isActive && <Icon name="ChevronRight" size={14} className="text-gold shrink-0" />}
             </div>

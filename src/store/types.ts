@@ -20,6 +20,9 @@ export interface Manufacturer {
   name: string;
   contact?: string;
   phone?: string;
+  email?: string;
+  telegram?: string;
+  website?: string;
   note?: string;
   materialTypeIds: string[];
 }

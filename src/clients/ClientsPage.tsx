@@ -5,6 +5,7 @@ import { CLIENT_STATUSES, clientFullName, emptyClient } from './types';
 import type { Client, ClientStatus } from './types';
 import ClientCard from './ClientCard';
 import { ClientsListSkeleton } from '@/components/Skeleton';
+import * as XLSX from 'xlsx';
 
 type View = 'list' | 'kanban';
 type SortField = 'name' | 'created_at' | 'delivery_date' | 'total_amount';
@@ -134,6 +135,46 @@ function exportCSV(clients: Client[]) {
   a.download = `clients_${new Date().toISOString().slice(0,10)}.csv`; a.click();
 }
 
+function exportExcel(clients: Client[]) {
+  const headers = ['Имя', 'Телефон', 'Доп. телефон', 'Email', 'Статус', 'Дизайнер', 'Замерщик',
+    'Договор №', 'Дата договора', 'Сумма', 'Схема оплаты', 'Внесено', 'Остаток',
+    'Дата доставки', 'Город доставки', 'Адрес доставки',
+    'Комментарий', 'Дата создания'];
+  const rows = clients.map(c => [
+    clientFullName(c),
+    c.phone || '',
+    c.phone2 || '',
+    c.email || '',
+    CLIENT_STATUSES.find(s => s.id === c.status)?.label || c.status,
+    c.designer || '',
+    c.measurer || '',
+    c.contract_number || '',
+    c.contract_date || '',
+    c.total_amount || 0,
+    c.payment_type || '',
+    c.prepaid_amount || 0,
+    Math.max(0, (c.total_amount || 0) - (c.prepaid_amount || 0)),
+    c.delivery_date || '',
+    c.delivery_city || '',
+    [c.delivery_street, c.delivery_house, c.delivery_apt ? `кв.${c.delivery_apt}` : ''].filter(Boolean).join(', '),
+    c.comment || '',
+    c.created_at?.slice(0, 10) || '',
+  ]);
+
+  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
+  // Ширина колонок
+  ws['!cols'] = [22,16,14,22,14,14,14,14,14,12,18,12,12,14,16,24,30,14].map(w => ({ wch: w }));
+  // Стиль заголовка (жирный)
+  headers.forEach((_, i) => {
+    const cell = ws[XLSX.utils.encode_cell({ r: 0, c: i })];
+    if (cell) cell.s = { font: { bold: true }, fill: { fgColor: { rgb: 'F3E6C8' } } };
+  });
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'Клиенты');
+  XLSX.writeFile(wb, `clients_${new Date().toISOString().slice(0,10)}.xlsx`);
+}
+
 export default function ClientsPage() {
   const { clients, loading, load, createClient, updateStatus } = useClients();
   const [view, setView] = useState<View>('list');
@@ -260,13 +301,22 @@ export default function ClientsPage() {
           </button>
         </div>
         {/* Экспорт */}
-        <button
-          onClick={() => exportCSV(filtered)}
-          title="Экспорт в CSV"
-          className="flex items-center gap-1.5 px-3 py-2 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-gold hover:border-gold/50 transition-colors"
-        >
-          <Icon name="FileDown" size={13} /> CSV
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={() => exportExcel(filtered)}
+            title="Экспорт в Excel (.xlsx)"
+            className="flex items-center gap-1.5 px-3 py-2 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-emerald-400 hover:border-emerald-400/50 transition-colors"
+          >
+            <Icon name="FileSpreadsheet" size={13} /> Excel
+          </button>
+          <button
+            onClick={() => exportCSV(filtered)}
+            title="Экспорт в CSV"
+            className="flex items-center gap-1.5 px-3 py-2 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-gold hover:border-gold/50 transition-colors"
+          >
+            <Icon name="FileDown" size={13} /> CSV
+          </button>
+        </div>
         <button onClick={handleCreate} disabled={creating}
           className="flex items-center gap-2 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90 shrink-0 disabled:opacity-60">
           <Icon name="Plus" size={14} /> Новый клиент
