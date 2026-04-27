@@ -720,29 +720,28 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 </div></body></html>'''
 
     elif doc_type == 'act':
+        total = float(c.get('total_amount') or 0)
+        total_words = _num_to_words(total) if total else '___________'
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Акт выполненных работ к договору №{contract_num}</title>{style}</head><body><div class="page">
-<p class="no-indent" style="text-align:right">Приложение № 4 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
+<p class="no-indent" style="text-align:right">Приложение № 4 к договору бытового подряда на изготовление мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
 <h1>«Акт выполненных работ»</h1>
-<p class="center">от «____» ______________ 20____ г.</p>
-<p class="center">(ФОРМА)</p>
-<p class="no-indent">ООО «Интерьерные решения», в лице менеджера <strong>{manager_line}</strong>, действующего на основании доверенности № <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, именуемый в дальнейшем «Подрядчик», и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», подписали настоящий Акт выполненных работ о нижеследующем:</p>
-<p class="no-indent">1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}:</p>
+<div class="city-date"><span></span><span>от «____» ______________ 20____ г.</span></div>
+<p style="text-align:center">(ФОРМА)</p>
+<p class="no-indent">ООО «Интерьерные решения», в лице менеджера <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, <span class="ul" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, действующего на основании доверенности № <span class="ul" style="min-width:40px">&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, именуемый в дальнейшем «Подрядчик» и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», подписали настоящий Акт выполненных работ о нижеследующем:</p>
+<p class="no-indent">1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда на изготовление мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>:</p>
 <table><tr><th style="width:5%">№</th><th>Наименование мебели, включая ее элементы</th><th style="width:13%">Ед. измерения</th><th style="width:12%">Кол-во изделий</th><th style="width:18%">Стоимость в руб.</th></tr>
-{products_rows}
+<tr><td style="text-align:center">1</td><td>Кухонный гарнитур</td><td style="text-align:center">Шт.</td><td style="text-align:center">1</td><td style="text-align:center">(сумма прописью)</td></tr>
 </table>
-<p style="margin:20px 0 30px 0">&nbsp;</p>
-<p class="no-indent">2. Комплектность, количество, вид, характеристики мебели соответствуют условиям договора. Визуальный осмотр мебели на предмет повреждений, царапин, сколов, трещин и других недостатков произведен Заказчиком. Фурнитура (петли, выдвижные механизмы, подъемные механизмы и т.д.) работает исправно. Заказчик претензий по объему, качеству, результату и срокам выполнения работ: <strong>не имеет / имеет (ненужное зачеркнуть)</strong>.</p>
+<p style="margin:20px 0 10px 0">&nbsp;</p>
+<p class="no-indent">2. Комплектность, количество, вид, характеристики мебели соответствуют условиям договора. Визуальный осмотр мебели на предмет повреждений, царапин, сколов, трещин и других недостатков произведен Заказчиком. Фурнитура (петли, выдвижные механизмы, подъемные механизмы и т.д.) работает исправно. Заказчик претензий по объему, качеству, результату и срокам выполнения работ: <strong>не имеет / имеет</strong> (ненужное зачеркнуть).</p>
 <p style="margin:20px 0">&nbsp;</p>
 <p style="margin:20px 0">&nbsp;</p>
 <p style="margin:20px 0">&nbsp;</p>
 <p class="no-indent">3. В случае наличия замечаний Заказчик, после подписания акта, в праве требовать устранения замечаний отраженных в данном акте.</p>
 <p class="no-indent">4. Настоящий акт подписан в 2 (двух) экземплярах по одному для каждой из Сторон.</p>
-<table style="margin-top:30px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
-<tr><td style="height:50px">&nbsp;</td><td>&nbsp;</td></tr>
-<tr><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
-<tr><td style="height:50px">&nbsp;</td><td>&nbsp;</td></tr>
-</table>
-<p class="center" style="margin-top:30px">М.П.</p>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
+<tr><td style="height:60px"></td><td>{fname}</td></tr>
+<tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
 </div></body></html>'''
 
     elif doc_type == 'tech':
@@ -1146,6 +1145,118 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 <tr><td style="padding:6px">Замерщик</td><td>&nbsp;</td></tr>
 <tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
 </table>
+</div></body></html>'''
+
+    elif doc_type == 'delivery_calc':
+        dcost = float(c.get('delivery_cost') or 0)
+        return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Калькуляция доставки — {contract_num}</title>{style}</head><body><div class="page">
+<p class="no-indent" style="text-align:right">Приложение № 1 к договору на оказание услуг по доставке мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
+<h1>«Калькуляция на выполнение услуг по доставке мебели»</h1>
+<table><tr><th>Наименование (перечень) работ и услуг</th><th style="width:15%">Ед. измерения</th><th style="width:12%">Количество</th><th style="width:18%">Цена за ед. измерения в руб.</th><th style="width:18%">Стоимость в руб.</th></tr>
+<tr><td>Доставка мебели в территориальных границах г. Саратова и г. Энгельса *</td><td style="text-align:center">1 услуга</td><td style="text-align:center">1</td><td style="text-align:right">8000</td><td style="text-align:right">8000</td></tr>
+<tr><td>Доставка мебели за пределы территориальных границ г. Саратова и г. Энгельса **</td><td style="text-align:center">1 км</td><td style="text-align:center"></td><td style="text-align:right">70</td><td style="text-align:right">0</td></tr>
+<tr><td colspan="3" style="text-align:right">Сумма:</td><td colspan="2" style="text-align:right">8000</td></tr>
+<tr><td colspan="3" style="text-align:right">Скидка ***:</td><td colspan="2" style="text-align:right">8000</td></tr>
+<tr><td colspan="3" style="text-align:right;font-weight:bold">Сумма со скидкой:</td><td colspan="2" style="text-align:right;font-weight:bold">0</td></tr></table>
+<p style="margin-top:16px">*Исполнитель вправе однократно предоставить Заказчику скидку в размере стоимости доставки, равной 8000 руб., которая осуществляется в пределах территориальных границ г. Саратова и г. Энгельса. В случае повторной доставки, по причинам не зависящим от Исполнителя, но зависящим от Заказчика, ее стоимость будет определена согласно приложению №1.</p>
+<p>**Расчет стоимости доставки учитывает расстояние по километражу от склада Исполнителя по адресу: г. Саратов, ул. Усть-Курдюмская д. 3, до дома (подъезда) заказчика согласно п. 1.3 договора. Километраж определяется на основании сервиса Яндекс.Карты https://yandex.ru/maps/</p>
+<p>*** Размер скидки определяется Исполнителем индивидуально.</p>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
+<tr><td style="padding:6px">Менеджер</td><td>&nbsp;</td></tr>
+<tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
+</div></body></html>'''
+
+    elif doc_type == 'delivery_lift':
+        return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Прайс подъём мебели — {contract_num}</title>{style}</head><body><div class="page">
+<p class="no-indent" style="text-align:right">Приложение № 2 к договору на оказание услуг по доставке мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
+<h1>«Прайс на выполнение услуг по подъему и заносу мебели»*</h1>
+<p><strong>Подъем мебели (полный комплект), при отсутствии лифта и занос мебели, при невозможности парковки автомашины вплотную к подъезду</strong></p>
+<table><tr><th>Наименование (перечень) работ и услуг</th><th style="width:15%">Ед. измерения</th><th style="width:15%">Количество (Этаж/метр)</th><th style="width:18%">Цена за ед. измерения в руб.</th><th style="width:15%">Стоимость в руб.</th></tr>
+<tr><td>Подъем. Квадратура корпуса до 20 кв.м</td><td style="text-align:center">руб./этаж</td><td></td><td style="text-align:right">550</td><td style="text-align:right">0</td></tr>
+<tr><td>Подъем. Квадратура корпуса от 20 до 25 кв.м</td><td style="text-align:center">руб./этаж</td><td></td><td style="text-align:right">650</td><td style="text-align:right">0</td></tr>
+<tr><td>Подъем. Квадратура корпуса более 25 кв.м</td><td style="text-align:center">руб./этаж</td><td></td><td style="text-align:right">750</td><td style="text-align:right">0</td></tr>
+<tr><td>Перемещение мебели вручную в случае невозможности подъезда автомашины к месту разгрузки за каждые</td><td style="text-align:center">1 м</td><td></td><td style="text-align:right">30</td><td style="text-align:right">0</td></tr></table>
+<p style="margin-top:12px"><em>Подъем комплектующих отдельно</em></p>
+<table><tr><th>Наименование (перечень) работ и услуг</th><th style="width:12%">Ед. измерения</th><th style="width:12%">Количество упаковок</th><th style="width:12%">Количество этажей</th><th style="width:16%">Цена за ед. измерения в руб.</th><th style="width:14%">Стоимость в руб.</th></tr>
+<tr><td>Подъем столешницы</td><td style="text-align:center">1 упаковка / 1 этаж</td><td></td><td></td><td style="text-align:right">350</td><td style="text-align:right">0</td></tr>
+<tr><td>Подъем стеновой панели</td><td style="text-align:center">1 упаковка / 1 этаж</td><td></td><td></td><td style="text-align:right">250</td><td style="text-align:right">0</td></tr>
+<tr><td>Подъем крупных частей корпуса. (боковины кухонного пенала, боковины шкафов-купе и т.д.). <strong>Упаковка по 2 шт.</strong></td><td style="text-align:center">1 упаковка / 1 этаж</td><td></td><td></td><td style="text-align:right">250</td><td style="text-align:right">0</td></tr>
+<tr><td>Подъем длинных комплектующих (цоколь, профильная ручка, труба – целиком)</td><td style="text-align:center">1 комплект / 1 этаж</td><td></td><td></td><td style="text-align:right">60</td><td style="text-align:right">0</td></tr>
+<tr><td>Подъем дверей-купе (<strong>Внимание! Обсудить размер лестничного пролета, относительно размеров двери</strong>)</td><td style="text-align:center">1 дверь / 1 этаж</td><td></td><td></td><td style="text-align:right">150</td><td style="text-align:right">0</td></tr>
+<tr><td colspan="5" style="text-align:right;font-weight:bold">Сумма:</td><td style="text-align:right;font-weight:bold">0</td></tr></table>
+<p style="margin-top:16px">Особые условия:</p>
+<p>1. Если подъем мебели можно осуществить полностью на лифте - подъем бесплатный. Расчет подъема изделия или элементов начинается с первого этажа.</p>
+<p>2. Занос мебели на первый этаж – бесплатный, при условии возможности парковки автомашины вплотную к подъезду.</p>
+<p>3. При невозможности парковки автомашины в плотную (не далее чем на 10 метров) к подъезду (вход в частный дом и т.д.), сумма заноса рассчитывается по данному прайсу, в зависимости от расстояния на ситуации, если из-за погодных условий (снег, гололед, размытая грунтовая дорога и т.д.) или из-за заставленного автомобилями двора (включая аналогичные ситуации) нет возможности подъехать ко входу.</p>
+<p>* Услуги могут быть рассчитаны по факту оказания, путем отражения в акте об оказании услуг.</p>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
+<tr><td style="padding:6px">Менеджер</td><td>&nbsp;</td></tr>
+<tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
+</div></body></html>'''
+
+    elif doc_type == 'assembly_calc':
+        return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Калькуляция сборки — {contract_num}</title>{style}</head><body><div class="page">
+<p class="no-indent" style="text-align:right">Приложение № 1 к договору на выполнение работ по монтажу и сборке мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
+<h1>«Калькуляция на выполнение работ по сборке мебели»</h1>
+<table><tr><th>Наименование (перечень) работ и услуг</th><th style="width:15%">Ед. измерения</th><th style="width:12%">Количество</th><th style="width:18%">Цена за ед. измерения в руб.</th><th style="width:18%">Стоимость в руб.</th></tr>
+<tr><td>Сборка и монтаж мебели согласно договору бытового подряда на изготовление мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> *</td><td style="text-align:center">работа</td><td style="text-align:center">1</td><td style="text-align:right">17500</td><td style="text-align:right">17500</td></tr>
+<tr><td>Выезд сборщика за пределы территориальных границ г. Саратова и г. Энгельса **</td><td style="text-align:center">1 км</td><td style="text-align:center">40</td><td style="text-align:right"></td><td style="text-align:right">0</td></tr>
+<tr><td colspan="3" style="text-align:right">Сумма:</td><td colspan="2" style="text-align:right">17500</td></tr>
+<tr><td colspan="3" style="text-align:right">Скидка ***:</td><td colspan="2" style="text-align:right">17500</td></tr>
+<tr><td colspan="3" style="text-align:right;font-weight:bold">Сумма со скидкой:</td><td colspan="2" style="text-align:right;font-weight:bold">0</td></tr></table>
+<p style="margin-top:16px">*Подрядчик вправе однократно предоставить Заказчику скидку в размере стоимости сборки, равной 17500 руб., которая осуществляется в пределах территориальных границ г. Саратова и г. Энгельса. В случае повторного выезда к месту сборки, по причинам не зависящим от Подрядчика, но зависящим от Заказчика, ее стоимость будет определена согласно приложению №1.</p>
+<p>**Расчет стоимости выезда сборщика учитывает расстояние по километражу от склада Подрядчика по адресу: г. Саратов, ул. Усть-Курдюмская д. 3, до дома (подъезда) заказчика согласно п. 1.2 договора. Километраж определяется на основании сервиса Яндекс.Карты https://yandex.ru/maps/</p>
+<p>*** Размер скидки определяется Подрядчиком индивидуально.</p>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
+<tr><td style="padding:6px">Менеджер</td><td>&nbsp;</td></tr>
+<tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
+</div></body></html>'''
+
+    elif doc_type == 'assembly_extra':
+        return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Прайс доп. работы сборка — {contract_num}</title>{style}</head><body><div class="page">
+<p class="no-indent" style="text-align:right">Приложение № 2 к договору на выполнение работ по монтажу и сборке мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
+<h1>«Прайс на дополнительные работы»*</h1>
+<table><tr><th>Наименование (перечень) работ и услуг</th><th style="width:15%">Ед. измерения</th><th style="width:12%">Количество</th><th style="width:18%">Цена за ед. измерения в руб.</th><th style="width:18%">Стоимость в руб.</th></tr>
+<tr><td>Врезка мойки с герметизацией. Без подвода и пуска воды</td><td style="text-align:center">шт.</td><td></td><td style="text-align:right">1250</td><td style="text-align:right">0</td></tr>
+<tr><td>Врезка варочной поверхности с герметизацией. Без пуска газа</td><td style="text-align:center">шт.</td><td></td><td style="text-align:right">1250</td><td style="text-align:right">0</td></tr>
+<tr><td>Установка вытяжки без подключения принудительного рукава воздуховода.</td><td style="text-align:center">шт.</td><td></td><td style="text-align:right">1500</td><td style="text-align:right">0</td></tr>
+<tr><td>Установка духового шкафа</td><td style="text-align:center">шт.</td><td></td><td style="text-align:right">750</td><td style="text-align:right">0</td></tr>
+<tr><td>Установка встраиваемой СВЧ-печи</td><td style="text-align:center">шт.</td><td></td><td style="text-align:right">650</td><td style="text-align:right">0</td></tr>
+<tr><td>Установка встраиваемого холодильника</td><td style="text-align:center">шт.</td><td></td><td style="text-align:right">2400</td><td style="text-align:right">0</td></tr>
+<tr><td>Установка посудомоечной машины. Без подвода и пуска воды</td><td style="text-align:center">шт.</td><td></td><td style="text-align:right">1500</td><td style="text-align:right">0</td></tr>
+<tr><td>Установка светодиодной ленты (1 погонный метр)</td><td style="text-align:center">п.м.</td><td></td><td style="text-align:right">1250</td><td style="text-align:right">0</td></tr>
+<tr><td>Установка столешницы в подоконник</td><td style="text-align:center">шт.</td><td></td><td style="text-align:right">3000</td><td style="text-align:right">0</td></tr>
+<tr><td>Установка ручек (если ручки были куплены клиентом самостоятельно)</td><td style="text-align:center">шт.</td><td></td><td style="text-align:right">70</td><td style="text-align:right">0</td></tr>
+<tr><td colspan="4" style="text-align:right;font-weight:bold">Сумма:</td><td style="text-align:right;font-weight:bold">0</td></tr></table>
+<p style="margin-top:16px">Стоимость и порядок выполнения дополнительных работ не включенных в данный прайс - обсуждаются Заказчиком и Подрядчиком индивидуально.</p>
+<p>* Работы могут быть рассчитаны по факту выполнения, путем отражения в акте выполненных работ.</p>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
+<tr><td style="padding:6px">Менеджер</td><td>&nbsp;</td></tr>
+<tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
+</div></body></html>'''
+
+    elif doc_type == 'tech_spec':
+        return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Спецификация на технику — {contract_num}</title>{style}</head><body><div class="page">
+<p class="no-indent" style="text-align:right">Приложение к договору бытового подряда на изготовление мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
+<h1>«Спецификация на поставку техники»</h1>
+<table><tr><th>Наименование</th><th style="width:15%">Ед. измерения</th><th style="width:12%">Количество</th><th style="width:18%">Цена за ед. измерения в руб.</th><th style="width:18%">Стоимость в руб.</th></tr>
+<tr><td></td><td style="text-align:center">шт.</td><td></td><td></td><td style="text-align:right">0</td></tr>
+<tr><td></td><td style="text-align:center">шт.</td><td></td><td></td><td style="text-align:right">0</td></tr>
+<tr><td></td><td style="text-align:center">шт.</td><td></td><td></td><td style="text-align:right">0</td></tr>
+<tr><td></td><td style="text-align:center">шт.</td><td></td><td></td><td style="text-align:right">0</td></tr>
+<tr><td></td><td style="text-align:center">шт.</td><td></td><td></td><td style="text-align:right">0</td></tr>
+<tr><td></td><td style="text-align:center">шт.</td><td></td><td></td><td style="text-align:right">0</td></tr>
+<tr><td></td><td style="text-align:center">шт.</td><td></td><td></td><td style="text-align:right">0</td></tr>
+<tr><td></td><td style="text-align:center">шт.</td><td></td><td></td><td style="text-align:right">0</td></tr>
+<tr><td colspan="4" style="text-align:right;font-weight:bold">Сумма:</td><td style="text-align:right;font-weight:bold">0</td></tr></table>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
+<tr><td style="padding:6px">Менеджер</td><td>&nbsp;</td></tr>
+<tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
 </div></body></html>'''
 
     elif doc_type == 'addendum':

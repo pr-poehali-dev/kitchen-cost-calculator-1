@@ -14,7 +14,7 @@ function apiUrl(action: string, clientId: string, doc: string) {
   return `${API}/?action=${action}&client_id=${clientId}&doc=${doc}&token=${encodeURIComponent(getToken())}`;
 }
 
-type DocType = 'contract' | 'act' | 'tech' | 'delivery' | 'assembly' | 'rules' | 'act_delivery' | 'act_assembly' | 'addendum';
+type DocType = 'contract' | 'act' | 'tech' | 'delivery' | 'assembly' | 'rules' | 'act_delivery' | 'act_assembly' | 'addendum' | 'delivery_calc' | 'delivery_lift' | 'assembly_calc' | 'assembly_extra' | 'tech_spec';
 
 interface DocDef {
   id: DocType;
@@ -91,10 +91,50 @@ const DOCS: DocDef[] = [
     group: 'Доставка и монтаж',
   },
   {
+    id: 'delivery_calc',
+    title: 'Калькуляция доставки',
+    subtitle: 'Приложение № 1 к договору доставки',
+    icon: 'Calculator',
+    appendix: 'Прил. №1',
+    group: 'Доставка и монтаж',
+  },
+  {
+    id: 'delivery_lift',
+    title: 'Прайс подъём мебели',
+    subtitle: 'Приложение № 2 к договору доставки',
+    icon: 'ArrowUpFromLine',
+    appendix: 'Прил. №2',
+    group: 'Доставка и монтаж',
+  },
+  {
+    id: 'assembly_calc',
+    title: 'Калькуляция сборки',
+    subtitle: 'Приложение № 1 к договору монтажа',
+    icon: 'Calculator',
+    appendix: 'Прил. №1',
+    group: 'Сборка',
+  },
+  {
+    id: 'assembly_extra',
+    title: 'Прайс доп. работ',
+    subtitle: 'Приложение № 2 к договору монтажа',
+    icon: 'ListPlus',
+    appendix: 'Прил. №2',
+    group: 'Сборка',
+  },
+  {
     id: 'addendum',
     title: 'Дополнительное соглашение',
     subtitle: 'К договору бытового подряда на изготовление мебели',
     icon: 'FilePlus2',
+    appendix: '',
+    group: 'Прочее',
+  },
+  {
+    id: 'tech_spec',
+    title: 'Спецификация на технику',
+    subtitle: 'Приложение к договору бытового подряда',
+    icon: 'Tv',
     appendix: '',
     group: 'Прочее',
   },
