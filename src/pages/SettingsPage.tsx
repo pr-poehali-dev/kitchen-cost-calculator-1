@@ -1,9 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import type { MaterialType, MaterialCategory, CompanyInfo } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import MaterialTypeModal from './settings/MaterialTypeModal';
 import MaterialCategoryModal from './settings/MaterialCategoryModal';
+
+const ACCENT_KEY = 'kuhni_pro_accent';
+
+const ACCENTS = [
+  { id: 'gold',    label: 'Золото',    color: 'hsl(38,60%,58%)' },
+  { id: 'blue',    label: 'Синий',     color: 'hsl(210,80%,60%)' },
+  { id: 'emerald', label: 'Изумруд',   color: 'hsl(160,60%,45%)' },
+  { id: 'violet',  label: 'Фиолет',    color: 'hsl(260,60%,65%)' },
+  { id: 'rose',    label: 'Розовый',   color: 'hsl(340,70%,60%)' },
+  { id: 'orange',  label: 'Оранжевый', color: 'hsl(25,90%,55%)' },
+] as const;
+
+type AccentId = typeof ACCENTS[number]['id'];
+
+function applyAccent(id: AccentId) {
+  const root = document.documentElement;
+  if (id === 'gold') root.removeAttribute('data-accent');
+  else root.setAttribute('data-accent', id);
+  localStorage.setItem(ACCENT_KEY, id);
+}
 
 function Section({ title, children, danger = false }: { title: string; children: React.ReactNode; danger?: boolean }) {
   return (
@@ -21,6 +41,79 @@ export default function SettingsPage() {
   const [editingType, setEditingType] = useState<Partial<MaterialType> | null>(null);
   const [editingCategory, setEditingCategory] = useState<Partial<MaterialCategory & { typeIds: string[] }> | null>(null);
   const [catTypeFilter, setCatTypeFilter] = useState<string>('all');
+  const [accent, setAccent] = useState<AccentId>(() => (localStorage.getItem(ACCENT_KEY) as AccentId) || 'gold');
+  const [importError, setImportError] = useState('');
+  const [importOk, setImportOk] = useState(false);
+
+  // Применяем тему при монтировании
+  useEffect(() => {
+    applyAccent(accent);
+  }, []);
+
+  const handleAccentChange = (id: AccentId) => {
+    setAccent(id);
+    applyAccent(id);
+  };
+
+  const handleExportBackup = () => {
+    const state = store;
+    const data = {
+      version: '1.0',
+      exportedAt: new Date().toISOString(),
+      materials: store.materials,
+      manufacturers: store.manufacturers,
+      vendors: store.vendors,
+      services: store.services,
+      expenses: store.expenses,
+      expenseGroups: store.expenseGroups,
+      projects: store.projects,
+      savedBlocks: store.savedBlocks,
+      templates: store.templates,
+      settings: store.settings,
+    };
+    void state;
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `kuhni-pro-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+  };
+
+  const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setImportError('');
+    setImportOk(false);
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const data = JSON.parse(ev.target?.result as string);
+        if (!data.materials || !data.settings) {
+          setImportError('Неверный формат файла');
+          return;
+        }
+        store.setState(s => ({
+          ...s,
+          materials: data.materials ?? s.materials,
+          manufacturers: data.manufacturers ?? s.manufacturers,
+          vendors: data.vendors ?? s.vendors,
+          services: data.services ?? s.services,
+          expenses: data.expenses ?? s.expenses,
+          expenseGroups: data.expenseGroups ?? s.expenseGroups,
+          projects: data.projects ?? s.projects,
+          savedBlocks: data.savedBlocks ?? s.savedBlocks,
+          templates: data.templates ?? s.templates,
+          settings: data.settings ?? s.settings,
+        }));
+        setImportOk(true);
+        setTimeout(() => setImportOk(false), 3000);
+      } catch {
+        setImportError('Ошибка чтения файла');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  };
 
   const getCatTypeIds = (cat: MaterialCategory): string[] => {
     if (cat.typeIds?.length) return cat.typeIds;
@@ -241,6 +334,76 @@ export default function SettingsPage() {
             <div className="flex justify-between"><span>Версия</span><span className="font-mono">1.2.0</span></div>
             <div className="flex justify-between"><span>Данные хранятся</span><span>Локально в браузере</span></div>
             <div className="flex justify-between"><span>Разработано</span><span>2026</span></div>
+          </div>
+        </Section>
+
+        {/* Внешний вид */}
+        <Section title="Внешний вид">
+          <div className="space-y-3">
+            <div>
+              <div className="text-xs text-[hsl(var(--text-muted))] mb-2">Акцентный цвет интерфейса</div>
+              <div className="flex gap-2 flex-wrap">
+                {ACCENTS.map(a => (
+                  <button
+                    key={a.id}
+                    onClick={() => handleAccentChange(a.id)}
+                    title={a.label}
+                    className={`flex items-center gap-2 px-3 py-2 rounded-lg border transition-all text-sm ${
+                      accent === a.id ? 'border-white/40 bg-[hsl(220,12%,18%)]' : 'border-border hover:border-[hsl(220,12%,28%)]'
+                    }`}
+                  >
+                    <span className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: a.color }} />
+                    <span className={accent === a.id ? 'text-foreground font-medium' : 'text-[hsl(var(--text-dim))]'}>{a.label}</span>
+                    {accent === a.id && <Icon name="Check" size={12} className="text-foreground" />}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </Section>
+
+        {/* Бэкап данных */}
+        <Section title="Резервная копия данных">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between gap-4">
+              <div>
+                <div className="text-sm text-foreground font-medium">Экспорт всех данных</div>
+                <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5">
+                  Скачает JSON-файл с материалами, проектами, расходами и настройками
+                </div>
+              </div>
+              <button
+                onClick={handleExportBackup}
+                className="flex items-center gap-2 px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-gold hover:border-gold/50 transition-all shrink-0"
+              >
+                <Icon name="Download" size={14} /> Скачать бэкап
+              </button>
+            </div>
+
+            <div className="border-t border-border pt-4">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <div className="text-sm text-foreground font-medium">Импорт из бэкапа</div>
+                  <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5">
+                    Загрузит данные из ранее сохранённого JSON-файла. Текущие данные будут заменены.
+                  </div>
+                </div>
+                <label className="flex items-center gap-2 px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-gold hover:border-gold/50 transition-all shrink-0 cursor-pointer">
+                  <Icon name="Upload" size={14} /> Загрузить бэкап
+                  <input type="file" accept=".json" className="hidden" onChange={handleImportBackup} />
+                </label>
+              </div>
+              {importError && (
+                <div className="flex items-center gap-2 mt-2 text-xs text-red-400">
+                  <Icon name="AlertCircle" size={13} /> {importError}
+                </div>
+              )}
+              {importOk && (
+                <div className="flex items-center gap-2 mt-2 text-xs text-emerald-400">
+                  <Icon name="CheckCircle" size={13} /> Данные успешно загружены
+                </div>
+              )}
+            </div>
           </div>
         </Section>
 

@@ -51,6 +51,53 @@
     --text-muted: 220 8% 52%;
     --text-dim: 220 8% 65%;
   }
+
+  /* Цветовые темы акцента */
+  [data-accent="blue"] {
+    --gold: 210 80% 60%;
+    --gold-dim: 210 60% 40%;
+    --primary: 210 80% 60%;
+    --accent: 210 80% 60%;
+    --ring: 210 80% 60%;
+    --sidebar-primary: 210 80% 60%;
+    --sidebar-ring: 210 80% 60%;
+  }
+  [data-accent="emerald"] {
+    --gold: 160 60% 45%;
+    --gold-dim: 160 40% 30%;
+    --primary: 160 60% 45%;
+    --accent: 160 60% 45%;
+    --ring: 160 60% 45%;
+    --sidebar-primary: 160 60% 45%;
+    --sidebar-ring: 160 60% 45%;
+  }
+  [data-accent="violet"] {
+    --gold: 260 60% 65%;
+    --gold-dim: 260 40% 45%;
+    --primary: 260 60% 65%;
+    --accent: 260 60% 65%;
+    --ring: 260 60% 65%;
+    --sidebar-primary: 260 60% 65%;
+    --sidebar-ring: 260 60% 65%;
+  }
+  [data-accent="rose"] {
+    --gold: 340 70% 60%;
+    --gold-dim: 340 50% 40%;
+    --primary: 340 70% 60%;
+    --accent: 340 70% 60%;
+    --ring: 340 70% 60%;
+    --sidebar-primary: 340 70% 60%;
+    --sidebar-ring: 340 70% 60%;
+  }
+  [data-accent="orange"] {
+    --gold: 25 90% 55%;
+    --gold-dim: 25 70% 38%;
+    --primary: 25 90% 55%;
+    --accent: 25 90% 55%;
+    --ring: 25 90% 55%;
+    --sidebar-primary: 25 90% 55%;
+    --sidebar-ring: 25 90% 55%;
+  }
 }
 
 @layer base {

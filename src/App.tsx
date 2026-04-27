@@ -19,6 +19,12 @@ import Icon from '@/components/ui/icon';
 
 type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings' | 'users';
 
+// Восстанавливаем акцент при старте
+const _savedAccent = localStorage.getItem('kuhni_pro_accent');
+if (_savedAccent && _savedAccent !== 'gold') {
+  document.documentElement.setAttribute('data-accent', _savedAccent);
+}
+
 export default function App() {
   const [section, setSection] = useState<Section>('home');
   const [stateLoading, setStateLoading] = useState(false);
