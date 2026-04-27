@@ -5,181 +5,13 @@ import { CLIENT_STATUSES, clientFullName, emptyClient } from './types';
 import type { Client, ClientStatus } from './types';
 import ClientCard from './ClientCard';
 import { ClientsListSkeleton } from '@/components/Skeleton';
-import * as XLSX from 'xlsx';
+import { ClientRow, KanbanColumn } from './list/ClientListItems';
+import { ClientsToolbar } from './list/ClientsToolbar';
+import { ClientsSearchBar, ClientsAdvancedFilters, ClientsCounter } from './list/ClientsFilters';
 
 type View = 'list' | 'kanban';
 type SortField = 'name' | 'created_at' | 'delivery_date' | 'total_amount';
 type SortDir = 'asc' | 'desc';
-
-function StatusBadge({ status }: { status: ClientStatus }) {
-  const s = CLIENT_STATUSES.find(x => x.id === status);
-  if (!s) return null;
-  return (
-    <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium" style={{ background: s.color + '22', color: s.color }}>
-      {s.label}
-    </span>
-  );
-}
-
-function DeliveryBadge({ date }: { date: string }) {
-  if (!date) return null;
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const d = new Date(date); d.setHours(0, 0, 0, 0);
-  const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
-  let label = '', cls = '';
-  if (diff < 0) { label = `${Math.abs(diff)} дн. назад`; cls = 'text-red-400'; }
-  else if (diff === 0) { label = 'Сегодня'; cls = 'text-amber-400 font-semibold'; }
-  else if (diff <= 3) { label = `через ${diff} дн.`; cls = 'text-amber-400'; }
-  else if (diff <= 14) { label = `через ${diff} дн.`; cls = 'text-emerald-400'; }
-  else { label = date; cls = 'text-[hsl(var(--text-muted))]'; }
-  return <span className={`flex items-center gap-1 text-xs ${cls}`}><Icon name="Truck" size={11} />{label}</span>;
-}
-
-function ClientRow({ client, selected, onSelect, onClick }: {
-  client: Client; selected: boolean;
-  onSelect: (e: React.MouseEvent) => void; onClick: () => void;
-}) {
-  const name = clientFullName(client);
-  const hasReminder = client.reminder_date && client.reminder_date >= new Date().toISOString().slice(0, 10);
-  return (
-    <div
-      className={`flex items-center gap-3 px-5 py-3.5 border-b border-border cursor-pointer transition-colors group ${selected ? 'bg-gold/5' : 'hover:bg-[hsl(220,12%,13%)]'}`}
-    >
-      {/* Checkbox */}
-      <div
-        onClick={onSelect}
-        className={`w-4 h-4 rounded-[4px] flex items-center justify-center shrink-0 transition-all duration-150 cursor-pointer ${
-          selected
-            ? 'bg-gold shadow-[0_0_0_1px_hsl(var(--gold))]'
-            : 'bg-[hsl(220,12%,14%)] shadow-[0_0_0_1.5px_hsl(220,12%,26%)] hover:shadow-[0_0_0_1.5px_hsl(var(--gold))]'
-        }`}
-      >
-        {selected && <Icon name="Check" size={9} className="text-[hsl(220,16%,8%)] stroke-[3]" />}
-      </div>
-      <div className="w-8 h-8 rounded-full bg-gold/10 flex items-center justify-center shrink-0" onClick={onClick}>
-        <span className="text-gold text-xs font-bold">{(client.last_name?.[0] || client.first_name?.[0] || '?').toUpperCase()}</span>
-      </div>
-      <div className="flex-1 min-w-0" onClick={onClick}>
-        <div className="text-sm font-medium text-foreground truncate">{name}</div>
-        <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5 flex items-center gap-2">
-          {client.phone && <span>{client.phone}</span>}
-          {client.contract_number && <span>№{client.contract_number}</span>}
-          {client.designer && <span className="text-[hsl(var(--text-muted))]">· {client.designer}</span>}
-        </div>
-      </div>
-      <div className="hidden sm:flex items-center gap-3 shrink-0" onClick={onClick}>
-        {client.total_amount > 0 && <span className="text-sm font-medium text-foreground">{client.total_amount.toLocaleString('ru')} ₽</span>}
-        {hasReminder && <div title={`Напоминание: ${client.reminder_date}`}><Icon name="Bell" size={14} className="text-amber-400" /></div>}
-        <StatusBadge status={client.status as ClientStatus} />
-        <DeliveryBadge date={client.delivery_date} />
-      </div>
-      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[hsl(var(--text-muted))] group-hover:text-gold group-hover:bg-gold/10 transition-all shrink-0" onClick={onClick}>
-        <Icon name="ChevronRight" size={13} />
-      </div>
-    </div>
-  );
-}
-
-function KanbanColumn({ status, clients, onClient }: {
-  status: typeof CLIENT_STATUSES[0]; clients: Client[]; onClient: (c: Client) => void;
-}) {
-  return (
-    <div className="flex flex-col min-w-[220px] w-[220px]">
-      <div className="flex items-center gap-2 mb-3 px-1">
-        <div className="w-2 h-2 rounded-full" style={{ background: status.color }} />
-        <span className="text-xs font-medium text-[hsl(var(--text-muted))] uppercase tracking-wider">{status.label}</span>
-        <span className="ml-auto text-xs text-[hsl(var(--text-muted))] bg-[hsl(220,12%,14%)] rounded-full px-1.5 py-0.5">{clients.length}</span>
-      </div>
-      <div className="flex flex-col gap-2">
-        {clients.map(c => (
-          <div key={c.id} onClick={() => onClient(c)}
-            className="bg-[hsl(220,14%,11%)] border border-border rounded-lg p-3 cursor-pointer hover:border-gold/40 transition-colors">
-            <div className="flex items-start gap-2">
-              <div className="w-6 h-6 rounded-full bg-gold/10 flex items-center justify-center shrink-0 mt-0.5">
-                <span className="text-gold text-[10px] font-bold">{(c.last_name?.[0] || c.first_name?.[0] || '?').toUpperCase()}</span>
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-medium text-foreground leading-tight">{clientFullName(c)}</div>
-                {c.phone && <div className="text-[11px] text-[hsl(var(--text-muted))] mt-0.5">{c.phone}</div>}
-              </div>
-            </div>
-            {c.total_amount > 0 && <div className="mt-2 text-xs font-semibold text-gold">{c.total_amount.toLocaleString('ru')} ₽</div>}
-            {c.delivery_date && <div className="mt-1.5"><DeliveryBadge date={c.delivery_date} /></div>}
-            {c.reminder_date && c.reminder_date >= new Date().toISOString().slice(0, 10) && (
-              <div className="mt-1 flex items-center gap-1 text-[11px] text-amber-400"><Icon name="Bell" size={10} />{c.reminder_date}</div>
-            )}
-          </div>
-        ))}
-        {clients.length === 0 && (
-          <div className="border border-dashed border-border rounded-lg p-4 text-center text-[11px] text-[hsl(var(--text-muted))]">Нет клиентов</div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-const SORT_LABELS: Record<SortField, string> = {
-  name: 'Имя', created_at: 'Дата создания', delivery_date: 'Доставка', total_amount: 'Сумма',
-};
-
-function exportCSV(clients: Client[]) {
-  const headers = ['Имя', 'Телефон', 'Статус', 'Дизайнер', 'Замерщик', 'Договор №', 'Сумма', 'Дата доставки', 'Дата создания'];
-  const rows = clients.map(c => [
-    clientFullName(c),
-    c.phone || '',
-    CLIENT_STATUSES.find(s => s.id === c.status)?.label || c.status,
-    c.designer || '',
-    c.measurer || '',
-    c.contract_number || '',
-    c.total_amount ? String(c.total_amount) : '',
-    c.delivery_date || '',
-    c.created_at?.slice(0, 10) || '',
-  ]);
-  const csv = [headers, ...rows].map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
-  const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
-  a.download = `clients_${new Date().toISOString().slice(0,10)}.csv`; a.click();
-}
-
-function exportExcel(clients: Client[]) {
-  const headers = ['Имя', 'Телефон', 'Доп. телефон', 'Email', 'Статус', 'Дизайнер', 'Замерщик',
-    'Договор №', 'Дата договора', 'Сумма', 'Схема оплаты', 'Внесено', 'Остаток',
-    'Дата доставки', 'Город доставки', 'Адрес доставки',
-    'Комментарий', 'Дата создания'];
-  const rows = clients.map(c => [
-    clientFullName(c),
-    c.phone || '',
-    c.phone2 || '',
-    c.email || '',
-    CLIENT_STATUSES.find(s => s.id === c.status)?.label || c.status,
-    c.designer || '',
-    c.measurer || '',
-    c.contract_number || '',
-    c.contract_date || '',
-    c.total_amount || 0,
-    c.payment_type || '',
-    c.prepaid_amount || 0,
-    Math.max(0, (c.total_amount || 0) - (c.prepaid_amount || 0)),
-    c.delivery_date || '',
-    c.delivery_city || '',
-    [c.delivery_street, c.delivery_house, c.delivery_apt ? `кв.${c.delivery_apt}` : ''].filter(Boolean).join(', '),
-    c.comment || '',
-    c.created_at?.slice(0, 10) || '',
-  ]);
-
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...rows]);
-  // Ширина колонок
-  ws['!cols'] = [22,16,14,22,14,14,14,14,14,12,18,12,12,14,16,24,30,14].map(w => ({ wch: w }));
-  // Стиль заголовка (жирный)
-  headers.forEach((_, i) => {
-    const cell = ws[XLSX.utils.encode_cell({ r: 0, c: i })];
-    if (cell) cell.s = { font: { bold: true }, fill: { fgColor: { rgb: 'F3E6C8' } } };
-  });
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, 'Клиенты');
-  XLSX.writeFile(wb, `clients_${new Date().toISOString().slice(0,10)}.xlsx`);
-}
 
 export default function ClientsPage() {
   const { clients, loading, load, createClient, updateStatus } = useClients();
@@ -211,7 +43,7 @@ export default function ClientsPage() {
   const designers = useMemo(() => [...new Set(clients.map(c => c.designer).filter(Boolean))], [clients]);
   const measurers = useMemo(() => [...new Set(clients.map(c => c.measurer).filter(Boolean))], [clients]);
 
-  const hasAdvancedFilters = filterDesigner || filterMeasurer || filterDateFrom || filterDateTo || filterDeliveryFrom || filterDeliveryTo || filterAmountMin || filterAmountMax;
+  const hasAdvancedFilters = !!(filterDesigner || filterMeasurer || filterDateFrom || filterDateTo || filterDeliveryFrom || filterDeliveryTo || filterAmountMin || filterAmountMax);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -292,185 +124,64 @@ export default function ClientsPage() {
     return <ClientCard clientId={selectedId} onBack={() => { setSelectedId(null); load(); }} />;
   }
 
-  const INP = 'bg-[hsl(220,12%,14%)] border border-border rounded px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors';
+  const showCounter = !!(search || filterStatus !== 'all' || hasAdvancedFilters || selectedIds.size > 0) && !loading;
 
   return (
     <div className="flex flex-col h-full animate-fade-in">
-      {/* Header */}
-      <div className="border-b border-border bg-[hsl(220,14%,11%)] px-6 py-4 flex items-center gap-4 shrink-0">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-base font-semibold text-foreground">Клиенты</h1>
-          <p className="text-[hsl(var(--text-muted))] text-xs mt-0.5">
-            {loading ? 'Загрузка...' : `${clients.length} клиентов`}
-          </p>
-        </div>
-        <div className="flex items-center gap-1 bg-[hsl(220,12%,14%)] rounded p-0.5">
-          <button onClick={() => setView('list')} className={`px-2.5 py-1.5 rounded text-xs transition-colors ${view === 'list' ? 'bg-[hsl(220,12%,20%)] text-foreground' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}>
-            <Icon name="List" size={13} />
-          </button>
-          <button onClick={() => setView('kanban')} className={`px-2.5 py-1.5 rounded text-xs transition-colors ${view === 'kanban' ? 'bg-[hsl(220,12%,20%)] text-foreground' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}>
-            <Icon name="Columns3" size={13} />
-          </button>
-        </div>
-        {/* Экспорт */}
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => exportExcel(filtered)}
-            title="Экспорт в Excel (.xlsx)"
-            className="flex items-center gap-1.5 px-3 py-2 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-emerald-400 hover:border-emerald-400/50 transition-colors"
-          >
-            <Icon name="FileSpreadsheet" size={13} /> Excel
-          </button>
-          <button
-            onClick={() => exportCSV(filtered)}
-            title="Экспорт в CSV"
-            className="flex items-center gap-1.5 px-3 py-2 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-gold hover:border-gold/50 transition-colors"
-          >
-            <Icon name="FileDown" size={13} /> CSV
-          </button>
-        </div>
-        <button onClick={handleCreate} disabled={creating}
-          className="flex items-center gap-2 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90 shrink-0 disabled:opacity-60">
-          <Icon name="Plus" size={14} /> Новый клиент
-        </button>
-      </div>
+      <ClientsToolbar
+        clientsCount={clients.length}
+        loading={loading}
+        view={view}
+        onViewChange={setView}
+        filteredClients={filtered}
+        creating={creating}
+        onCreate={handleCreate}
+      />
 
-      {/* Filters row */}
-      <div className="border-b border-border px-6 py-3 flex items-center gap-3 shrink-0 bg-[hsl(220,16%,7%)]">
-        <div className="relative flex-1 max-w-xs">
-          <Icon name="Search" size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))]" />
-          <input className="w-full bg-[hsl(220,12%,14%)] border border-border rounded pl-8 pr-3 py-1.5 text-sm outline-none focus:border-gold transition-colors"
-            placeholder="Поиск по имени, телефону..." value={search} onChange={e => setSearch(e.target.value)} />
-          {search && <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] hover:text-foreground"><Icon name="X" size={12} /></button>}
-        </div>
-        <div className="flex items-center gap-1.5 flex-wrap flex-1">
-          <button onClick={() => setFilterStatus('all')} className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${filterStatus === 'all' ? 'bg-gold/20 text-gold' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}>Все</button>
-          {CLIENT_STATUSES.map(s => (
-            <button key={s.id} onClick={() => setFilterStatus(filterStatus === s.id ? 'all' : s.id)}
-              className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${filterStatus === s.id ? 'text-white' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
-              style={filterStatus === s.id ? { background: s.color } : {}}>
-              {s.label}
-            </button>
-          ))}
-        </div>
-        {/* Кнопка расширенных фильтров */}
-        <button
-          onClick={() => setShowFilters(v => !v)}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border transition-colors shrink-0 ${(showFilters || hasAdvancedFilters) ? 'border-gold/50 text-gold' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
-        >
-          <Icon name="SlidersHorizontal" size={13} />
-          Фильтры
-          {hasAdvancedFilters && <span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0" />}
-        </button>
-        {/* Сортировка */}
-        <div className="relative shrink-0">
-          <button onClick={() => setShowSortMenu(v => !v)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border transition-colors ${showSortMenu ? 'border-gold/50 text-gold' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}>
-            <Icon name={sortDir === 'asc' ? 'ArrowUpAZ' : 'ArrowDownAZ'} size={13} />{SORT_LABELS[sortField]}
-          </button>
-          {showSortMenu && (<>
-            <div className="fixed inset-0 z-10" onClick={() => setShowSortMenu(false)} />
-            <div className="absolute right-0 top-full mt-1 z-20 bg-[hsl(220,14%,13%)] border border-border rounded-lg shadow-xl py-1 min-w-[160px]">
-              {(Object.keys(SORT_LABELS) as SortField[]).map(f => (
-                <button key={f} onClick={() => handleSort(f)}
-                  className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-xs hover:bg-[hsl(220,12%,18%)] transition-colors ${sortField === f ? 'text-gold' : 'text-[hsl(var(--text-dim))]'}`}>
-                  {SORT_LABELS[f]}
-                  {sortField === f && <Icon name={sortDir === 'asc' ? 'ArrowUp' : 'ArrowDown'} size={11} />}
-                </button>
-              ))}
-            </div>
-          </>)}
-        </div>
-      </div>
+      <ClientsSearchBar
+        search={search}
+        onSearchChange={setSearch}
+        filterStatus={filterStatus}
+        onFilterStatusChange={setFilterStatus}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters(v => !v)}
+        hasAdvancedFilters={hasAdvancedFilters}
+        sortField={sortField}
+        sortDir={sortDir}
+        showSortMenu={showSortMenu}
+        onToggleSortMenu={() => setShowSortMenu(v => !v)}
+        onCloseSortMenu={() => setShowSortMenu(false)}
+        onSort={handleSort}
+      />
 
-      {/* Расширенные фильтры */}
       {showFilters && (
-        <div className="border-b border-border px-6 py-3 bg-[hsl(220,14%,10%)] shrink-0">
-          <div className="flex items-center gap-4 flex-wrap">
-            {/* Дизайнер */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-[hsl(var(--text-muted))]">Дизайнер:</span>
-              <select value={filterDesigner} onChange={e => setFilterDesigner(e.target.value)} className={INP}>
-                <option value="">Все</option>
-                {designers.map(d => <option key={d} value={d}>{d}</option>)}
-              </select>
-            </div>
-            {/* Замерщик */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-[hsl(var(--text-muted))]">Замерщик:</span>
-              <select value={filterMeasurer} onChange={e => setFilterMeasurer(e.target.value)} className={INP}>
-                <option value="">Все</option>
-                {measurers.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </div>
-            {/* Дата создания */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-[hsl(var(--text-muted))]">Создан:</span>
-              <input type="date" value={filterDateFrom} onChange={e => setFilterDateFrom(e.target.value)} className={INP} />
-              <span className="text-xs text-[hsl(var(--text-muted))]">—</span>
-              <input type="date" value={filterDateTo} onChange={e => setFilterDateTo(e.target.value)} className={INP} />
-            </div>
-            {/* Дата доставки */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-[hsl(var(--text-muted))]">Доставка:</span>
-              <input type="date" value={filterDeliveryFrom} onChange={e => setFilterDeliveryFrom(e.target.value)} className={INP} />
-              <span className="text-xs text-[hsl(var(--text-muted))]">—</span>
-              <input type="date" value={filterDeliveryTo} onChange={e => setFilterDeliveryTo(e.target.value)} className={INP} />
-            </div>
-            {/* Сумма */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-xs text-[hsl(var(--text-muted))]">Сумма:</span>
-              <input type="number" placeholder="от" value={filterAmountMin} onChange={e => setFilterAmountMin(e.target.value)} className={INP + ' w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'} />
-              <span className="text-xs text-[hsl(var(--text-muted))]">—</span>
-              <input type="number" placeholder="до" value={filterAmountMax} onChange={e => setFilterAmountMax(e.target.value)} className={INP + ' w-24 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'} />
-            </div>
-            {hasAdvancedFilters && (
-              <button onClick={clearFilters} className="flex items-center gap-1 text-xs text-[hsl(var(--text-muted))] hover:text-destructive transition-colors">
-                <Icon name="X" size={12} /> Сбросить
-              </button>
-            )}
-          </div>
-        </div>
+        <ClientsAdvancedFilters
+          filterDesigner={filterDesigner} onFilterDesignerChange={setFilterDesigner}
+          filterMeasurer={filterMeasurer} onFilterMeasurerChange={setFilterMeasurer}
+          filterDateFrom={filterDateFrom} onFilterDateFromChange={setFilterDateFrom}
+          filterDateTo={filterDateTo} onFilterDateToChange={setFilterDateTo}
+          filterDeliveryFrom={filterDeliveryFrom} onFilterDeliveryFromChange={setFilterDeliveryFrom}
+          filterDeliveryTo={filterDeliveryTo} onFilterDeliveryToChange={setFilterDeliveryTo}
+          filterAmountMin={filterAmountMin} onFilterAmountMinChange={setFilterAmountMin}
+          filterAmountMax={filterAmountMax} onFilterAmountMaxChange={setFilterAmountMax}
+          designers={designers} measurers={measurers}
+          hasAdvancedFilters={hasAdvancedFilters}
+          onClearFilters={clearFilters}
+        />
       )}
 
-      {/* Счётчик + мультиселект панель */}
-      {(search || filterStatus !== 'all' || hasAdvancedFilters || selectedIds.size > 0) && !loading && (
-        <div className="px-6 py-2 text-xs bg-[hsl(220,16%,7%)] border-b border-border shrink-0 flex items-center justify-between gap-3">
-          <span className="text-[hsl(var(--text-muted))]">
-            Найдено: <span className="text-foreground font-medium">{filtered.length}</span> из {clients.length}
-          </span>
-          {selectedIds.size > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="text-foreground font-medium">{selectedIds.size} выбрано</span>
-              <div className="relative">
-                <button
-                  onClick={() => setShowBulkMenu(v => !v)}
-                  disabled={bulkLoading}
-                  className="flex items-center gap-1.5 px-3 py-1 bg-gold text-[hsl(220,16%,8%)] rounded text-xs font-medium hover:opacity-90 disabled:opacity-60"
-                >
-                  {bulkLoading ? <Icon name="Loader2" size={11} className="animate-spin" /> : <Icon name="Tag" size={11} />}
-                  Изменить статус
-                </button>
-                {showBulkMenu && (<>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowBulkMenu(false)} />
-                  <div className="absolute right-0 top-full mt-1 z-20 bg-[hsl(220,14%,13%)] border border-border rounded-lg shadow-xl py-1 min-w-[160px]">
-                    {CLIENT_STATUSES.map(s => (
-                      <button key={s.id} onClick={() => handleBulkStatus(s.id)}
-                        className="w-full flex items-center gap-2 px-3 py-2 text-xs hover:bg-[hsl(220,12%,18%)] transition-colors">
-                        <div className="w-2 h-2 rounded-full shrink-0" style={{ background: s.color }} />
-                        {s.label}
-                      </button>
-                    ))}
-                  </div>
-                </>)}
-              </div>
-              <button onClick={() => setSelectedIds(new Set())} className="text-[hsl(var(--text-muted))] hover:text-foreground transition-colors">
-                <Icon name="X" size={13} />
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+      <ClientsCounter
+        totalCount={clients.length}
+        filteredCount={filtered.length}
+        showCounter={showCounter}
+        selectedIds={selectedIds}
+        showBulkMenu={showBulkMenu}
+        bulkLoading={bulkLoading}
+        onToggleBulkMenu={() => setShowBulkMenu(v => !v)}
+        onCloseBulkMenu={() => setShowBulkMenu(false)}
+        onBulkStatus={handleBulkStatus}
+        onClearSelection={() => setSelectedIds(new Set())}
+      />
 
       {/* Content */}
       <div className="flex-1 overflow-auto scrollbar-thin">
