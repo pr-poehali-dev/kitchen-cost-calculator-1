@@ -43,6 +43,15 @@
       "expectedStatus": 200,
       "expectedBody": { "ok": true, "series": "skat" },
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST boyard - parse BOYARD",
+      "method": "POST",
+      "path": "/",
+      "body": { "series": "boyard" },
+      "expectedStatus": 200,
+      "expectedBody": { "ok": true, "series": "boyard" },
+      "bodyMatcher": "partial"
     }
   ]
 }

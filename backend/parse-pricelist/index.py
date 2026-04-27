@@ -16,6 +16,49 @@ SKAT_SHEET_ID = '1O9WjIlUzQ4czzWIwVVlM5G77rn-MgAgLh4tgsbXi6Hs'
 SKAT_GID      = '1829594300'
 SKAT_CATEGORIES = ['1 кат', '2 кат', '3 кат', '4 кат', '5 кат']
 
+# ─── BOYARD ───────────────────────────────────────────────────────────────────
+BOYARD_SHEET_ID = '1RF3LtsvI51OI8rApV5tksnr4Ne-l1AHHSAeZ0rlQlUc'
+BOYARD_GID      = '1875668796'
+
+# Ключевые слова верхнего уровня → тип материала
+BOYARD_ROOT_TYPES = {
+    'крючки':        'mt10',
+    'петли':         'mt10',
+    'ручки':         'mt10',
+    'направляющие':  'mt10',
+    'газовые':       'mt10',
+    'корзины':       'mt10',
+    'навесы':        'mt10',
+    'колеса':        'mt10',
+    'полкодержател': 'mt10',
+    'стяжки':        'mt10',
+    'замки':         'mt10',
+    'подъём':        'mt10',
+    'аксессуар':     'mt10',
+    'рейлинг':       'mt11',
+    'профил':        'mt11',
+    'кромка':        'mt12',
+}
+
+def boyard_type(name: str) -> str:
+    low = name.lower()
+    for kw, tid in BOYARD_ROOT_TYPES.items():
+        if kw in low:
+            return tid
+    return 'mt10'
+
+# Признаки корневой категории (верхний уровень иерархии)
+BOYARD_ROOT_HINTS = [
+    'крючки', 'петли мебельные', 'направляющие', 'стяжки', 'замки',
+    'ручки', 'газовые', 'корзины', 'навесы', 'кухонные', 'колеса',
+    'полкодержател', 'аксессуар', 'рейлинг', 'профил', 'кромка',
+    'лифт',
+]
+
+def boyard_is_root(name: str) -> bool:
+    low = name.lower()
+    return any(h in low for h in BOYARD_ROOT_HINTS)
+
 
 def parse_price(s: str) -> float:
     cleaned = re.sub(r'[^\d.]', '', s.replace(',', '.').replace('\u202f', '').replace('\xa0', '').replace(' ', ''))
@@ -263,6 +306,89 @@ def parse_skat(csv_text: str, category: str = '1 кат') -> list:
     return result
 
 
+# ─── Парсер BOYARD ────────────────────────────────────────────────────────────
+def parse_boyard(csv_text: str) -> dict:
+    """
+    Парсит прайс BOYARD. Розница в рублях (col index 5).
+    Иерархия: корневая категория (Крючки, Петли...) → подкатегории.
+    category = самая конкретная подсекция, type_id = от корневой.
+    """
+    lines = csv_text.splitlines()
+    rate = 0.0
+    items = []
+    root_category = ''
+    current_category = ''
+    header_passed = False
+
+    for raw_line in lines:
+        cells = split_csv_line(raw_line)
+
+        # Курс из первой строки (число 50..200)
+        if not header_passed and rate == 0.0:
+            for cell in cells:
+                v = parse_price(cell)
+                if 50 < v < 200:
+                    rate = v
+                    break
+
+        def g(i):
+            return cells[i].strip() if i < len(cells) else ''
+
+        col0 = g(0)
+        col1 = g(1)
+
+        if not col0 and not col1:
+            continue
+
+        low1 = col1.lower()
+        low0 = col0.lower()
+
+        # Пропускаем служебные строки
+        if 'поиск' in low1 or 'поиск' in low0:
+            continue
+        if 'курс' in low1:
+            header_passed = True
+            continue
+        if 'опт' in low1 or 'розница' in low1:
+            header_passed = True
+            continue
+
+        header_passed = True
+
+        # Строка-секция: col0 пустой, col1 = название
+        if not col0 and col1:
+            name = col1.strip()
+            # Пропускаем "Комплектующие BOYARD" — это просто шапка
+            if 'boyard' in name.lower() and len(name) < 35 and not any(c.isdigit() for c in name):
+                continue
+            current_category = name
+            if boyard_is_root(name):
+                root_category = name
+            continue
+
+        # Строка товара
+        if col0 and col1:
+            price = parse_price(g(5))   # розница руб
+            if price <= 0:
+                price = parse_price(g(3))  # опт руб запасной
+            if price <= 0:
+                continue
+
+            cat = current_category or root_category
+            type_cat = root_category or current_category
+
+            items.append({
+                'article': col0,
+                'name': col1,
+                'category': cat,
+                'type_id': boyard_type(type_cat),
+                'price_retail': round(price, 2),
+                'unit': 'шт',
+            })
+
+    return {'rate': round(rate, 4), 'items': items}
+
+
 # ─── Handler ──────────────────────────────────────────────────────────────────
 def handler(event: dict, context) -> dict:
     """
@@ -312,6 +438,16 @@ def handler(event: dict, context) -> dict:
                                         'series_name': f'СКАТ ({category})',
                                         'category': category,
                                         'count': len(items), 'items': items})}
+
+        # ── BOYARD ──
+        if series_key == 'boyard':
+            csv_text = fetch_csv(BOYARD_SHEET_ID, BOYARD_GID)
+            result = parse_boyard(csv_text)
+            return {'statusCode': 200, 'headers': hdrs,
+                    'body': json.dumps({'ok': True, 'series': 'boyard',
+                                        'rate': result['rate'],
+                                        'count': len(result['items']),
+                                        'items': result['items']})}
 
         # ── Slotex ──
         if series_key not in SLOTEX_SERIES:

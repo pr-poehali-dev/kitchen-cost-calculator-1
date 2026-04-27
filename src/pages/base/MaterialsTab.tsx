@@ -9,6 +9,8 @@ import MaterialEditModal from './materials/MaterialEditModal';
 import ExcelPriceModal from './materials/ExcelPriceModal';
 import SkatPriceModal from './materials/SkatPriceModal';
 import SkatImportModal from './materials/SkatImportModal';
+import BoyardImportModal from './materials/BoyardImportModal';
+import BoyardPriceModal from './materials/BoyardPriceModal';
 
 interface Props {
   matTypeFilter: string;
@@ -24,6 +26,8 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
   const [showExcelPrice, setShowExcelPrice] = useState(false);
   const [showSkatPrice, setShowSkatPrice] = useState(false);
   const [showSkatImport, setShowSkatImport] = useState(false);
+  const [showBoyardImport, setShowBoyardImport] = useState(false);
+  const [showBoyardPrice, setShowBoyardPrice] = useState(false);
 
   const allTypes = store.settings.materialTypes;
   const allCategories = store.settings.materialCategories || [];
@@ -74,6 +78,20 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
               title="Обновить цены из прайса СКАТ"
             >
               <Icon name="RefreshCw" size={14} /> Цены СКАТ
+            </button>
+            <button
+              onClick={() => setShowBoyardImport(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
+              title="Импортировать фурнитуру BOYARD в базу"
+            >
+              <Icon name="PackagePlus" size={14} /> Импорт BOYARD
+            </button>
+            <button
+              onClick={() => setShowBoyardPrice(true)}
+              className="flex items-center gap-2 px-4 py-2 bg-[hsl(220,12%,16%)] border border-border text-foreground rounded text-sm hover:border-gold hover:text-gold transition-all"
+              title="Обновить цены из прайса BOYARD"
+            >
+              <Icon name="RefreshCw" size={14} /> Цены BOYARD
             </button>
             <button
               onClick={() => setShowExcelPrice(true)}
@@ -182,6 +200,16 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
       {/* Modal: SKAT price update */}
       {showSkatPrice && (
         <SkatPriceModal onClose={() => setShowSkatPrice(false)} />
+      )}
+
+      {/* Modal: BOYARD import */}
+      {showBoyardImport && (
+        <BoyardImportModal onClose={() => setShowBoyardImport(false)} />
+      )}
+
+      {/* Modal: BOYARD price update */}
+      {showBoyardPrice && (
+        <BoyardPriceModal onClose={() => setShowBoyardPrice(false)} />
       )}
 
       {/* Modal: Excel price update */}
