@@ -9,6 +9,7 @@ const PARSE_URL = (func2url as Record<string, string>)['parse-pricelist'];
 const CATEGORIES = ['1 кат', '2 кат', '3 кат', '4 кат', '5 кат'];
 
 interface SkatAllItem {
+  item_type?: 'facade' | 'decor';
   thickness_section: string;
   subsection: string;
   facade_type: string;
@@ -146,7 +147,7 @@ export default function SkatPriceModal({ onClose }: { onClose: () => void }) {
         {!changed && !loading && allItems.length === 0 && (
           <>
             <p className="text-xs text-[hsl(var(--text-muted))]">
-              Загрузит актуальный прайс и сравнит все <strong className="text-foreground">705 цен</strong> (141 материал × 5 категорий) с текущими.
+              Загрузит актуальный прайс и сравнит все цены — фасады МДФ (Косичка, Classic, Premium и др.) и декоративные элементы (спалы, карнизы, багеты) — по всем 5 категориям с текущими.
             </p>
             {error && (
               <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded px-3 py-2 flex items-start gap-2">
@@ -166,7 +167,7 @@ export default function SkatPriceModal({ onClose }: { onClose: () => void }) {
         {loading && (
           <div className="flex items-center justify-center py-8 gap-2 text-[hsl(var(--text-muted))]">
             <Icon name="Loader2" size={16} className="animate-spin text-gold" />
-            <span className="text-sm">Загружаю и сравниваю 705 цен...</span>
+            <span className="text-sm">Загружаю и сравниваю цены из прайса...</span>
           </div>
         )}
 

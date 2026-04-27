@@ -32,7 +32,7 @@
       "path": "/",
       "body": { "series": "xyz" },
       "expectedStatus": 400,
-      "expectedBody": { "error": "Unknown series" },
+      "expectedBody": { "ok": false },
       "bodyMatcher": "partial"
     },
     {

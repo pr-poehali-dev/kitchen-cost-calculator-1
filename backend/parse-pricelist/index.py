@@ -138,15 +138,16 @@ def parse_skat_all(csv_text: str) -> list:
     """
     Парсит прайс СКАТ, возвращает все 5 категорий цен сразу.
     Каждая запись содержит prices: {'1 кат': X, '2 кат': Y, ...}
+    item_type: 'facade' (м²) или 'decor' (пм/шт)
     """
     results = []
     lines = csv_text.splitlines()
 
-    # Индексы колонок категорий
     cat_indices = {}   # '1 кат' -> col_index
     thickness_section = ''
     subsection = ''
     header_found = False
+    in_decor = False   # флаг — находимся в секции «Декоративные элементы»
 
     for line in lines:
         cells = split_csv_line(line)
@@ -173,30 +174,35 @@ def parse_skat_all(csv_text: str) -> list:
         if not col0:
             continue
 
-        # Секция толщины (МДФ 16 ММ и т.д.)
+        # Секция «Декоративные элементы»
+        if 'декоративн' in col0.lower() and col2 == '':
+            in_decor = True
+            thickness_section = 'Декоративные элементы'
+            subsection = ''
+            continue
+
+        # Секция толщины МДФ/ДСП сбрасывает флаг декора
         if col2 == '' and all(g(i) == '' for i in range(3, 8)):
             if re.search(r'(МДФ|ДСП|фанер|ЛДСП)', col0, re.IGNORECASE):
+                in_decor = False
                 thickness_section = col0.strip()
                 subsection = ''
                 continue
 
-        # Подсекция (серия фрезеровки)
+        # Подсекция (серия фрезеровки или декора)
         if col2 == '' and all(g(i) == '' for i in range(3, 8)):
             subsection = col0.strip()
             continue
 
-        # Строка с ценами
-        if col2 in ('м²', 'м2', 'мм²'):
+        # Строка с ценами — фасады (м²)
+        if not in_decor and col2 in ('м²', 'м2', 'мм²', 'кв.м.', 'кв.м'):
             prices = {}
             for cat, idx in cat_indices.items():
                 p = parse_price(g(idx))
                 if p > 0:
                     prices[cat] = p
-
             if not prices:
                 continue
-
-            # Толщина из секции
             thickness = None
             m = re.search(r'(\d+)\s*[мМmM][мМmM]', thickness_section)
             if m:
@@ -204,14 +210,34 @@ def parse_skat_all(csv_text: str) -> list:
                     thickness = float(m.group(1))
                 except ValueError:
                     pass
-
             results.append({
+                'item_type': 'facade',
                 'thickness_section': thickness_section,
                 'subsection': subsection,
                 'facade_type': col0,
                 'unit': 'м²',
                 'thickness': thickness,
-                'prices': prices,   # {'1 кат': 4417, '2 кат': 4906, ...}
+                'prices': prices,
+            })
+
+        # Строка с ценами — декоративные элементы (пм, шт)
+        elif in_decor and col2 in ('пм', 'п.м', 'п.м.', 'шт', 'шт.', 'пог.м', 'пог.м.'):
+            prices = {}
+            for cat, idx in cat_indices.items():
+                p = parse_price(g(idx))
+                if p > 0:
+                    prices[cat] = p
+            if not prices:
+                continue
+            unit = 'пм' if col2 in ('пм', 'п.м', 'п.м.', 'пог.м', 'пог.м.') else 'шт'
+            results.append({
+                'item_type': 'decor',
+                'thickness_section': 'Декоративные элементы',
+                'subsection': subsection,
+                'facade_type': col0,
+                'unit': unit,
+                'thickness': None,
+                'prices': prices,
             })
 
     return results
@@ -290,7 +316,7 @@ def handler(event: dict, context) -> dict:
         # ── Slotex ──
         if series_key not in SLOTEX_SERIES:
             return {'statusCode': 400, 'headers': hdrs,
-                    'body': json.dumps({'error': f'Unknown series. Use: {list(SLOTEX_SERIES.keys())} or skat'})}
+                    'body': json.dumps({'ok': False, 'error': f'Unknown series. Use: {list(SLOTEX_SERIES.keys())} or skat'})}
 
         gid = SLOTEX_SERIES[series_key]['gid']
         csv_text = fetch_csv(SLOTEX_SHEET_ID, gid)

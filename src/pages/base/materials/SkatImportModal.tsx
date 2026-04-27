@@ -5,8 +5,9 @@ import { Modal } from '../BaseShared';
 import func2url from '../../../../backend/func2url.json';
 
 const PARSE_URL = (func2url as Record<string, string>)['parse-pricelist'];
-const SKAT_TYPE_ID = 'mt2'; // МДФ
-const SKAT_VENDOR_ID = 'v2'; // Специалист
+const SKAT_TYPE_ID = 'mt2';       // МДФ (фасады)
+const SKAT_DECOR_TYPE_ID = 'mt3'; // Декоративные элементы
+const SKAT_VENDOR_ID = 'v2';      // Специалист
 const CATEGORIES = ['1 кат', '2 кат', '3 кат', '4 кат', '5 кат'];
 
 export function skatArticle(section: string, subsection: string, facadeType: string): string {
@@ -19,6 +20,7 @@ export function skatVariantId(article: string, cat: string): string {
 }
 
 interface SkatAllItem {
+  item_type?: 'facade' | 'decor';
   thickness_section: string;
   subsection: string;
   facade_type: string;
@@ -57,6 +59,8 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState({ created: 0, updated: 0, skipped: 0 });
 
+  const facades = items.filter(i => (i.item_type ?? 'facade') === 'facade');
+  const decors = items.filter(i => i.item_type === 'decor');
   const existingArticles = new Set(store.materials.map(m => m.article).filter(Boolean));
   const toCreate = items.filter(i => !existingArticles.has(skatArticle(i.thickness_section, i.subsection, i.facade_type))).length;
   const toUpdate = items.length - toCreate;
@@ -86,8 +90,8 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
 
     const existingMfr = store.manufacturers.find(m => m.name.toLowerCase() === 'скат');
 
-    // Категории по подсекциям
-    const subsections = Array.from(new Set(items.map(i => i.subsection).filter(Boolean)));
+    // Категории по подсекциям (фасады)
+    const subsections = Array.from(new Set(facades.map(i => i.subsection).filter(Boolean)));
     const categories = subsections.map(sub => ({
       key: sub,
       name: shortCatName(sub),
@@ -95,19 +99,28 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
       note: `СКАТ: ${sub}`,
     }));
 
-    // Материалы с 5 вариантами — каждый вариант несёт полное описание для picker
-    const materials = items.map(item => {
+    // Категория для декоративных
+    if (decors.length > 0) {
+      categories.push({
+        key: 'Декоративные элементы',
+        name: 'Декоративные элементы',
+        typeIds: [SKAT_DECOR_TYPE_ID],
+        note: 'СКАТ: декоративные элементы',
+      });
+    }
+
+    // Фасады с 5 вариантами цен
+    const facadeMaterials = facades.map(item => {
       const article = skatArticle(item.thickness_section, item.subsection, item.facade_type);
-      // size = серия · тип (показывается в первой колонке picker)
       const seriesShort = shortCatName(item.subsection);
       const sizeLabel = `${item.facade_type} · ${seriesShort}`;
       const variants = CATEGORIES
         .filter(cat => item.prices[cat] > 0)
         .map(cat => ({
           variantId: skatVariantId(article, cat),
-          size: sizeLabel,                          // "глухой · Classic/Optima"
-          thickness: item.thickness || undefined,   // 16, 19, 22...
-          params: cat,                              // "1 кат", "2 кат"...
+          size: sizeLabel,
+          thickness: item.thickness || undefined,
+          params: cat,
           basePrice: item.prices[cat],
         }));
       return {
@@ -122,13 +135,36 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
       };
     });
 
+    // Декоративные элементы с 5 вариантами цен
+    const decorMaterials = decors.map(item => {
+      const article = skatArticle(item.thickness_section, item.subsection, item.facade_type);
+      const variants = CATEGORIES
+        .filter(cat => item.prices[cat] > 0)
+        .map(cat => ({
+          variantId: skatVariantId(article, cat),
+          size: `${item.facade_type} · 1 кат`,
+          thickness: undefined,
+          params: cat,
+          basePrice: item.prices[cat],
+        }));
+      return {
+        name: item.facade_type,
+        typeId: SKAT_DECOR_TYPE_ID,
+        vendorId: SKAT_VENDOR_ID,
+        thickness: undefined,
+        article,
+        categoryKey: 'Декоративные элементы',
+        unit: item.unit as 'пм' | 'шт',
+        variants,
+      };
+    });
+
     const res = store.importSkatBatch(
-      { name: 'СКАТ', note: 'Производитель МДФ фасадов', materialTypeIds: [SKAT_TYPE_ID], existingId: existingMfr?.id },
+      { name: 'СКАТ', note: 'Производитель МДФ фасадов и декоративных элементов', materialTypeIds: [SKAT_TYPE_ID, SKAT_DECOR_TYPE_ID], existingId: existingMfr?.id },
       categories,
-      materials
+      [...facadeMaterials, ...decorMaterials]
     );
 
-    // Патч уже существующих материалов СКАТ (если импорт был раньше)
     store.patchSkatMaterials(SKAT_TYPE_ID, SKAT_VENDOR_ID);
 
     setResult(res);
@@ -155,14 +191,14 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
               <p className="font-medium text-foreground">Что будет создано:</p>
               <div className="text-xs text-[hsl(var(--text-muted))] space-y-1">
                 <p>• Производитель <span className="text-gold font-medium">СКАТ</span></p>
-                <p>• Категории по сериям фрезеровки</p>
-                <p>• <span className="text-gold font-medium">141 материал</span> — каждый с 5 вариантами цен (1–5 кат)</p>
-                <p>• Итого <span className="text-gold font-medium">705 цен</span> в базе</p>
+                <p>• <span className="text-gold font-medium">МДФ фасады</span> — серии Classic, 3D волна, Premium, Косички и др.</p>
+                <p>• <span className="text-gold font-medium">Декоративные элементы</span> — спалы, карнизы, фризы, багеты, балюстрады</p>
+                <p>• Каждый материал с <span className="text-gold font-medium">5 вариантами цен</span> (1–5 кат)</p>
               </div>
             </div>
             <p className="text-xs text-[hsl(var(--text-muted))]">
-              При расчёте выбираешь фасад → появляется picker с категориями цен → указываешь нужную.
-              Обновление прайса меняет все 705 цен за один клик.
+              При расчёте выбираешь материал → появляется picker с категориями цен → указываешь нужную.
+              Обновление прайса меняет все цены за один клик.
             </p>
             {error && (
               <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded px-3 py-2 flex items-start gap-2">
@@ -183,14 +219,15 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
 
         {step === 'preview' && (
           <>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-4 gap-2">
               {[
-                { label: 'позиций', value: items.length, color: 'text-foreground' },
-                { label: 'будет создано', value: toCreate, color: 'text-green-400' },
-                { label: 'обновится', value: toUpdate, color: 'text-gold' },
+                { label: 'фасадов', value: facades.length, color: 'text-foreground' },
+                { label: 'декоративных', value: decors.length, color: 'text-sky-400' },
+                { label: 'создаётся', value: toCreate, color: 'text-green-400' },
+                { label: 'обновляется', value: toUpdate, color: 'text-gold' },
               ].map(s => (
                 <div key={s.label} className="bg-[hsl(220,12%,14%)] rounded-lg border border-border p-3 text-center">
-                  <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
+                  <div className={`text-xl font-bold ${s.color}`}>{s.value}</div>
                   <div className="text-[10px] text-[hsl(var(--text-muted))] mt-0.5">{s.label}</div>
                 </div>
               ))}
