@@ -29,6 +29,26 @@ export default function ExpenseSummary({
   showRefreshBanner, refreshDone,
   onApplyRefresh, onDismissBanner,
 }: Props) {
+  // Сегменты для диаграммы
+  const segments = totals && totals.grandTotal > 0 ? (() => {
+    const total = totals.grandTotal;
+    const items = [
+      { label: 'Материалы', value: totals.rawMaterials, color: '#c8a96e' },
+      { label: 'Услуги', value: totals.rawServices, color: '#3b82f6' },
+      { label: 'Надбавки', value: totals.blockExtraTotal + totals.totalMarkupAmount, color: '#8b5cf6' },
+      { label: 'Накладные %', value: totals.percentAmount, color: '#06b6d4' },
+      { label: 'Фиксированные', value: totals.fixedAmount, color: '#10b981' },
+    ].filter(s => s.value > 0);
+
+    let offset = 0;
+    return items.map(s => {
+      const pct = (s.value / total) * 100;
+      const seg = { ...s, pct, offset };
+      offset += pct;
+      return seg;
+    });
+  })() : [];
+
   return (
     <>
       {/* Баннер: предложение обновить цены в проекте */}
@@ -55,10 +75,7 @@ export default function ExpenseSummary({
               >
                 Обновить
               </button>
-              <button
-                onClick={onDismissBanner}
-                className="text-[hsl(var(--text-muted))] hover:text-foreground"
-              >
+              <button onClick={onDismissBanner} className="text-[hsl(var(--text-muted))] hover:text-foreground">
                 <Icon name="X" size={14} />
               </button>
             </div>
@@ -69,47 +86,87 @@ export default function ExpenseSummary({
       {/* Влияние на расчёт */}
       {totals && (
         <div className="bg-[hsl(220,14%,11%)] rounded border border-border p-4">
-          <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))] mb-3">Влияние на расчёт</div>
-          <div className="space-y-1.5 text-sm">
-            <div className="flex justify-between text-[hsl(var(--text-dim))]">
-              <span>Материалы (розн.)</span>
-              <span className="font-mono">{fmt(totals.rawMaterials)} {currency}</span>
-            </div>
-            <div className="flex justify-between text-[hsl(var(--text-dim))]">
-              <span>Услуги (розн.)</span>
-              <span className="font-mono">{fmt(totals.rawServices)} {currency}</span>
-            </div>
-            {totals.blockExtraTotal > 0 && (
-              <div className="flex justify-between text-gold">
-                <span>Надбавки на блоки</span>
-                <span className="font-mono">+{fmt(totals.blockExtraTotal)} {currency}</span>
+          <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))] mb-4">Структура итоговой цены</div>
+
+          <div className="flex gap-6 items-start">
+            {/* Диаграмма */}
+            {segments.length > 0 && (
+              <div className="shrink-0">
+                {/* Горизонтальный стек-бар */}
+                <div className="flex h-6 rounded overflow-hidden w-64 mb-3">
+                  {segments.map((s, i) => (
+                    <div
+                      key={i}
+                      style={{ width: `${s.pct}%`, backgroundColor: s.color }}
+                      className="transition-all"
+                      title={`${s.label}: ${fmt(s.value)} ${currency} (${s.pct.toFixed(1)}%)`}
+                    />
+                  ))}
+                </div>
+                {/* Легенда */}
+                <div className="space-y-1.5">
+                  {segments.map((s, i) => (
+                    <div key={i} className="flex items-center justify-between gap-4 text-xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded-sm shrink-0" style={{ backgroundColor: s.color }} />
+                        <span className="text-[hsl(var(--text-dim))]">{s.label}</span>
+                      </div>
+                      <div className="flex items-center gap-2 font-mono">
+                        <span className="text-[hsl(var(--text-muted))]">{s.pct.toFixed(1)}%</span>
+                        <span className="text-foreground">{fmt(s.value)}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
-            {totals.totalMarkupAmount > 0 && (
-              <div className="flex justify-between text-gold">
-                <span>Надбавка на итог ({totals.totalMarkupPct}%)</span>
-                <span className="font-mono">+{fmt(totals.totalMarkupAmount)} {currency}</span>
-              </div>
-            )}
-            {totals.percentAmount > 0 && (
-              <div className="flex justify-between text-[hsl(200,60%,70%)]">
-                <span>Накладные расходы (%)</span>
-                <span className="font-mono">+{fmt(totals.percentAmount)} {currency}</span>
-              </div>
-            )}
-            {totals.fixedAmount > 0 && (
+
+            {/* Числовая разбивка */}
+            <div className="flex-1 space-y-1.5 text-sm min-w-0">
               <div className="flex justify-between text-[hsl(var(--text-dim))]">
-                <span>Фиксированные расходы</span>
-                <span className="font-mono">+{fmt(totals.fixedAmount)} {currency}</span>
+                <span>Материалы (розн.)</span>
+                <span className="font-mono">{fmt(totals.rawMaterials)} {currency}</span>
               </div>
-            )}
-            <div className="border-t border-border mt-2 pt-2 space-y-1">
-              <div className="flex justify-between text-xs text-[hsl(var(--text-muted))]">
-                <span>Наценка на материалы/услуги заложена в розничные цены строк</span>
-              </div>
-              <div className="flex justify-between font-semibold text-base pt-1">
-                <span>Итого с расходами</span>
-                <span className="font-mono text-gold">{fmt(totals.grandTotal)} {currency}</span>
+              {totals.rawServices > 0 && (
+                <div className="flex justify-between text-[hsl(var(--text-dim))]">
+                  <span>Услуги (розн.)</span>
+                  <span className="font-mono">{fmt(totals.rawServices)} {currency}</span>
+                </div>
+              )}
+              {totals.blockExtraTotal > 0 && (
+                <div className="flex justify-between text-[hsl(var(--gold))]">
+                  <span>Надбавки на блоки</span>
+                  <span className="font-mono">+{fmt(totals.blockExtraTotal)} {currency}</span>
+                </div>
+              )}
+              {totals.totalMarkupAmount > 0 && (
+                <div className="flex justify-between text-[hsl(var(--gold))]">
+                  <span>Надбавка на итог ({totals.totalMarkupPct}%)</span>
+                  <span className="font-mono">+{fmt(totals.totalMarkupAmount)} {currency}</span>
+                </div>
+              )}
+              {totals.percentAmount > 0 && (
+                <div className="flex justify-between text-[hsl(200,60%,70%)]">
+                  <span>Накладные расходы (%)</span>
+                  <span className="font-mono">+{fmt(totals.percentAmount)} {currency}</span>
+                </div>
+              )}
+              {totals.fixedAmount > 0 && (
+                <div className="flex justify-between text-[hsl(var(--text-dim))]">
+                  <span>Фиксированные расходы</span>
+                  <span className="font-mono">+{fmt(totals.fixedAmount)} {currency}</span>
+                </div>
+              )}
+              <div className="border-t border-border mt-2 pt-2">
+                <div className="flex justify-between font-semibold text-base">
+                  <span>Итого с расходами</span>
+                  <span className="font-mono text-gold">{fmt(totals.grandTotal)} {currency}</span>
+                </div>
+                {totals.rawMaterials > 0 && totals.grandTotal > 0 && (
+                  <div className="text-xs text-[hsl(var(--text-muted))] mt-1">
+                    Наценка к закупке: ×{(totals.grandTotal / totals.rawMaterials).toFixed(2)}
+                  </div>
+                )}
               </div>
             </div>
           </div>

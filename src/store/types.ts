@@ -160,6 +160,17 @@ export interface Project {
   clientView?: ClientView;
 }
 
+export interface CompanyInfo {
+  name: string;
+  inn?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  website?: string;
+  director?: string;
+  contractPrefix?: string;
+}
+
 export interface Settings {
   currency: string;
   markupMaterial: number;
@@ -167,6 +178,7 @@ export interface Settings {
   units: Unit[];
   materialTypes: MaterialType[];
   materialCategories: MaterialCategory[];
+  company?: CompanyInfo;
 }
 
 // Шаблон расчёта — структура блоков без данных клиента и цен

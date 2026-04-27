@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import type { MaterialType, MaterialCategory } from '@/store/types';
+import type { MaterialType, MaterialCategory, CompanyInfo } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import MaterialTypeModal from './settings/MaterialTypeModal';
 import MaterialCategoryModal from './settings/MaterialCategoryModal';
@@ -50,6 +50,63 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex-1 overflow-auto scrollbar-thin p-6 space-y-5 max-w-3xl">
+
+        {/* О компании */}
+        <Section title="О компании">
+          {(() => {
+            const company: CompanyInfo = store.settings.company || { name: '' };
+            const upd = (field: keyof CompanyInfo, value: string) =>
+              store.updateSettings({ company: { ...company, [field]: value } });
+            const inp = 'w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold transition-colors placeholder:text-[hsl(var(--text-muted))]';
+            return (
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Название компании</label>
+                    <input value={company.name || ''} onChange={e => upd('name', e.target.value)} placeholder="ООО «Моя Кухня»" className={inp} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">ИНН</label>
+                    <input value={company.inn || ''} onChange={e => upd('inn', e.target.value)} placeholder="7712345678" className={inp} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Телефон</label>
+                    <input value={company.phone || ''} onChange={e => upd('phone', e.target.value)} placeholder="+7 (000) 000-00-00" className={inp} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Email</label>
+                    <input value={company.email || ''} onChange={e => upd('email', e.target.value)} placeholder="info@company.ru" className={inp} />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Директор / ИП</label>
+                    <input value={company.director || ''} onChange={e => upd('director', e.target.value)} placeholder="Иванов Иван Иванович" className={inp} />
+                  </div>
+                  <div>
+                    <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Сайт</label>
+                    <input value={company.website || ''} onChange={e => upd('website', e.target.value)} placeholder="https://example.ru" className={inp} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Адрес</label>
+                  <input value={company.address || ''} onChange={e => upd('address', e.target.value)} placeholder="г. Москва, ул. Пушкина, д. 1" className={inp} />
+                </div>
+                <div>
+                  <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Префикс нумерации договоров</label>
+                  <div className="flex items-center gap-2">
+                    <input value={company.contractPrefix || ''} onChange={e => upd('contractPrefix', e.target.value)} placeholder="К-" className="w-24 bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold transition-colors" />
+                    <span className="text-xs text-[hsl(var(--text-muted))]">
+                      Пример: <span className="font-mono text-foreground">{(company.contractPrefix || 'К-')}{new Date().getFullYear()}-001</span>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
+        </Section>
 
         <Section title="Валюта">
           <div className="grid grid-cols-2 gap-4">

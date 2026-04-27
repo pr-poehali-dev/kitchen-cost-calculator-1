@@ -6,12 +6,52 @@ import ExpenseSummary from './expenses/ExpenseSummary';
 import ExpenseGroupBlock from './expenses/ExpenseGroupBlock';
 import { ExpenseModal, GroupModal } from './expenses/ExpenseModals';
 
+const EXPENSE_TEMPLATES = [
+  {
+    id: 'usn6',
+    label: 'УСН 6%',
+    description: 'Упрощённая система налогообложения',
+    items: [
+      { name: 'Налог УСН 6%', type: 'percent' as const, value: 6, applyTo: 'total' as const },
+    ],
+  },
+  {
+    id: 'selfemployed',
+    label: 'Самозанятость',
+    description: 'Налог на профессиональный доход',
+    items: [
+      { name: 'НПД самозанятого 6%', type: 'percent' as const, value: 6, applyTo: 'total' as const },
+    ],
+  },
+  {
+    id: 'standard',
+    label: 'Стандартный',
+    description: 'Типовой набор накладных расходов',
+    items: [
+      { name: 'Реклама и маркетинг', type: 'percent' as const, value: 5, applyTo: 'total' as const },
+      { name: 'Аренда и коммуналка', type: 'fixed' as const, value: 15000, applyTo: undefined },
+      { name: 'Зарплата менеджера', type: 'fixed' as const, value: 30000, applyTo: undefined },
+    ],
+  },
+  {
+    id: 'markup_only',
+    label: 'Только наценки',
+    description: 'Наценка на материалы и услуги',
+    items: [
+      { name: 'Наценка на материалы', type: 'markup' as const, value: 30, applyTo: 'materials' as const },
+      { name: 'Наценка на услуги', type: 'markup' as const, value: 20, applyTo: 'services' as const },
+    ],
+  },
+];
+
 export default function ExpensesPage() {
   const store = useStore();
   const [editing, setEditing] = useState<Partial<ExpenseItem> | null>(null);
   const [editingGroup, setEditingGroup] = useState<{ id?: string; name: string } | null>(null);
   const [showRefreshBanner, setShowRefreshBanner] = useState(false);
   const [refreshDone, setRefreshDone] = useState(false);
+  const [showTemplates, setShowTemplates] = useState(false);
+  const [appliedTemplate, setAppliedTemplate] = useState<string | null>(null);
 
   const project = store.getActiveProject();
   const projectBlocks = project?.blocks.map(b => ({ id: b.id, name: b.name })) || [];
@@ -83,6 +123,55 @@ export default function ExpensesPage() {
           <p className="text-[hsl(var(--text-muted))] text-xs mt-0.5 truncate">Группируй статьи, включай и выключай в расчёте</p>
         </div>
         <div className="flex gap-2 shrink-0">
+          {/* Кнопка шаблонов */}
+          <div className="relative">
+            <button
+              onClick={() => setShowTemplates(v => !v)}
+              className={`flex items-center gap-1.5 px-3 py-2 border rounded text-sm transition-colors ${
+                showTemplates ? 'border-gold/50 text-gold' : 'border-border text-[hsl(var(--text-dim))] hover:text-foreground hover:border-[hsl(var(--text-dim))]'
+              }`}
+            >
+              <Icon name="Sparkles" size={14} /> Шаблоны
+            </button>
+            {showTemplates && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setShowTemplates(false)} />
+                <div className="absolute right-0 top-full mt-1 z-20 bg-[hsl(220,14%,13%)] border border-border rounded-lg shadow-xl w-64 py-1">
+                  <div className="px-3 py-1.5 text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider border-b border-border mb-1">
+                    Применить набор расходов
+                  </div>
+                  {EXPENSE_TEMPLATES.map(tpl => (
+                    <button
+                      key={tpl.id}
+                      onClick={() => {
+                        tpl.items.forEach(item => {
+                          store.addExpense({
+                            name: item.name,
+                            type: item.type,
+                            value: item.value,
+                            applyTo: item.applyTo,
+                            blockIds: [],
+                            enabled: true,
+                          } as Omit<ExpenseItem, 'id'>);
+                        });
+                        setAppliedTemplate(tpl.id);
+                        setShowTemplates(false);
+                        setTimeout(() => setAppliedTemplate(null), 2000);
+                        if (tpl.items.some(i => i.type === 'markup')) {
+                          setShowRefreshBanner(true);
+                        }
+                      }}
+                      className="w-full text-left px-3 py-2.5 hover:bg-[hsl(220,12%,18%)] transition-colors"
+                    >
+                      <div className="text-sm text-foreground font-medium">{tpl.label}</div>
+                      <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5">{tpl.description}</div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
           <button
             onClick={() => setEditingGroup({ name: '' })}
             className="flex items-center gap-1.5 px-3 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground hover:border-[hsl(var(--text-dim))] transition-colors"
@@ -99,6 +188,14 @@ export default function ExpensesPage() {
       </div>
 
       <div className="flex-1 overflow-auto scrollbar-thin p-6 space-y-4">
+        {/* Уведомление об применённом шаблоне */}
+        {appliedTemplate && (
+          <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded text-sm text-emerald-400 animate-fade-in">
+            <Icon name="Check" size={14} />
+            Шаблон «{EXPENSE_TEMPLATES.find(t => t.id === appliedTemplate)?.label}» применён
+          </div>
+        )}
+
         <ExpenseSummary
           totals={totals}
           currency={store.settings.currency}

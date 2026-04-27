@@ -300,6 +300,35 @@ export function useStore() {
     }));
   };
 
+  const reorderServiceRows = (projectId: string, blockId: string, orderedIds: string[]) => {
+    updateProject(projectId, p => ({
+      ...p,
+      serviceBlocks: p.serviceBlocks.map(b => {
+        if (b.id !== blockId) return b;
+        const map = new Map(b.rows.map(r => [r.id, r]));
+        const rows = orderedIds.map(id => map.get(id)!).filter(Boolean);
+        return { ...b, rows };
+      })
+    }));
+  };
+
+  const duplicateServiceBlock = (projectId: string, blockId: string) => {
+    updateProject(projectId, p => {
+      const src = p.serviceBlocks.find(b => b.id === blockId);
+      if (!src) return p;
+      const cloned = {
+        ...src,
+        id: `sb${Date.now()}`,
+        name: `${src.name} (копия)`,
+        rows: src.rows.map(r => ({ ...r, id: `sr${Date.now()}${Math.random().toString(36).slice(2)}` })),
+      };
+      const idx = p.serviceBlocks.findIndex(b => b.id === blockId);
+      const blocks = [...p.serviceBlocks];
+      blocks.splice(idx + 1, 0, cloned);
+      return { ...p, serviceBlocks: blocks };
+    });
+  };
+
   const updateProjectInfo = (projectId: string, data: Partial<Project>) => {
     setState(s => ({
       ...s,
@@ -920,6 +949,7 @@ export function useStore() {
     addRow, updateRow, deleteRow,
     addServiceBlock, updateServiceBlock, deleteServiceBlock,
     addServiceRow, updateServiceRow, deleteServiceRow,
+    reorderServiceRows, duplicateServiceBlock,
     updateProjectInfo,
     createProject, deleteProject, duplicateProject,
     duplicateBlock, reorderBlocks,

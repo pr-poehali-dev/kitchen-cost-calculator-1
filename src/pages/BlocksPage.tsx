@@ -67,6 +67,12 @@ export default function BlocksPage() {
   const [newName, setNewName] = useState('');
   const [showNewForm, setShowNewForm] = useState(false);
   const [showProjectPicker, setShowProjectPicker] = useState(false);
+  const [search, setSearch] = useState('');
+  const [previewId, setPreviewId] = useState<string | null>(null);
+
+  const filteredBlocks = search.trim()
+    ? savedBlocks.filter(b => b.name.toLowerCase().includes(search.toLowerCase()))
+    : savedBlocks;
 
   const selected = savedBlocks.find(b => b.id === selectedId) ?? null;
   const currency = store.settings.currency;
@@ -101,7 +107,9 @@ export default function BlocksPage() {
       {/* Левая панель — список блоков */}
       <div className="w-56 shrink-0 border-r border-border bg-[hsl(220,16%,7%)] flex flex-col">
         <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-          <span className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))]">Блоки</span>
+          <span className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))]">
+            Блоки {savedBlocks.length > 0 && <span className="opacity-60">({savedBlocks.length})</span>}
+          </span>
           <button
             onClick={() => setShowNewForm(v => !v)}
             className="text-[hsl(var(--text-muted))] hover:text-gold transition-colors"
@@ -127,22 +135,85 @@ export default function BlocksPage() {
           </div>
         )}
 
+        {/* Поиск */}
+        {savedBlocks.length > 3 && (
+          <div className="px-3 py-2 border-b border-border">
+            <div className="relative">
+              <Icon name="Search" size={11} className="absolute left-2 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] pointer-events-none" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Поиск блока..."
+                className="w-full bg-[hsl(220,12%,14%)] border border-border rounded pl-6 pr-2 py-1 text-xs outline-none focus:border-gold transition-colors"
+              />
+              {search && (
+                <button onClick={() => setSearch('')} className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] hover:text-foreground">
+                  <Icon name="X" size={10} />
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="flex-1 overflow-auto scrollbar-thin py-1">
           {savedBlocks.length === 0 ? (
             <div className="px-4 py-6 text-center text-xs text-[hsl(var(--text-muted))] opacity-60">
               Нет блоков.<br />Нажми + чтобы создать
             </div>
+          ) : filteredBlocks.length === 0 ? (
+            <div className="px-4 py-4 text-center text-xs text-[hsl(var(--text-muted))] opacity-60">
+              Не найдено
+            </div>
           ) : (
             <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-              <SortableContext items={savedBlocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-                {savedBlocks.map(block => (
-                  <SortableBlockItem
-                    key={block.id}
-                    block={block}
-                    isSelected={selectedId === block.id}
-                    onClick={() => setSelectedId(block.id)}
-                  />
-                ))}
+              <SortableContext items={filteredBlocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+                {filteredBlocks.map(block => {
+                  const rowCount = block.rows.length + (block.assemblies || []).reduce((s, a) => s + a.rows.length, 0);
+                  return (
+                    <div key={block.id} className="group/item relative">
+                      <SortableBlockItem
+                        block={block}
+                        isSelected={selectedId === block.id}
+                        onClick={() => setSelectedId(block.id)}
+                      />
+                      {/* Кнопка предпросмотра */}
+                      <button
+                        onClick={e => { e.stopPropagation(); setPreviewId(previewId === block.id ? null : block.id); }}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] hover:text-gold opacity-0 group-hover/item:opacity-100 transition-all"
+                        title="Предпросмотр содержимого"
+                      >
+                        <Icon name="Eye" size={12} />
+                      </button>
+                      {/* Предпросмотр */}
+                      {previewId === block.id && (
+                        <div className="mx-2 mb-1 bg-[hsl(220,12%,11%)] border border-border rounded overflow-hidden text-xs">
+                          {rowCount === 0 ? (
+                            <div className="px-3 py-2 text-[hsl(var(--text-muted))]">Нет строк</div>
+                          ) : (
+                            <>
+                              {block.rows.slice(0, 5).map(r => (
+                                <div key={r.id} className="flex items-center justify-between px-3 py-1 border-b border-[hsl(220,12%,14%)] last:border-0">
+                                  <span className="text-[hsl(var(--text-dim))] truncate flex-1">{r.name || '—'}</span>
+                                  <span className="text-[hsl(var(--text-muted))] shrink-0 ml-2">{r.qty} {r.unit}</span>
+                                </div>
+                              ))}
+                              {block.rows.length > 5 && (
+                                <div className="px-3 py-1 text-[hsl(var(--text-muted))] text-center">
+                                  +{block.rows.length - 5} строк...
+                                </div>
+                              )}
+                              {(block.assemblies || []).length > 0 && (
+                                <div className="px-3 py-1 border-t border-border text-[hsl(var(--text-muted))]">
+                                  {(block.assemblies || []).length} сборок
+                                </div>
+                              )}
+                            </>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </SortableContext>
             </DndContext>
           )}
