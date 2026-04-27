@@ -7,16 +7,20 @@ interface Props {
   onClose: () => void;
 }
 
-type ColKey = 'name' | 'article' | 'color' | 'thickness' | 'unit' | 'basePrice' | 'skip';
+type ColKey = 'name' | 'article' | 'color' | 'thickness' | 'unit' | 'basePrice' | 'manufacturer' | 'vendor' | 'type' | 'category' | 'skip';
 
 const COL_OPTIONS: { value: ColKey; label: string }[] = [
-  { value: 'skip',       label: '— пропустить —' },
-  { value: 'name',       label: 'Наименование *' },
-  { value: 'article',    label: 'Артикул' },
-  { value: 'color',      label: 'Цвет' },
-  { value: 'thickness',  label: 'Толщина (мм)' },
-  { value: 'unit',       label: 'Единица измерения' },
-  { value: 'basePrice',  label: 'Цена закупочная *' },
+  { value: 'skip',         label: '— пропустить —' },
+  { value: 'name',         label: 'Наименование *' },
+  { value: 'article',      label: 'Артикул' },
+  { value: 'color',        label: 'Цвет' },
+  { value: 'thickness',    label: 'Толщина (мм)' },
+  { value: 'unit',         label: 'Единица измерения' },
+  { value: 'basePrice',    label: 'Цена закупочная *' },
+  { value: 'manufacturer', label: 'Производитель' },
+  { value: 'vendor',       label: 'Поставщик' },
+  { value: 'type',         label: 'Тип материала' },
+  { value: 'category',     label: 'Категория' },
 ];
 
 export default function ExcelMappingImportModal({ onClose }: Props) {
@@ -51,6 +55,10 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
         if (l.includes('толщ') || l.includes('thickness')) return 'thickness';
         if (l.includes('ед') || l.includes('unit') || l.includes('изм')) return 'unit';
         if (l.includes('цен') || l.includes('price') || l.includes('стоим')) return 'basePrice';
+        if (l.includes('произв') || l.includes('бренд') || l.includes('manufacturer')) return 'manufacturer';
+        if (l.includes('поставщ') || l.includes('вендор') || l.includes('vendor') || l.includes('supplier')) return 'vendor';
+        if (l.includes('тип') || l.includes('type') || l.includes('вид')) return 'type';
+        if (l.includes('катег') || l.includes('category')) return 'category';
         return 'skip';
       });
       setMapping(auto);
@@ -67,6 +75,25 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
     let created = 0; let skipped = 0;
     const today = new Date().toISOString().slice(0, 10);
 
+    // Вспомогательные функции поиска по названию (нечёткое совпадение)
+    const findManufacturer = (val: string) => {
+      const v = val.toLowerCase();
+      return store.manufacturers.find(m => m.name.toLowerCase().includes(v) || v.includes(m.name.toLowerCase()));
+    };
+    const findVendor = (val: string) => {
+      const v = val.toLowerCase();
+      return store.vendors.find(m => m.name.toLowerCase().includes(v) || v.includes(m.name.toLowerCase()));
+    };
+    const findType = (val: string) => {
+      const v = val.toLowerCase();
+      return store.settings.materialTypes.find(t => t.name.toLowerCase().includes(v) || v.includes(t.name.toLowerCase()));
+    };
+    const findCategory = (val: string, resolvedTypeId?: string) => {
+      const v = val.toLowerCase();
+      const cats = store.getCategoriesForType(resolvedTypeId);
+      return cats.find(c => c.name.toLowerCase().includes(v) || v.includes(c.name.toLowerCase()));
+    };
+
     dataRows.forEach(row => {
       const get = (key: ColKey) => {
         const idx = mapping.indexOf(key);
@@ -76,19 +103,40 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
       const price = parseFloat(get('basePrice').replace(',', '.'));
       if (!name || isNaN(price)) { skipped++; return; }
 
+      // Производитель: из колонки или из глобального выбора
+      const mfrRaw = get('manufacturer');
+      const resolvedMfr = mfrRaw ? findManufacturer(mfrRaw) : null;
+      const resolvedMfrId = resolvedMfr?.id ?? manufacturerId;
+
+      // Поставщик: из колонки или не задан
+      const vendorRaw = get('vendor');
+      const resolvedVendor = vendorRaw ? findVendor(vendorRaw) : null;
+      const resolvedVendorId = resolvedVendor?.id;
+
+      // Тип материала: из колонки или из глобального выбора
+      const typeRaw = get('type');
+      const resolvedType = typeRaw ? findType(typeRaw) : null;
+      const resolvedTypeId = resolvedType?.id ?? typeId;
+
+      // Категория: из колонки (относительно разрешённого типа)
+      const catRaw = get('category');
+      const resolvedCategory = catRaw ? findCategory(catRaw, resolvedTypeId) : null;
+
       // Проверяем дубликат по артикулу или имени
       const article = get('article');
       const exists = article
         ? store.materials.some(m => m.article === article)
-        : store.materials.some(m => m.name === name && m.typeId === typeId);
+        : store.materials.some(m => m.name === name && m.typeId === resolvedTypeId);
 
       if (exists) { skipped++; return; }
 
       const thickness = parseFloat(get('thickness'));
       store.addMaterial({
         name,
-        manufacturerId,
-        typeId,
+        manufacturerId: resolvedMfrId,
+        vendorId: resolvedVendorId,
+        typeId: resolvedTypeId,
+        categoryId: resolvedCategory?.id,
         article: article || undefined,
         color: get('color') || undefined,
         thickness: isNaN(thickness) ? undefined : thickness,
@@ -154,19 +202,20 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
                 <>
                   {/* Настройки */}
                   <div>
-                    <div className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-2">2. Параметры</div>
+                    <div className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-2">2. Параметры по умолчанию</div>
+                    <div className="text-xs text-[hsl(var(--text-muted))] mb-2 opacity-70">Применяются для строк, где соответствующая колонка не задана или не распознана</div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
-                        <label className="text-xs text-[hsl(var(--text-muted))] mb-1 block">Тип материала</label>
+                        <label className="text-xs text-[hsl(var(--text-muted))] mb-1 block">Тип материала (по умолчанию)</label>
                         <select value={typeId} onChange={e => setTypeId(e.target.value)} className={INP + ' w-full'}>
                           {store.settings.materialTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs text-[hsl(var(--text-muted))] mb-1 block">Производитель</label>
+                        <label className="text-xs text-[hsl(var(--text-muted))] mb-1 block">Производитель (по умолчанию)</label>
                         <select value={manufacturerId} onChange={e => setManufacturerId(e.target.value)} className={INP + ' w-full'}>
+                          <option value="">— не задан —</option>
                           {store.manufacturers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                          {store.manufacturers.length === 0 && <option value="">— нет производителей —</option>}
                         </select>
                       </div>
                     </div>
