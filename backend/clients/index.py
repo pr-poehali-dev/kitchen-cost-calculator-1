@@ -524,23 +524,35 @@ def _get_products(c):
 
 def _doc_style():
     return '''<style>
-@import url('https://fonts.googleapis.com/css2?family=PT+Serif&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=PT+Serif:ital@0;1&display=swap');
+@page{size:A4 portrait;margin:20mm 20mm 20mm 25mm}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:'PT Serif',Georgia,serif;font-size:12pt;line-height:1.6;color:#000;background:#fff}
-.page{width:210mm;min-height:297mm;margin:0 auto;padding:20mm 20mm 20mm 25mm}
-h1{font-size:14pt;text-align:center;font-weight:bold;margin:0 0 4px}
-h2{font-size:12pt;text-align:center;font-weight:normal;margin:0 0 16px}
-.city-date{display:flex;justify-content:space-between;margin:12px 0}
-p{margin:6px 0;text-align:justify;text-indent:2em}
+html{background:#e8e8e8}
+body{font-family:'PT Serif',Georgia,serif;font-size:11pt;line-height:1.5;color:#000;background:#fff}
+.page{width:210mm;min-height:297mm;margin:0 auto;padding:20mm 20mm 20mm 25mm;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.18)}
+h1{font-size:13pt;text-align:center;font-weight:bold;margin:0 0 3px;text-transform:uppercase;letter-spacing:.03em}
+h2{font-size:11pt;text-align:center;font-weight:normal;margin:0 0 14px}
+.city-date{display:flex;justify-content:space-between;margin:10px 0 12px;font-size:11pt}
+p{margin:4px 0;text-align:justify;text-indent:1.5em;line-height:1.45}
 p.no-indent{text-indent:0}
 p.center{text-align:center;text-indent:0}
-.sec{font-weight:bold;margin:14px 0 4px;text-indent:0}
-table{width:100%;border-collapse:collapse;margin:10px 0;font-size:11pt}
-th,td{border:1px solid #000;padding:5px 8px}
-th{background:#f0f0f0;font-weight:bold;text-align:center}
+.sec{font-weight:bold;margin:12px 0 3px;text-indent:0;font-size:11pt}
+table{width:100%;border-collapse:collapse;margin:8px 0;font-size:10pt}
+th,td{border:1px solid #000;padding:4px 7px}
+th{background:#f0f0f0;font-weight:bold;text-align:center;font-size:10pt}
 td{vertical-align:top}
 .ul{border-bottom:1px solid #000;display:inline-block;min-width:180px}
-@media print{body{margin:0}.page{padding:15mm 15mm 15mm 20mm}}
+.sig-table{width:100%;margin-top:16px;border-collapse:collapse}
+.sig-table td{border:none;padding:3px 8px;vertical-align:top;width:50%}
+@media print{
+  html{background:#fff}
+  body{margin:0;font-size:11pt}
+  .page{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}
+  @page{size:A4 portrait;margin:20mm 20mm 20mm 25mm}
+  p{orphans:3;widows:3}
+  .sec{page-break-after:avoid}
+  table{page-break-inside:avoid}
+}
 </style>'''
 
 
@@ -1297,6 +1309,9 @@ def _build_docx(c: dict, doc_type: str) -> bytes:
     custom = c.get('custom_payment_scheme', '') or ''
     products = _get_products(c)
 
+    from docx.oxml.ns import qn
+    from docx.oxml import OxmlElement
+
     doc = Document()
     sec = doc.sections[0]
     sec.page_width = Mm(210); sec.page_height = Mm(297)
@@ -1305,31 +1320,44 @@ def _build_docx(c: dict, doc_type: str) -> bytes:
 
     style = doc.styles['Normal']
     style.font.name = 'Times New Roman'
-    style.font.size = Pt(12)
+    style.font.size = Pt(11)
+    style.paragraph_format.line_spacing = Pt(14)
+    style.paragraph_format.space_after = Pt(3)
+
+    def _set_font(run, size=11, bold=False, name='Times New Roman'):
+        run.font.name = name; run.font.size = Pt(size); run.bold = bold
 
     def h(text):
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r = p.add_run(text); r.bold = True; r.font.size = Pt(13)
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(2)
+        r = p.add_run(text.upper()); _set_font(r, 12, bold=True)
         return p
 
     def h2(text):
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        r = p.add_run(text); r.font.size = Pt(12)
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(10)
+        r = p.add_run(text); _set_font(r, 11)
         return p
 
     def sec_title(text):
         p = doc.add_paragraph()
-        r = p.add_run(text); r.bold = True; r.font.size = Pt(12)
         p.paragraph_format.space_before = Pt(8)
+        p.paragraph_format.space_after = Pt(2)
+        r = p.add_run(text); _set_font(r, 11, bold=True)
         return p
 
-    def para(text, indent=True):
+    def para(text, indent=True, bold_parts=None):
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        p.paragraph_format.space_before = Pt(0)
+        p.paragraph_format.space_after = Pt(2)
+        p.paragraph_format.line_spacing = Pt(14)
         if indent: p.paragraph_format.first_line_indent = Mm(12)
-        r = p.add_run(text); r.font.size = Pt(12)
+        r = p.add_run(text); _set_font(r, 11)
         return p
 
     def sig_table(left, right):
@@ -1338,10 +1366,12 @@ def _build_docx(c: dict, doc_type: str) -> bytes:
         t.alignment = WD_TABLE_ALIGNMENT.CENTER
         for i, txt in enumerate([left[0], right[0]]):
             c2 = t.cell(0, i); c2.text = txt
-            c2.paragraphs[0].runs[0].bold = True
+            run = c2.paragraphs[0].runs[0]
+            _set_font(run, 11, bold=True)
             c2.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-        t.cell(1, 0).text = left[1]
-        t.cell(1, 1).text = right[1]
+        for i, txt in enumerate([left[1], right[1]]):
+            c2 = t.cell(1, i); c2.text = txt
+            _set_font(c2.paragraphs[0].runs[0] if c2.paragraphs[0].runs else c2.paragraphs[0].add_run(txt), 11)
         return t
 
     if doc_type == 'contract':
