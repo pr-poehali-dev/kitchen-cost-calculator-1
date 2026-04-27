@@ -474,7 +474,19 @@ export function useStore() {
 
   const addMaterial = (material: Omit<Material, 'id'>) => {
     const id = `m${Date.now()}`;
-    setState(s => ({ ...s, materials: [...s.materials, { ...material, id }] }));
+    const today = new Date().toISOString().slice(0, 10);
+    setState(s => ({ ...s, materials: [...s.materials, { ...material, id, priceUpdatedAt: today }] }));
+  };
+
+  const duplicateMaterial = (id: string) => {
+    const src = state.materials.find(m => m.id === id);
+    if (!src) return;
+    const newId = `m${Date.now()}`;
+    const today = new Date().toISOString().slice(0, 10);
+    setState(s => ({
+      ...s,
+      materials: [...s.materials, { ...src, id: newId, name: `${src.name} (копия)`, priceUpdatedAt: today, priceHistory: [] }]
+    }));
   };
 
   // Батчевый импорт СКАТ — все 141 материал с 5 вариантами цен в одном setState
@@ -597,7 +609,21 @@ export function useStore() {
     return count;
   };
   const updateMaterial = (id: string, data: Partial<Material>) => {
-    setState(s => ({ ...s, materials: s.materials.map(m => m.id === id ? { ...m, ...data } : m) }));
+    setState(s => ({
+      ...s,
+      materials: s.materials.map(m => {
+        if (m.id !== id) return m;
+        const updated = { ...m, ...data };
+        // Если изменилась базовая цена — записываем в историю и обновляем дату
+        if (data.basePrice !== undefined && data.basePrice !== m.basePrice) {
+          const today = new Date().toISOString().slice(0, 10);
+          const histItem = { date: today, price: m.basePrice };
+          updated.priceHistory = [histItem, ...(m.priceHistory || [])].slice(0, 20);
+          updated.priceUpdatedAt = today;
+        }
+        return updated;
+      })
+    }));
   };
   const deleteMaterial = (id: string) => {
     setState(s => ({ ...s, materials: s.materials.filter(m => m.id !== id) }));
@@ -997,7 +1023,7 @@ export function useStore() {
     duplicateBlock, reorderBlocks,
     addManufacturer, updateManufacturer, deleteManufacturer,
     addVendor, updateVendor, deleteVendor,
-    addMaterial, updateMaterial, deleteMaterial, importSkatBatch, updateSkatPrices, patchSkatMaterials,
+    addMaterial, updateMaterial, deleteMaterial, duplicateMaterial, importSkatBatch, updateSkatPrices, patchSkatMaterials,
     addService, updateService, deleteService,
     addExpense, updateExpense, deleteExpense,
     addExpenseGroup, updateExpenseGroup, deleteExpenseGroup,

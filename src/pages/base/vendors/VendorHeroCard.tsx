@@ -2,6 +2,20 @@ import { useStore } from '@/store/useStore';
 import type { Vendor, Material, MaterialType } from '@/store/types';
 import Icon from '@/components/ui/icon';
 
+function ContactRow({ icon, value, href }: { icon: string; value: string; href?: string }) {
+  const cls = 'flex items-center gap-1.5 text-sm text-[hsl(var(--text-dim))]';
+  return (
+    <div className={cls}>
+      <Icon name={icon} size={12} className="text-[hsl(var(--text-muted))] shrink-0" />
+      {href ? (
+        <a href={href} target="_blank" rel="noopener noreferrer" className="hover:text-gold transition-colors truncate">{value}</a>
+      ) : (
+        <span className="truncate">{value}</span>
+      )}
+    </div>
+  );
+}
+
 interface MfrGroup {
   manufacturer: { id: string; name: string };
   materials: Material[];
@@ -44,19 +58,35 @@ export default function VendorHeroCard({
               <div>
                 <h2 className="text-lg font-bold leading-tight">{vendor.name}</h2>
                 <div className="flex flex-col gap-1 mt-1.5">
-                  {vendor.contact && (
-                    <div className="flex items-center gap-1.5 text-sm text-[hsl(var(--text-dim))]">
-                      <Icon name="User" size={12} className="text-[hsl(var(--text-muted))] shrink-0" />
-                      {vendor.contact}
-                    </div>
-                  )}
-                  {vendor.phone && (
-                    <div className="flex items-center gap-1.5 text-sm text-[hsl(var(--text-dim))]">
-                      <Icon name="Phone" size={12} className="text-[hsl(var(--text-muted))] shrink-0" />
-                      {vendor.phone}
-                    </div>
-                  )}
+                  {vendor.contact && <ContactRow icon="User" value={vendor.contact} />}
+                  {vendor.phone && <ContactRow icon="Phone" value={vendor.phone} href={`tel:${vendor.phone.replace(/\D/g,'')}`} />}
+                  {(vendor as Vendor).email && <ContactRow icon="Mail" value={(vendor as Vendor).email!} href={`mailto:${(vendor as Vendor).email}`} />}
+                  {(vendor as Vendor).telegram && <ContactRow icon="Send" value={(vendor as Vendor).telegram!} href={`https://t.me/${(vendor as Vendor).telegram!.replace('@','')}`} />}
+                  {(vendor as Vendor).website && <ContactRow icon="Globe" value={(vendor as Vendor).website!} href={(vendor as Vendor).website} />}
                 </div>
+                {/* Логистика */}
+                {((vendor as Vendor).deliveryDays || (vendor as Vendor).minOrderAmount || (vendor as Vendor).deliverySchedule) && (
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {(vendor as Vendor).deliveryDays && (
+                      <span className="flex items-center gap-1 text-xs bg-[hsl(220,12%,16%)] px-2 py-1 rounded border border-border text-[hsl(var(--text-dim))]">
+                        <Icon name="Clock" size={11} className="text-[hsl(var(--text-muted))]" />
+                        Срок: {(vendor as Vendor).deliveryDays} дн.
+                      </span>
+                    )}
+                    {(vendor as Vendor).minOrderAmount && (
+                      <span className="flex items-center gap-1 text-xs bg-[hsl(220,12%,16%)] px-2 py-1 rounded border border-border text-[hsl(var(--text-dim))]">
+                        <Icon name="ShoppingCart" size={11} className="text-[hsl(var(--text-muted))]" />
+                        Мин.: {(vendor as Vendor).minOrderAmount?.toLocaleString('ru')} ₽
+                      </span>
+                    )}
+                    {(vendor as Vendor).deliverySchedule && (
+                      <span className="flex items-center gap-1 text-xs bg-[hsl(220,12%,16%)] px-2 py-1 rounded border border-border text-[hsl(var(--text-dim))]">
+                        <Icon name="CalendarDays" size={11} className="text-[hsl(var(--text-muted))]" />
+                        {(vendor as Vendor).deliverySchedule}
+                      </span>
+                    )}
+                  </div>
+                )}
               </div>
               <div className="flex gap-1.5 shrink-0">
                 <button onClick={onEditVendor}

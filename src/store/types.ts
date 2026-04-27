@@ -30,8 +30,15 @@ export interface Vendor {
   name: string;
   contact?: string;
   phone?: string;
+  email?: string;
+  telegram?: string;
+  website?: string;
   note?: string;
   materialTypeIds: string[];
+  // Логистика
+  deliveryDays?: number;       // срок доставки (дней)
+  minOrderAmount?: number;     // минимальная партия (сумма)
+  deliverySchedule?: string;   // расписание (напр. "Пн, Ср, Пт")
 }
 
 // Supplier остаётся как алиас для обратной совместимости
@@ -48,6 +55,12 @@ export interface MaterialVariant {
   basePrice: number;   // закупочная
 }
 
+export interface MaterialPriceHistoryItem {
+  date: string;    // ISO date "2026-04-27"
+  price: number;   // закупочная цена
+  note?: string;
+}
+
 export interface Material {
   id: string;
   manufacturerId: string;  // производитель (бренд)
@@ -61,6 +74,9 @@ export interface Material {
   unit: Unit;
   basePrice: number;
   variants?: MaterialVariant[]; // варианты с разными размерами/ценами
+  archived?: boolean;           // архивный — скрыт из подбора
+  priceUpdatedAt?: string;      // дата последнего обновления цены (ISO)
+  priceHistory?: MaterialPriceHistoryItem[]; // история изменений цены
 }
 
 export interface Service {

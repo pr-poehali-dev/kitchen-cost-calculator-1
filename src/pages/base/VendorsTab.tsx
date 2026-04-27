@@ -134,6 +134,19 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Телефон" value={editingVendor.phone || ''} onChange={v => setEditingVendor(p => ({ ...p!, phone: v }))} />
+              <Field label="Email" value={(editingVendor as Vendor).email || ''} onChange={v => setEditingVendor(p => ({ ...p!, email: v }))} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Telegram" value={(editingVendor as Vendor).telegram || ''} onChange={v => setEditingVendor(p => ({ ...p!, telegram: v }))} placeholder="@username или +7..." />
+              <Field label="Сайт" value={(editingVendor as Vendor).website || ''} onChange={v => setEditingVendor(p => ({ ...p!, website: v }))} placeholder="https://..." />
+            </div>
+            <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))] pt-1 pb-0.5">Логистика</div>
+            <div className="grid grid-cols-3 gap-3">
+              <Field label="Срок доставки (дни)" value={String((editingVendor as Vendor).deliveryDays || '')} onChange={v => setEditingVendor(p => ({ ...p!, deliveryDays: parseInt(v) || undefined }))} type="number" />
+              <Field label="Мин. заказ (руб.)" value={String((editingVendor as Vendor).minOrderAmount || '')} onChange={v => setEditingVendor(p => ({ ...p!, minOrderAmount: parseFloat(v) || undefined }))} type="number" />
+              <Field label="Дни поставок" value={(editingVendor as Vendor).deliverySchedule || ''} onChange={v => setEditingVendor(p => ({ ...p!, deliverySchedule: v }))} placeholder="Пн, Ср, Пт" />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <Field label="Примечание" value={editingVendor.note || ''} onChange={v => setEditingVendor(p => ({ ...p!, note: v }))} />
             </div>
             <div>

@@ -11,6 +11,7 @@ import SkatPriceModal from './materials/SkatPriceModal';
 import SkatImportModal from './materials/SkatImportModal';
 import BoyardImportModal from './materials/BoyardImportModal';
 import BoyardPriceModal from './materials/BoyardPriceModal';
+import ExcelMappingImportModal from './materials/ExcelMappingImportModal';
 
 interface Props {
   matTypeFilter: string;
@@ -33,6 +34,8 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
   const [showPercentModal, setShowPercentModal] = useState(false);
   const [percentVal, setPercentVal] = useState('');
   const [percentApplied, setPercentApplied] = useState(false);
+  const [showArchived, setShowArchived] = useState(false);
+  const [showExcelImport, setShowExcelImport] = useState(false);
 
   const allTypes = store.settings.materialTypes;
   const allCategories = store.settings.materialCategories || [];
@@ -55,13 +58,26 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
 
   const filteredMaterials = useMemo(() => {
     const q = search.trim().toLowerCase();
-    if (!q) return catFiltered;
-    return catFiltered.filter(m =>
+    const list = catFiltered.filter(m => showArchived ? m.archived : !m.archived);
+    if (!q) return list;
+    return list.filter(m =>
       m.name.toLowerCase().includes(q) ||
       (m.article || '').toLowerCase().includes(q) ||
       (m.color || '').toLowerCase().includes(q)
     );
-  }, [catFiltered, search]);
+  }, [catFiltered, search, showArchived]);
+
+  // Предупреждение: материалы с ценами > 30 дней
+  const staleCount = useMemo(() => {
+    const now = Date.now();
+    return store.materials.filter(m => {
+      if (!m.priceUpdatedAt || m.archived) return false;
+      const days = Math.floor((now - new Date(m.priceUpdatedAt).getTime()) / 86400000);
+      return days >= 30;
+    }).length;
+  }, [store.materials]);
+
+  const archivedCount = useMemo(() => store.materials.filter(m => m.archived).length, [store.materials]);
 
   const typeMatSet = useMemo(() => {
     const catIds = new Set(typeFiltered.map(m => m.categoryId).filter(Boolean));
@@ -167,6 +183,10 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
                       className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
                       <Icon name="Tags" size={13} className="text-[hsl(var(--text-muted))]" /> Цены списком
                     </button>
+                    <button onClick={() => { setShowExcelImport(true); setShowImportMenu(false); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
+                      <Icon name="Table" size={13} className="text-emerald-400" /> Импорт из Excel (маппинг)
+                    </button>
                     <div className="border-t border-border my-1" />
                     <button onClick={() => { setShowPercentModal(true); setShowImportMenu(false); }}
                       className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
@@ -184,6 +204,45 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
               <Icon name="Plus" size={14} /> Добавить
             </button>
           </div>
+        </div>
+
+        {/* Предупреждение о старых ценах */}
+        {staleCount > 0 && !showArchived && (
+          <div className="flex items-center gap-3 px-3 py-2 mb-3 bg-amber-400/10 border border-amber-400/30 rounded-lg text-xs text-amber-400">
+            <Icon name="Clock" size={13} className="shrink-0" />
+            <span className="flex-1">
+              <span className="font-medium">{staleCount} материалов</span> не обновлялись более 30 дней — возможно, цены устарели
+            </span>
+          </div>
+        )}
+
+        {/* Кнопки фильтра архива */}
+        <div className="flex items-center gap-2 mb-3">
+          <button
+            onClick={() => setShowArchived(false)}
+            className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${!showArchived ? 'bg-gold/20 text-gold' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+          >
+            <Icon name="Package" size={12} /> Активные ({store.materials.filter(m => !m.archived).length})
+          </button>
+          {archivedCount > 0 && (
+            <button
+              onClick={() => setShowArchived(true)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${showArchived ? 'bg-[hsl(220,12%,20%)] text-foreground' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+            >
+              <Icon name="Archive" size={12} /> Архив ({archivedCount})
+            </button>
+          )}
+          {showArchived && archivedCount > 0 && (
+            <button
+              onClick={() => {
+                if (!confirm(`Восстановить все ${archivedCount} архивных материалов?`)) return;
+                store.materials.filter(m => m.archived).forEach(m => store.updateMaterial(m.id, { archived: false }));
+              }}
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs text-[hsl(var(--text-muted))] hover:text-gold transition-colors ml-auto"
+            >
+              <Icon name="ArchiveRestore" size={12} /> Восстановить все
+            </button>
+          )}
         </div>
 
         {/* Строка 2: поиск + фильтр по категории */}
@@ -399,6 +458,11 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Modal: Импорт из Excel с маппингом */}
+      {showExcelImport && (
+        <ExcelMappingImportModal onClose={() => setShowExcelImport(false)} />
       )}
     </>
   );
