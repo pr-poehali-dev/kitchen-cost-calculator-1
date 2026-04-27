@@ -1,0 +1,97 @@
+import { useStore } from '@/store/useStore';
+import type { Vendor } from '@/store/types';
+import Icon from '@/components/ui/icon';
+
+interface Props {
+  visibleVendors: Vendor[];
+  selectedId: string | null;
+  sideSearch: string;
+  vendorStats: { countMap: Map<string, number>; mfrMap: Map<string, Set<string>> };
+  onSelect: (id: string | null) => void;
+  onSearchChange: (v: string) => void;
+  onAddVendor: () => void;
+}
+
+export default function VendorSidebar({
+  visibleVendors,
+  selectedId,
+  sideSearch,
+  vendorStats,
+  onSelect,
+  onSearchChange,
+  onAddVendor,
+}: Props) {
+  const store = useStore();
+
+  return (
+    <div className="w-64 shrink-0 flex flex-col gap-2">
+      <div className="flex items-center justify-between mb-2">
+        <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))]">Поставщики</div>
+        <span className="text-xs text-[hsl(var(--text-muted))]">{store.vendors.length}</span>
+      </div>
+      <div className="relative mb-2">
+        <Icon name="Search" size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] pointer-events-none" />
+        <input
+          value={sideSearch}
+          onChange={e => onSearchChange(e.target.value)}
+          placeholder="Поиск..."
+          className="w-full bg-[hsl(220,12%,14%)] border border-border rounded pl-7 pr-6 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors"
+        />
+        {sideSearch && (
+          <button onClick={() => onSearchChange('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] hover:text-foreground">
+            <Icon name="X" size={11} />
+          </button>
+        )}
+      </div>
+      {visibleVendors.map(v => {
+        const matCount = vendorStats.countMap.get(v.id) || 0;
+        const mfrCount = vendorStats.mfrMap.get(v.id)?.size || 0;
+        const types = (v.materialTypeIds || []).slice(0, 4).map(tid => store.getTypeById(tid)).filter(Boolean);
+        const isActive = selectedId === v.id;
+        return (
+          <button
+            key={v.id}
+            onClick={() => onSelect(v.id)}
+            className={`w-full text-left rounded-lg border transition-all duration-150 p-3 ${
+              isActive
+                ? 'bg-[hsl(220,12%,17%)] border-gold/50 shadow-sm'
+                : 'bg-[hsl(220,14%,11%)] border-border hover:border-[hsl(220,12%,26%)] hover:bg-[hsl(220,12%,14%)]'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${isActive ? 'bg-gold text-[hsl(220,16%,8%)]' : 'bg-[hsl(220,12%,18%)] text-[hsl(var(--text-dim))]'}`}>
+                <Icon name="Truck" size={16} />
+              </div>
+              <div className="min-w-0 flex-1">
+                <div className={`font-semibold text-sm truncate ${isActive ? 'text-gold' : 'text-foreground'}`}>{v.name}</div>
+                <div className="flex items-center gap-2 mt-0.5">
+                  <span className="text-xs text-[hsl(var(--text-muted))]">{matCount} позиций</span>
+                  {mfrCount > 0 && <span className="text-xs text-[hsl(var(--text-muted))]">· {mfrCount} бренд.</span>}
+                  {types.length > 0 && (
+                    <div className="flex gap-0.5">
+                      {types.map(t => (
+                        <span key={t!.id} className="w-2 h-2 rounded-full" style={{ backgroundColor: t!.color || '#888' }} title={t!.name} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+              {isActive && <Icon name="ChevronRight" size={14} className="text-gold shrink-0" />}
+            </div>
+          </button>
+        );
+      })}
+      {visibleVendors.length === 0 && (
+        <div className="text-center py-8 text-xs text-[hsl(var(--text-muted))] opacity-60">
+          {sideSearch ? 'Не найдено' : 'Нет поставщиков'}
+        </div>
+      )}
+      <button
+        onClick={onAddVendor}
+        className="w-full flex items-center justify-center gap-2 px-3 py-2.5 text-xs text-[hsl(var(--text-muted))] hover:text-gold border border-dashed border-[hsl(var(--surface-3))] rounded-lg hover:border-gold transition-all mt-1"
+      >
+        <Icon name="Plus" size={12} /> Добавить поставщика
+      </button>
+    </div>
+  );
+}
