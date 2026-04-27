@@ -3,6 +3,94 @@ import type { Client, ClientStatus, ClientHistoryItem } from './types';
 import { CLIENT_STATUSES } from './types';
 import { INPUT, SELECT, TEXTAREA, Field, Section } from './ClientCardShared';
 
+function formatPhone(raw: string): string {
+  const digits = raw.replace(/\D/g, '');
+  const d = digits.startsWith('8') ? '7' + digits.slice(1) : digits.startsWith('7') ? digits : '7' + digits;
+  const n = d.slice(0, 11);
+  if (n.length === 0) return '';
+  let result = '+' + n[0];
+  if (n.length > 1) result += ' (' + n.slice(1, 4);
+  if (n.length > 4) result += ') ' + n.slice(4, 7);
+  if (n.length > 7) result += '-' + n.slice(7, 9);
+  if (n.length > 9) result += '-' + n.slice(9, 11);
+  return result;
+}
+
+function PhoneInput({ value, onChange, placeholder }: { value: string; onChange: (v: string) => void; placeholder?: string }) {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const raw = e.target.value;
+    if (raw === '' || raw === '+') { onChange(''); return; }
+    onChange(formatPhone(raw));
+  };
+  return (
+    <input
+      className={INPUT}
+      value={value}
+      onChange={handleChange}
+      placeholder={placeholder || '+7 (___) ___-__-__'}
+      inputMode="tel"
+    />
+  );
+}
+
+const STATUS_FLOW: ClientStatus[] = ['new', 'measure', 'agreement', 'production', 'delivery', 'done'];
+
+function StatusTimeline({ status, onStatusChange }: { status: string; onStatusChange: (s: ClientStatus) => void }) {
+  const currentIdx = STATUS_FLOW.indexOf(status as ClientStatus);
+  const isCancelled = status === 'cancelled';
+
+  return (
+    <div className="flex items-center gap-0 w-full">
+      {STATUS_FLOW.map((s, i) => {
+        const info = CLIENT_STATUSES.find(x => x.id === s)!;
+        const isDone = !isCancelled && currentIdx > i;
+        const isCurrent = !isCancelled && currentIdx === i;
+        const isFuture = isCancelled || currentIdx < i;
+        return (
+          <div key={s} className="flex items-center flex-1 min-w-0">
+            <button
+              onClick={() => onStatusChange(s)}
+              title={info.label}
+              className="flex flex-col items-center gap-1.5 group flex-1 min-w-0"
+            >
+              <div
+                className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-all text-xs font-bold ${
+                  isCurrent ? 'scale-110 shadow-md' : 'group-hover:scale-105'
+                }`}
+                style={
+                  isDone
+                    ? { background: info.color, borderColor: info.color, color: '#fff' }
+                    : isCurrent
+                    ? { background: info.color, borderColor: info.color, color: '#fff', boxShadow: `0 0 8px ${info.color}66` }
+                    : { borderColor: info.color + '44', color: info.color + '88' }
+                }
+              >
+                {isDone ? <Icon name="Check" size={11} /> : <span>{i + 1}</span>}
+              </div>
+              <span className={`text-[10px] text-center leading-tight truncate w-full px-0.5 ${
+                isCurrent ? 'font-semibold' : isFuture ? 'opacity-40' : ''
+              }`} style={isCurrent || isDone ? { color: info.color } : {}}>
+                {info.label}
+              </span>
+            </button>
+            {i < STATUS_FLOW.length - 1 && (
+              <div className={`h-0.5 w-3 shrink-0 mx-0.5 rounded transition-colors ${isDone ? 'opacity-60' : 'opacity-20'}`}
+                style={{ background: isDone ? CLIENT_STATUSES.find(x => x.id === s)!.color : '#888' }}
+              />
+            )}
+          </div>
+        );
+      })}
+      {isCancelled && (
+        <div className="ml-3 flex items-center gap-1.5 px-2.5 py-1 bg-red-500/10 border border-red-500/30 rounded text-xs text-red-400">
+          <Icon name="XCircle" size={12} />
+          Отменён
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── Вкладка: Сводка ────────────────────────────────────────────
 export function TabOverview({ client, onChange, onStatusChange }: {
   client: Client;
@@ -12,26 +100,79 @@ export function TabOverview({ client, onChange, onStatusChange }: {
   const today = new Date().toISOString().slice(0, 10);
   const hasReminder = client.reminder_date && client.reminder_date >= today;
 
+  const deliveryDiff = client.delivery_date
+    ? Math.round((new Date(client.delivery_date).setHours(0,0,0,0) - new Date().setHours(0,0,0,0)) / 86400000)
+    : null;
+
   return (
     <div className="space-y-4">
-      {/* Статус */}
+      {/* Статус — таймлайн */}
       <Section title="Статус сделки" icon="Activity">
-        <div className="flex flex-wrap gap-2">
-          {CLIENT_STATUSES.map(s => (
+        <StatusTimeline status={client.status} onStatusChange={onStatusChange} />
+        {client.status === 'cancelled' && (
+          <div className="mt-3">
             <button
-              key={s.id}
-              onClick={() => onStatusChange(s.id)}
-              className="flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-all"
-              style={client.status === s.id
-                ? { background: s.color, borderColor: s.color, color: '#fff' }
-                : { borderColor: s.color + '44', color: s.color }
-              }
+              onClick={() => onStatusChange('new')}
+              className="text-xs text-[hsl(var(--text-muted))] hover:text-gold transition-colors"
             >
-              {s.label}
+              ← Восстановить как «Новый лид»
             </button>
-          ))}
-        </div>
+          </div>
+        )}
       </Section>
+
+      {/* Ключевые даты */}
+      {(client.delivery_date || client.contract_date) && (
+        <Section title="Ключевые даты" icon="Calendar">
+          <div className="flex flex-wrap gap-3">
+            {client.contract_date && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-[hsl(220,12%,14%)] rounded-lg">
+                <Icon name="FileText" size={13} className="text-[hsl(var(--text-muted))]" />
+                <div>
+                  <div className="text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider">Договор</div>
+                  <div className="text-sm font-medium">{new Date(client.contract_date).toLocaleDateString('ru', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                </div>
+              </div>
+            )}
+            {client.delivery_date && (
+              <div className={`flex items-center gap-2 px-3 py-2 rounded-lg border ${
+                deliveryDiff !== null && deliveryDiff < 0 ? 'bg-red-500/10 border-red-500/30' :
+                deliveryDiff !== null && deliveryDiff <= 3 ? 'bg-amber-400/10 border-amber-400/30' :
+                'bg-[hsl(220,12%,14%)] border-transparent'
+              }`}>
+                <Icon name="Truck" size={13} className={
+                  deliveryDiff !== null && deliveryDiff < 0 ? 'text-red-400' :
+                  deliveryDiff !== null && deliveryDiff <= 3 ? 'text-amber-400' :
+                  'text-[hsl(var(--text-muted))]'
+                } />
+                <div>
+                  <div className="text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider">Доставка</div>
+                  <div className={`text-sm font-medium ${
+                    deliveryDiff !== null && deliveryDiff < 0 ? 'text-red-400' :
+                    deliveryDiff !== null && deliveryDiff <= 3 ? 'text-amber-400' : ''
+                  }`}>
+                    {new Date(client.delivery_date).toLocaleDateString('ru', { day: 'numeric', month: 'short', year: 'numeric' })}
+                    {deliveryDiff !== null && (
+                      <span className="ml-1.5 text-[11px] opacity-70">
+                        {deliveryDiff === 0 ? '· сегодня' : deliveryDiff > 0 ? `· через ${deliveryDiff} дн.` : `· ${Math.abs(deliveryDiff)} дн. назад`}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+            {client.total_amount > 0 && (
+              <div className="flex items-center gap-2 px-3 py-2 bg-[hsl(220,12%,14%)] rounded-lg">
+                <Icon name="Banknote" size={13} className="text-gold" />
+                <div>
+                  <div className="text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider">Сумма</div>
+                  <div className="text-sm font-semibold text-gold">{client.total_amount.toLocaleString('ru')} ₽</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </Section>
+      )}
 
       {/* Ответственные */}
       <Section title="Ответственные" icon="Users">
@@ -95,10 +236,10 @@ export function TabData({ client, onChange }: { client: Client; onChange: (f: ke
           </div>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Телефон (основной)">
-              <input className={INPUT} value={client.phone} onChange={e => onChange('phone', e.target.value)} placeholder="+7 (___) ___-__-__" />
+              <PhoneInput value={client.phone} onChange={v => onChange('phone', v)} />
             </Field>
             <Field label="Телефон (доп.)">
-              <input className={INPUT} value={client.phone2} onChange={e => onChange('phone2', e.target.value)} placeholder="+7 (___) ___-__-__" />
+              <PhoneInput value={client.phone2} onChange={v => onChange('phone2', v)} />
             </Field>
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -162,7 +303,21 @@ export function TabData({ client, onChange }: { client: Client; onChange: (f: ke
       </Section>
 
       {/* Адрес доставки */}
-      <Section title="Адрес доставки" icon="Truck">
+      <Section title="Адрес доставки" icon="Truck" action={
+        <button
+          onClick={() => {
+            onChange('delivery_city', client.reg_city);
+            onChange('delivery_street', client.reg_street);
+            onChange('delivery_house', client.reg_house);
+            onChange('delivery_apt', client.reg_apt);
+          }}
+          className="flex items-center gap-1.5 text-xs text-[hsl(var(--text-muted))] hover:text-gold transition-colors"
+          title="Скопировать из адреса регистрации"
+        >
+          <Icon name="Copy" size={12} />
+          Как у регистрации
+        </button>
+      }>
         <div className="space-y-3">
           <div className="grid grid-cols-3 gap-3">
             <Field label="Город">

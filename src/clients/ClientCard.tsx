@@ -84,6 +84,39 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {/* Быстрые действия */}
+            {current.phone && (
+              <div className="flex items-center gap-1">
+                <a
+                  href={`tel:${current.phone.replace(/\D/g, '')}`}
+                  title="Позвонить"
+                  onClick={e => e.stopPropagation()}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-[hsl(220,12%,16%)] border border-border text-[hsl(var(--text-muted))] hover:text-emerald-400 hover:border-emerald-400/40 transition-all"
+                >
+                  <Icon name="Phone" size={13} />
+                </a>
+                <a
+                  href={`https://wa.me/${current.phone.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="WhatsApp"
+                  onClick={e => e.stopPropagation()}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-[hsl(220,12%,16%)] border border-border text-[hsl(var(--text-muted))] hover:text-[#25D366] hover:border-[#25D366]/40 transition-all"
+                >
+                  <Icon name="MessageCircle" size={13} />
+                </a>
+                <a
+                  href={`https://t.me/${current.phone.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  title="Telegram"
+                  onClick={e => e.stopPropagation()}
+                  className="w-8 h-8 flex items-center justify-center rounded-lg bg-[hsl(220,12%,16%)] border border-border text-[hsl(var(--text-muted))] hover:text-sky-400 hover:border-sky-400/40 transition-all"
+                >
+                  <Icon name="Send" size={13} />
+                </a>
+              </div>
+            )}
             {draft && (
               <button
                 onClick={handleSave}

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Icon from '@/components/ui/icon';
 import { useClients } from './useClients';
 import { CLIENT_STATUSES, clientFullName, emptyClient } from './types';
@@ -6,6 +6,8 @@ import type { Client, ClientStatus } from './types';
 import ClientCard from './ClientCard';
 
 type View = 'list' | 'kanban';
+type SortField = 'name' | 'created_at' | 'delivery_date' | 'total_amount';
+type SortDir = 'asc' | 'desc';
 
 function StatusBadge({ status }: { status: ClientStatus }) {
   const s = CLIENT_STATUSES.find(x => x.id === status);
@@ -13,6 +15,41 @@ function StatusBadge({ status }: { status: ClientStatus }) {
   return (
     <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium" style={{ background: s.color + '22', color: s.color }}>
       {s.label}
+    </span>
+  );
+}
+
+function DeliveryBadge({ date }: { date: string }) {
+  if (!date) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(date);
+  d.setHours(0, 0, 0, 0);
+  const diff = Math.round((d.getTime() - today.getTime()) / 86400000);
+
+  let label = '';
+  let cls = '';
+  if (diff < 0) {
+    label = `${Math.abs(diff)} дн. назад`;
+    cls = 'text-red-400';
+  } else if (diff === 0) {
+    label = 'Сегодня';
+    cls = 'text-amber-400 font-semibold';
+  } else if (diff <= 3) {
+    label = `через ${diff} дн.`;
+    cls = 'text-amber-400';
+  } else if (diff <= 14) {
+    label = `через ${diff} дн.`;
+    cls = 'text-emerald-400';
+  } else {
+    label = date;
+    cls = 'text-[hsl(var(--text-muted))]';
+  }
+
+  return (
+    <span className={`flex items-center gap-1 text-xs ${cls}`}>
+      <Icon name="Truck" size={11} />
+      {label}
     </span>
   );
 }
@@ -49,12 +86,7 @@ function ClientRow({ client, onClick }: { client: Client; onClick: () => void })
           </div>
         )}
         <StatusBadge status={client.status as ClientStatus} />
-        {client.delivery_date && (
-          <span className="text-xs text-[hsl(var(--text-muted))]">
-            <Icon name="Calendar" size={11} className="inline mr-1" />
-            {client.delivery_date}
-          </span>
-        )}
+        <DeliveryBadge date={client.delivery_date} />
       </div>
       <Icon name="ChevronRight" size={14} className="text-[hsl(var(--text-muted))] group-hover:text-gold transition-colors shrink-0" />
     </div>
@@ -95,9 +127,8 @@ function KanbanColumn({ status, clients, onClient }: {
               <div className="mt-2 text-xs font-semibold text-gold">{c.total_amount.toLocaleString('ru')} ₽</div>
             )}
             {c.delivery_date && (
-              <div className="mt-1 flex items-center gap-1 text-[11px] text-[hsl(var(--text-muted))]">
-                <Icon name="Calendar" size={10} />
-                {c.delivery_date}
+              <div className="mt-1.5">
+                <DeliveryBadge date={c.delivery_date} />
               </div>
             )}
             {c.reminder_date && c.reminder_date >= new Date().toISOString().slice(0, 10) && (
@@ -118,6 +149,13 @@ function KanbanColumn({ status, clients, onClient }: {
   );
 }
 
+const SORT_LABELS: Record<SortField, string> = {
+  name: 'Имя',
+  created_at: 'Дата создания',
+  delivery_date: 'Доставка',
+  total_amount: 'Сумма',
+};
+
 export default function ClientsPage() {
   const { clients, loading, load, createClient } = useClients();
   const [view, setView] = useState<View>('list');
@@ -125,14 +163,43 @@ export default function ClientsPage() {
   const [filterStatus, setFilterStatus] = useState<ClientStatus | 'all'>('all');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
+  const [sortField, setSortField] = useState<SortField>('created_at');
+  const [sortDir, setSortDir] = useState<SortDir>('desc');
+  const [showSortMenu, setShowSortMenu] = useState(false);
 
-  const filtered = clients.filter(c => {
-    const name = clientFullName(c).toLowerCase();
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDir(field === 'total_amount' || field === 'created_at' ? 'desc' : 'asc');
+    }
+    setShowSortMenu(false);
+  };
+
+  const filtered = useMemo(() => {
     const q = search.toLowerCase();
-    const matchSearch = !q || name.includes(q) || c.phone.includes(q) || c.contract_number.toLowerCase().includes(q);
-    const matchStatus = filterStatus === 'all' || c.status === filterStatus;
-    return matchSearch && matchStatus;
-  });
+    let list = clients.filter(c => {
+      const name = clientFullName(c).toLowerCase();
+      const matchSearch = !q || name.includes(q) || c.phone.includes(q) || c.contract_number.toLowerCase().includes(q);
+      const matchStatus = filterStatus === 'all' || c.status === filterStatus;
+      return matchSearch && matchStatus;
+    });
+
+    list = [...list].sort((a, b) => {
+      let va: string | number = '';
+      let vb: string | number = '';
+      if (sortField === 'name') { va = clientFullName(a); vb = clientFullName(b); }
+      else if (sortField === 'created_at') { va = a.created_at || ''; vb = b.created_at || ''; }
+      else if (sortField === 'delivery_date') { va = a.delivery_date || '9999'; vb = b.delivery_date || '9999'; }
+      else if (sortField === 'total_amount') { va = a.total_amount; vb = b.total_amount; }
+      if (va < vb) return sortDir === 'asc' ? -1 : 1;
+      if (va > vb) return sortDir === 'asc' ? 1 : -1;
+      return 0;
+    });
+
+    return list;
+  }, [clients, search, filterStatus, sortField, sortDir]);
 
   const handleCreate = async () => {
     setCreating(true);
@@ -195,8 +262,15 @@ export default function ClientsPage() {
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
+          {search && (
+            <button onClick={() => setSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] hover:text-foreground">
+              <Icon name="X" size={12} />
+            </button>
+          )}
         </div>
-        <div className="flex items-center gap-1.5 flex-wrap">
+
+        {/* Status filters */}
+        <div className="flex items-center gap-1.5 flex-wrap flex-1">
           <button
             onClick={() => setFilterStatus('all')}
             className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${filterStatus === 'all' ? 'bg-gold/20 text-gold' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
@@ -206,7 +280,7 @@ export default function ClientsPage() {
           {CLIENT_STATUSES.map(s => (
             <button
               key={s.id}
-              onClick={() => setFilterStatus(s.id)}
+              onClick={() => setFilterStatus(filterStatus === s.id ? 'all' : s.id)}
               className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${filterStatus === s.id ? 'text-white' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
               style={filterStatus === s.id ? { background: s.color } : {}}
             >
@@ -214,7 +288,44 @@ export default function ClientsPage() {
             </button>
           ))}
         </div>
+
+        {/* Sort button */}
+        <div className="relative shrink-0">
+          <button
+            onClick={() => setShowSortMenu(v => !v)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border transition-colors ${showSortMenu ? 'border-gold/50 text-gold' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+          >
+            <Icon name={sortDir === 'asc' ? 'ArrowUpAZ' : 'ArrowDownAZ'} size={13} />
+            {SORT_LABELS[sortField]}
+          </button>
+          {showSortMenu && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowSortMenu(false)} />
+              <div className="absolute right-0 top-full mt-1 z-20 bg-[hsl(220,14%,13%)] border border-border rounded-lg shadow-xl py-1 min-w-[160px]">
+                {(Object.keys(SORT_LABELS) as SortField[]).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => handleSort(f)}
+                    className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-xs hover:bg-[hsl(220,12%,18%)] transition-colors ${sortField === f ? 'text-gold' : 'text-[hsl(var(--text-dim))]'}`}
+                  >
+                    {SORT_LABELS[f]}
+                    {sortField === f && (
+                      <Icon name={sortDir === 'asc' ? 'ArrowUp' : 'ArrowDown'} size={11} />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Results count */}
+      {(search || filterStatus !== 'all') && !loading && (
+        <div className="px-6 py-2 text-xs text-[hsl(var(--text-muted))] bg-[hsl(220,16%,7%)] border-b border-border shrink-0">
+          Найдено: <span className="text-foreground font-medium">{filtered.length}</span> из {clients.length}
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 overflow-auto scrollbar-thin">
