@@ -140,12 +140,25 @@ const DOCS: DocDef[] = [
   },
 ];
 
-function DocCard({ doc, clientId, clientName }: { doc: DocDef; clientId: string; clientName: string }) {
+function DocCard({ doc, clientId, clientName, onSave, hasDraft }: {
+  doc: DocDef;
+  clientId: string;
+  clientName: string;
+  onSave?: () => Promise<void>;
+  hasDraft?: boolean;
+}) {
   const [loading, setLoading] = useState<string | null>(null);
+
+  async function ensureSaved() {
+    if (hasDraft && onSave) {
+      await onSave();
+    }
+  }
 
   async function openPreview() {
     setLoading('preview');
     try {
+      await ensureSaved();
       const url = apiUrl('doc_html', clientId, doc.id);
       window.open(url, '_blank');
     } finally {
@@ -156,6 +169,7 @@ function DocCard({ doc, clientId, clientName }: { doc: DocDef; clientId: string;
   async function downloadDocx() {
     setLoading('docx');
     try {
+      await ensureSaved();
       const res = await fetch(apiUrl('doc_docx', clientId, doc.id));
       const data = await res.json();
       if (data.url) {
@@ -177,6 +191,7 @@ function DocCard({ doc, clientId, clientName }: { doc: DocDef; clientId: string;
   async function printPdf() {
     setLoading('pdf');
     try {
+      await ensureSaved();
       const url = apiUrl('doc_html', clientId, doc.id);
       const win = window.open(url, '_blank');
       if (win) {
@@ -193,6 +208,7 @@ function DocCard({ doc, clientId, clientName }: { doc: DocDef; clientId: string;
   async function copyLink() {
     setLoading('link');
     try {
+      await ensureSaved();
       const res = await fetch(apiUrl('doc_link', clientId, doc.id));
       const data = await res.json();
       if (data.url) {
@@ -211,6 +227,7 @@ function DocCard({ doc, clientId, clientName }: { doc: DocDef; clientId: string;
   async function shareTelegram() {
     setLoading('tg');
     try {
+      await ensureSaved();
       const res = await fetch(apiUrl('doc_link', clientId, doc.id));
       const data = await res.json();
       if (data.url) {
@@ -230,6 +247,7 @@ function DocCard({ doc, clientId, clientName }: { doc: DocDef; clientId: string;
   async function shareVK() {
     setLoading('vk');
     try {
+      await ensureSaved();
       const res = await fetch(apiUrl('doc_link', clientId, doc.id));
       const data = await res.json();
       if (data.url) {
@@ -249,6 +267,7 @@ function DocCard({ doc, clientId, clientName }: { doc: DocDef; clientId: string;
   async function shareMax() {
     setLoading('max');
     try {
+      await ensureSaved();
       const res = await fetch(apiUrl('doc_link', clientId, doc.id));
       const data = await res.json();
       if (data.url) {
@@ -335,14 +354,18 @@ function DocCard({ doc, clientId, clientName }: { doc: DocDef; clientId: string;
 
       <div className="mt-3 pt-3 border-t border-border">
         <p className="text-[10px] text-[hsl(var(--text-muted))] leading-relaxed">
-          Документ формируется автоматически из данных карточки клиента. Сохраните карточку перед генерацией.
+          Документ формируется из актуальных данных карточки. При наличии несохранённых изменений — они сохраняются автоматически перед генерацией.
         </p>
       </div>
     </div>
   );
 }
 
-export default function TabDocuments({ client }: { client: Client }) {
+export default function TabDocuments({ client, hasDraft, onSave }: {
+  client: Client;
+  hasDraft?: boolean;
+  onSave?: () => Promise<void>;
+}) {
   const clientName = clientFullName(client);
 
   const hasData = client.contract_number || client.last_name;
@@ -399,7 +422,7 @@ export default function TabDocuments({ client }: { client: Client }) {
             </div>
             <div className="grid grid-cols-1 gap-3">
               {docs.map(doc => (
-                <DocCard key={doc.id} doc={doc} clientId={client.id} clientName={clientName} />
+                <DocCard key={doc.id} doc={doc} clientId={client.id} clientName={clientName} onSave={onSave} hasDraft={hasDraft} />
               ))}
             </div>
           </div>

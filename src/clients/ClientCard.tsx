@@ -132,7 +132,7 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
           {tab === 'data'       && <TabData client={current} onChange={onChange} />}
           {tab === 'contract'   && <TabContract client={current} onChange={onChange} />}
           {tab === 'photos'     && <TabPhotos clientId={clientId} photos={photos} onUpload={uploadPhoto} onDelete={deletePhoto} />}
-          {tab === 'documents'  && <TabDocuments client={current} />}
+          {tab === 'documents'  && <TabDocuments client={current} hasDraft={!!draft} onSave={handleSave} />}
           {tab === 'history'    && <TabHistory history={history} />}
         </div>
       </div>
