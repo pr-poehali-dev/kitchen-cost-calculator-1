@@ -3,6 +3,7 @@ import { useStore } from '@/store/useStore';
 import type { CalcBlock as CalcBlockType, CalcColumnKey } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { COLUMN_LABELS_SHORT, COLUMN_ALIGN, COLUMN_WIDTHS, fmt } from './constants';
+import { DEFAULT_VISIBLE_COLUMNS } from '@/store/initialState';
 import CalcRowComponent from './CalcRowComponent';
 import {
   DndContext,
@@ -123,12 +124,12 @@ export default function CalcBlock({
     store.reorderRows(projectId, block.id, arrayMove(oldOrder, oldIdx, newIdx));
   };
 
-  const blockColor = (block as CalcBlockType & { color?: string }).color as string | undefined;
+  const blockColor = block.color;
   const blockTotal = block.rows.reduce((s, r) => s + r.qty * r.price, 0);
   const visibleCols: CalcColumnKey[] = block.visibleColumns.length > 0
     ? block.visibleColumns
-    : ['material', 'supplier', 'article', 'color', 'thickness', 'unit', 'qty', 'price'];
-  const gridCols = [...visibleCols.map(c => COLUMN_WIDTHS[c]), '56px'].join(' ');
+    : DEFAULT_VISIBLE_COLUMNS;
+  const gridCols = [...visibleCols.map(c => COLUMN_WIDTHS[c] ?? '1fr'), '56px'].join(' ');
 
   // Другие блоки (для копирования строки)
   const otherBlocks = allBlocks.filter(b => b.id !== block.id);
@@ -219,7 +220,7 @@ export default function CalcBlock({
                       key={c.id}
                       title={c.label}
                       onClick={() => {
-                        store.updateBlock(projectId, block.id, { color: c.color } as Parameters<typeof store.updateBlock>[2]);
+                        store.updateBlock(projectId, block.id, { color: c.color ?? undefined });
                         setShowColorPicker(false);
                       }}
                       className={`w-5 h-5 rounded-full border-2 transition-transform hover:scale-110 ${

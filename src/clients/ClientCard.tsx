@@ -18,6 +18,8 @@ function calcProfileProgress(c: Client): { pct: number; filled: number; total: n
   ];
   const filled = fields.filter(f => {
     const v = c[f];
+    // total_amount: 0 считается заполненным (сумма может быть нулевой)
+    if (f === 'total_amount') return v !== null && v !== undefined && v !== '';
     return v !== null && v !== undefined && v !== '' && v !== 0;
   }).length;
   return { pct: Math.round((filled / fields.length) * 100), filled, total: fields.length };

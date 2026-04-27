@@ -18,13 +18,13 @@ export const DEFAULT_MATERIAL_TYPES: MaterialType[] = [
   { id: 'mt13', name: 'Другое', color: '#787878' },
 ];
 
-export const ALL_COLUMNS: CalcColumnKey[] = ['material', 'manufacturer', 'vendor', 'article', 'color', 'thickness', 'unit', 'qty', 'price'];
+export const ALL_COLUMNS: CalcColumnKey[] = ['material', 'manufacturer', 'vendor', 'article', 'color', 'thickness', 'unit', 'qty', 'baseprice', 'price', 'total'];
 
 export const DEFAULT_MATERIAL_CATEGORIES: MaterialCategory[] = [
-  { id: 'mc1', name: 'Е1', typeId: 'mt1', note: 'Эмиссия формальдегида класс Е1' },
-  { id: 'mc2', name: 'Е2', typeId: 'mt1', note: 'Эмиссия формальдегида класс Е2' },
-  { id: 'mc3', name: 'Стандарт', note: 'Стандартная категория' },
-  { id: 'mc4', name: 'Премиум', note: 'Премиальная категория' },
+  { id: 'mc1', name: 'Е1', typeIds: ['mt1'], note: 'Эмиссия формальдегида класс Е1' },
+  { id: 'mc2', name: 'Е2', typeIds: ['mt1'], note: 'Эмиссия формальдегида класс Е2' },
+  { id: 'mc3', name: 'Стандарт', typeIds: [], note: 'Стандартная категория' },
+  { id: 'mc4', name: 'Премиум', typeIds: [], note: 'Премиальная категория' },
 ];
 
 export const defaultSettings: Settings = {

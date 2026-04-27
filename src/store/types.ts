@@ -117,6 +117,7 @@ export interface CalcBlock {
   allowedTypeIds: string[];
   visibleColumns: CalcColumnKey[];
   rows: CalcRow[];
+  color?: string;  // цветовая метка блока
 }
 
 export interface CalcRow {

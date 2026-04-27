@@ -42,6 +42,7 @@ export function Modal({ title, onClose, children }: { title: string; onClose: ()
 function getPriceAgeDays(priceUpdatedAt?: string): number | null {
   if (!priceUpdatedAt) return null;
   const d = new Date(priceUpdatedAt);
+  if (isNaN(d.getTime())) return null;
   const now = new Date();
   return Math.floor((now.getTime() - d.getTime()) / 86400000);
 }

@@ -73,7 +73,7 @@ export default function CalcSummary({
     Object.entries(groupByGid(percentItems)).forEach(([gid, items]) => {
       const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
       const pct = items.reduce((s, e) => s + e.value, 0);
-      const amt = items.reduce((s, e) => s + Math.round(baseForOverhead * e.value / 100), 0);
+      const amt = Math.round(items.reduce((s, e) => s + baseForOverhead * e.value / 100, 0));
       if (amt > 0) rows.push({ id: `percent-${gid}`, label: `${grp?.name ?? 'Расходы'} (${pct}%)`, value: amt, sign: '+', color: 'blue' });
     });
   }

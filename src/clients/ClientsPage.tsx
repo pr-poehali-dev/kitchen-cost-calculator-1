@@ -215,18 +215,24 @@ export default function ClientsPage() {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase();
+    const amountMin = filterAmountMin ? parseFloat(filterAmountMin) : null;
+    const amountMax = filterAmountMax ? parseFloat(filterAmountMax) : null;
     let list = clients.filter(c => {
       const name = clientFullName(c).toLowerCase();
-      if (q && !name.includes(q) && !c.phone?.includes(q) && !c.contract_number?.toLowerCase().includes(q)) return false;
+      // Поиск по имени, телефону (основной + доп.), номеру договора
+      if (q && !name.includes(q) && !c.phone?.includes(q) && !c.phone2?.includes(q) && !c.contract_number?.toLowerCase().includes(q)) return false;
       if (filterStatus !== 'all' && c.status !== filterStatus) return false;
       if (filterDesigner && c.designer !== filterDesigner) return false;
       if (filterMeasurer && c.measurer !== filterMeasurer) return false;
-      if (filterDateFrom && (c.created_at || '') < filterDateFrom) return false;
-      if (filterDateTo && (c.created_at || '') > filterDateTo + 'T23:59') return false;
-      if (filterDeliveryFrom && (c.delivery_date || '') < filterDeliveryFrom) return false;
-      if (filterDeliveryTo && (c.delivery_date || '') > filterDeliveryTo) return false;
-      if (filterAmountMin && c.total_amount < parseFloat(filterAmountMin)) return false;
-      if (filterAmountMax && c.total_amount > parseFloat(filterAmountMax)) return false;
+      // Дата создания: сравниваем ISO-строки (YYYY-MM-DD prefix всегда первый)
+      if (filterDateFrom && (c.created_at?.slice(0, 10) || '') < filterDateFrom) return false;
+      if (filterDateTo && (c.created_at?.slice(0, 10) || '') > filterDateTo) return false;
+      // Дата доставки: включаем обе граничные даты
+      if (filterDeliveryFrom && c.delivery_date && c.delivery_date < filterDeliveryFrom) return false;
+      if (filterDeliveryTo && c.delivery_date && c.delivery_date > filterDeliveryTo) return false;
+      // Сумма: только если числа валидны
+      if (amountMin !== null && !isNaN(amountMin) && c.total_amount < amountMin) return false;
+      if (amountMax !== null && !isNaN(amountMax) && c.total_amount > amountMax) return false;
       return true;
     });
     list = [...list].sort((a, b) => {

@@ -88,8 +88,9 @@ export function useStore() {
     const baseForOverhead = base + totalMarkupAmount + blockExtraTotal;
 
     // Процентные накладные расходы (percent) — от итоговой базы с наценками
+    // Округляем сумму ПОСЛЕ суммирования чтобы избежать накопительных ошибок округления
     const percentExpenses = activeExpenses.filter(e => e.type === 'percent');
-    const percentAmount = percentExpenses.reduce((s, e) => s + Math.round(baseForOverhead * e.value / 100), 0);
+    const percentAmount = Math.round(percentExpenses.reduce((s, e) => s + baseForOverhead * e.value / 100, 0));
 
     // Фиксированные накладные расходы
     const fixedExpenses = activeExpenses.filter(e => e.type === 'fixed');
@@ -135,7 +136,7 @@ export function useStore() {
   };
 
   const addBlock = (projectId: string) => {
-    const id = `b${Date.now()}`;
+    const id = `b${Date.now()}${Math.random().toString(36).slice(2)}`;
     updateProject(projectId, p => ({
       ...p,
       blocks: [...p.blocks, {
@@ -163,7 +164,7 @@ export function useStore() {
   };
 
   const addRow = (projectId: string, blockId: string) => {
-    const id = `r${Date.now()}`;
+    const id = `r${Date.now()}${Math.random().toString(36).slice(2)}`;
     const newRow: CalcRow = { id, name: '', unit: 'м²', qty: 1, price: 0 };
     updateProject(projectId, p => ({
       ...p,
@@ -227,7 +228,7 @@ export function useStore() {
       blocks: p.blocks.map(b => {
         if (b.id !== blockId) return b;
         const map = new Map(b.rows.map(r => [r.id, r]));
-        const rows = orderedIds.map(id => map.get(id)!).filter(Boolean);
+        const rows = orderedIds.map(id => map.get(id)).filter((r): r is CalcRow => !!r);
         return { ...b, rows };
       })
     }));
@@ -266,7 +267,7 @@ export function useStore() {
   };
 
   const addServiceBlock = (projectId: string) => {
-    const id = `sb${Date.now()}`;
+    const id = `sb${Date.now()}${Math.random().toString(36).slice(2)}`;
     updateProject(projectId, p => ({
       ...p,
       serviceBlocks: [...p.serviceBlocks, { id, name: 'Новый блок', rows: [] }]
@@ -312,7 +313,7 @@ export function useStore() {
   };
 
   const addServiceRow = (projectId: string, blockId: string) => {
-    const id = `sr${Date.now()}`;
+    const id = `sr${Date.now()}${Math.random().toString(36).slice(2)}`;
     const newRow: ServiceRow = { id, name: '', unit: 'шт', qty: 1, price: 0 };
     updateProject(projectId, p => ({
       ...p,
@@ -348,7 +349,7 @@ export function useStore() {
       serviceBlocks: p.serviceBlocks.map(b => {
         if (b.id !== blockId) return b;
         const map = new Map(b.rows.map(r => [r.id, r]));
-        const rows = orderedIds.map(id => map.get(id)!).filter(Boolean);
+        const rows = orderedIds.map(id => map.get(id)).filter((r): r is ServiceRow => !!r);
         return { ...b, rows };
       })
     }));
@@ -360,7 +361,7 @@ export function useStore() {
       if (!src) return p;
       const cloned = {
         ...src,
-        id: `sb${Date.now()}`,
+        id: `sb${Date.now()}${Math.random().toString(36).slice(2)}`,
         name: `${src.name} (копия)`,
         rows: src.rows.map(r => ({ ...r, id: `sr${Date.now()}${Math.random().toString(36).slice(2)}` })),
       };
@@ -379,12 +380,12 @@ export function useStore() {
   };
 
   const createProject = () => {
-    const id = `p${Date.now()}`;
+    const id = `p${Date.now()}${Math.random().toString(36).slice(2)}`;
     const newProject: Project = {
       id, client: '', object: 'Новый проект', address: '', phone: '',
       messenger: 'WhatsApp',
       createdAt: new Date().toISOString().split('T')[0],
-      blocks: [{ id: `b${Date.now()}`, name: 'Корпус', allowedTypeIds: [], visibleColumns: DEFAULT_VISIBLE_COLUMNS, rows: [] }],
+      blocks: [{ id: `b${Date.now()}${Math.random().toString(36).slice(2)}`, name: 'Корпус', allowedTypeIds: [], visibleColumns: DEFAULT_VISIBLE_COLUMNS, rows: [] }],
       serviceBlocks: [],
     };
     setState(s => ({ ...s, projects: [...s.projects, newProject], activeProjectId: id }));
@@ -399,7 +400,7 @@ export function useStore() {
   };
 
   const duplicateProject = (projectId: string) => {
-    const id = `p${Date.now()}`;
+    const id = `p${Date.now()}${Math.random().toString(36).slice(2)}`;
     setState(s => {
       const src = s.projects.find(p => p.id === projectId);
       if (!src) return s;
@@ -429,7 +430,7 @@ export function useStore() {
       if (!src) return p;
       const cloned: CalcBlock = {
         ...src,
-        id: `b${Date.now()}`,
+        id: `b${Date.now()}${Math.random().toString(36).slice(2)}`,
         name: `${src.name} (копия)`,
         rows: src.rows.map(r => ({ ...r, id: `r${Date.now()}${Math.random().toString(36).slice(2)}` })),
       };
@@ -450,7 +451,7 @@ export function useStore() {
 
   // ===== MANUFACTURERS =====
   const addManufacturer = (m: Omit<Manufacturer, 'id'>) => {
-    const id = `mfr${Date.now()}`;
+    const id = `mfr${Date.now()}${Math.random().toString(36).slice(2)}`;
     setState(s => ({ ...s, manufacturers: [...s.manufacturers, { ...m, id }] }));
   };
   const updateManufacturer = (id: string, data: Partial<Manufacturer>) => {
@@ -462,7 +463,7 @@ export function useStore() {
 
   // ===== VENDORS =====
   const addVendor = (v: Omit<Vendor, 'id'>) => {
-    const id = `v${Date.now()}`;
+    const id = `v${Date.now()}${Math.random().toString(36).slice(2)}`;
     setState(s => ({ ...s, vendors: [...s.vendors, { ...v, id }] }));
   };
   const updateVendor = (id: string, data: Partial<Vendor>) => {
@@ -473,7 +474,7 @@ export function useStore() {
   };
 
   const addMaterial = (material: Omit<Material, 'id'>) => {
-    const id = `m${Date.now()}`;
+    const id = `m${Date.now()}${Math.random().toString(36).slice(2)}`;
     const today = new Date().toISOString().slice(0, 10);
     setState(s => ({ ...s, materials: [...s.materials, { ...material, id, priceUpdatedAt: today }] }));
   };
@@ -481,7 +482,7 @@ export function useStore() {
   const duplicateMaterial = (id: string) => {
     const src = state.materials.find(m => m.id === id);
     if (!src) return;
-    const newId = `m${Date.now()}`;
+    const newId = `m${Date.now()}${Math.random().toString(36).slice(2)}`;
     const today = new Date().toISOString().slice(0, 10);
     setState(s => ({
       ...s,
@@ -630,7 +631,7 @@ export function useStore() {
   };
 
   const addService = (service: Omit<Service, 'id'>) => {
-    const id = `sv${Date.now()}`;
+    const id = `sv${Date.now()}${Math.random().toString(36).slice(2)}`;
     setState(s => ({ ...s, services: [...s.services, { ...service, id }] }));
   };
   const updateService = (id: string, data: Partial<Service>) => {
@@ -641,7 +642,7 @@ export function useStore() {
   };
 
   const addExpense = (expense: Omit<ExpenseItem, 'id'>) => {
-    const id = `e${Date.now()}`;
+    const id = `e${Date.now()}${Math.random().toString(36).slice(2)}`;
     setState(s => ({ ...s, expenses: [...s.expenses, { ...expense, id }] }));
   };
   const updateExpense = (id: string, data: Partial<ExpenseItem>) => {
@@ -656,7 +657,7 @@ export function useStore() {
   };
 
   const addMaterialType = (mt: Omit<MaterialType, 'id'>) => {
-    const id = `mt${Date.now()}`;
+    const id = `mt${Date.now()}${Math.random().toString(36).slice(2)}`;
     setState(s => ({ ...s, settings: { ...s.settings, materialTypes: [...s.settings.materialTypes, { ...mt, id }] } }));
   };
   const updateMaterialType = (id: string, data: Partial<MaterialType>) => {
@@ -670,7 +671,7 @@ export function useStore() {
   const saveTemplate = (projectId: string, name: string, description?: string) => {
     const project = state.projects.find(p => p.id === projectId);
     if (!project) return;
-    const id = `tpl${Date.now()}`;
+    const id = `tpl${Date.now()}${Math.random().toString(36).slice(2)}`;
     const template: CalcTemplate = {
       id,
       name,
@@ -788,7 +789,7 @@ export function useStore() {
   };
 
   const addExpenseGroup = (name: string) => {
-    const id = `eg${Date.now()}`;
+    const id = `eg${Date.now()}${Math.random().toString(36).slice(2)}`;
     setState(s => ({ ...s, expenseGroups: [...(s.expenseGroups || []), { id, name }] }));
     return id;
   };
@@ -805,7 +806,7 @@ export function useStore() {
 
   // ===== SAVED BLOCKS =====
   const createSavedBlock = (name: string) => {
-    const id = `sb_${Date.now()}`;
+    const id = `sb_${Date.now()}${Math.random().toString(36).slice(2)}`;
     const block: SavedBlock = {
       id,
       name,
@@ -832,13 +833,13 @@ export function useStore() {
   const reorderSavedBlocks = (orderedIds: string[]) => {
     setState(s => {
       const map = new Map((s.savedBlocks || []).map(b => [b.id, b]));
-      const reordered = orderedIds.map(id => map.get(id)).filter(Boolean) as typeof s.savedBlocks;
+      const reordered = orderedIds.map(id => map.get(id)).filter((b): b is SavedBlock => !!b);
       return { ...s, savedBlocks: reordered };
     });
   };
 
   const addSavedBlockRow = (blockId: string) => {
-    const id = `r${Date.now()}`;
+    const id = `r${Date.now()}${Math.random().toString(36).slice(2)}`;
     const newRow: CalcRow = { id, name: '', unit: 'м²', qty: 1, price: 0 };
     setState(s => ({
       ...s,
@@ -905,7 +906,7 @@ export function useStore() {
   };
 
   const addAssemblyRow = (blockId: string, assemblyId: string) => {
-    const id = `r${Date.now()}`;
+    const id = `r${Date.now()}${Math.random().toString(36).slice(2)}`;
     const newRow: CalcRow = { id, name: '', unit: 'м²', qty: 1, price: 0 };
     setState(s => ({
       ...s,
@@ -995,7 +996,7 @@ export function useStore() {
     });
 
   const addMaterialCategory = (cat: Omit<MaterialCategory, 'id'>) => {
-    const id = `mc${Date.now()}`;
+    const id = `mc${Date.now()}${Math.random().toString(36).slice(2)}`;
     setState(s => ({ ...s, settings: { ...s.settings, materialCategories: [...(s.settings.materialCategories || []), { ...cat, id }] } }));
   };
   const updateMaterialCategory = (id: string, data: Partial<MaterialCategory>) => {
