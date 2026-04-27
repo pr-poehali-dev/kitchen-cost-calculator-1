@@ -1316,14 +1316,23 @@ def _build_docx(c: dict, doc_type: str) -> bytes:
     doc = Document()
     sec = doc.sections[0]
     sec.page_width = Mm(210); sec.page_height = Mm(297)
-    sec.left_margin = Mm(25); sec.right_margin = Mm(20)
-    sec.top_margin = Mm(20); sec.bottom_margin = Mm(20)
+    sec.left_margin = Mm(20); sec.right_margin = Mm(15)
+    sec.top_margin = Mm(15); sec.bottom_margin = Mm(15)
+
+    # Устанавливаем вид «одна страница» и масштаб 100% чтобы Word не открывал в режиме двух страниц
+    from docx.oxml.ns import qn as _qn
+    from docx.oxml import OxmlElement as _OxmlElement
+    settings = doc.settings.element
+    zoom_el = _OxmlElement('w:zoom')
+    zoom_el.set(_qn('w:percent'), '100')
+    zoom_el.set(_qn('w:val'), 'bestFit')
+    settings.append(zoom_el)
 
     style = doc.styles['Normal']
     style.font.name = 'Times New Roman'
     style.font.size = Pt(11)
-    style.paragraph_format.line_spacing = Pt(14)
-    style.paragraph_format.space_after = Pt(3)
+    style.paragraph_format.line_spacing = Pt(13)
+    style.paragraph_format.space_after = Pt(0)
 
     def _set_font(run, size=11, bold=False, name='Times New Roman'):
         run.font.name = name; run.font.size = Pt(size); run.bold = bold
@@ -1340,14 +1349,14 @@ def _build_docx(c: dict, doc_type: str) -> bytes:
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after = Pt(10)
+        p.paragraph_format.space_after = Pt(6)
         r = p.add_run(text); _set_font(r, 11)
         return p
 
     def sec_title(text):
         p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(8)
-        p.paragraph_format.space_after = Pt(2)
+        p.paragraph_format.space_before = Pt(6)
+        p.paragraph_format.space_after = Pt(1)
         r = p.add_run(text); _set_font(r, 11, bold=True)
         return p
 
@@ -1355,9 +1364,9 @@ def _build_docx(c: dict, doc_type: str) -> bytes:
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after = Pt(2)
-        p.paragraph_format.line_spacing = Pt(14)
-        if indent: p.paragraph_format.first_line_indent = Mm(12)
+        p.paragraph_format.space_after = Pt(1)
+        p.paragraph_format.line_spacing = Pt(13)
+        if indent: p.paragraph_format.first_line_indent = Mm(10)
         r = p.add_run(text); _set_font(r, 11)
         return p
 
