@@ -30,6 +30,9 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
   const [showBoyardPrice, setShowBoyardPrice] = useState(false);
   const [showImportMenu, setShowImportMenu] = useState(false);
   const [search, setSearch] = useState('');
+  const [showPercentModal, setShowPercentModal] = useState(false);
+  const [percentVal, setPercentVal] = useState('');
+  const [percentApplied, setPercentApplied] = useState(false);
 
   const allTypes = store.settings.materialTypes;
   const allCategories = store.settings.materialCategories || [];
@@ -163,6 +166,11 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
                     <button onClick={() => { setShowBulkPrice(true); setShowImportMenu(false); }}
                       className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
                       <Icon name="Tags" size={13} className="text-[hsl(var(--text-muted))]" /> Цены списком
+                    </button>
+                    <div className="border-t border-border my-1" />
+                    <button onClick={() => { setShowPercentModal(true); setShowImportMenu(false); }}
+                      className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
+                      <Icon name="Percent" size={13} className="text-amber-400" /> Изменить на %
                     </button>
                   </div>
                 </>
@@ -323,6 +331,74 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
           onChange={setEditingMaterial}
           onClose={() => setEditingMaterial(null)}
         />
+      )}
+
+      {/* Modal: Массовое обновление цен на % */}
+      {showPercentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg shadow-2xl w-full max-w-sm mx-4 animate-fade-in">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
+              <span className="font-semibold text-sm">Изменить цены на %</span>
+              <button onClick={() => { setShowPercentModal(false); setPercentApplied(false); }} className="text-[hsl(var(--text-muted))] hover:text-foreground">
+                <Icon name="X" size={16} />
+              </button>
+            </div>
+            <div className="px-5 py-4 space-y-4">
+              <p className="text-xs text-[hsl(var(--text-muted))]">
+                Применяется к <span className="text-foreground font-medium">{filteredMaterials.length}</span> материалам
+                {matTypeFilter !== 'all' && <> типа «{allTypes.find(t => t.id === matTypeFilter)?.name}»</>}
+                {catFilter !== 'all' && <> в выбранной категории</>}.
+              </p>
+              <div>
+                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">
+                  Процент изменения
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    value={percentVal}
+                    onChange={e => setPercentVal(e.target.value)}
+                    placeholder="например +5 или -10"
+                    className="flex-1 bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm outline-none focus:border-gold transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    autoFocus
+                  />
+                  <span className="text-[hsl(var(--text-muted))]">%</span>
+                </div>
+                <p className="text-xs text-[hsl(var(--text-muted))] mt-1">
+                  Положительное — повышение, отрицательное — снижение
+                </p>
+              </div>
+              {percentApplied && (
+                <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded text-xs text-emerald-400">
+                  <Icon name="Check" size={12} /> Цены обновлены
+                </div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => {
+                    const pct = parseFloat(percentVal);
+                    if (isNaN(pct) || pct === 0) return;
+                    filteredMaterials.forEach(m => {
+                      const newPrice = Math.round(m.basePrice * (1 + pct / 100));
+                      store.updateMaterial(m.id, { basePrice: Math.max(0, newPrice) });
+                    });
+                    setPercentApplied(true);
+                    setPercentVal('');
+                  }}
+                  className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90"
+                >
+                  Применить
+                </button>
+                <button
+                  onClick={() => { setShowPercentModal(false); setPercentApplied(false); }}
+                  className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground"
+                >
+                  Закрыть
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );

@@ -327,6 +327,56 @@ export function useStore() {
     });
   };
 
+  const duplicateProject = (projectId: string) => {
+    const id = `p${Date.now()}`;
+    setState(s => {
+      const src = s.projects.find(p => p.id === projectId);
+      if (!src) return s;
+      const cloned: Project = {
+        ...src,
+        id,
+        object: `${src.object} (копия)`,
+        createdAt: new Date().toISOString().split('T')[0],
+        blocks: src.blocks.map(b => ({
+          ...b,
+          id: `b${Date.now()}${Math.random().toString(36).slice(2)}`,
+          rows: b.rows.map(r => ({ ...r, id: `r${Date.now()}${Math.random().toString(36).slice(2)}` })),
+        })),
+        serviceBlocks: src.serviceBlocks.map(sb => ({
+          ...sb,
+          id: `sb${Date.now()}${Math.random().toString(36).slice(2)}`,
+          rows: sb.rows.map(r => ({ ...r, id: `sr${Date.now()}${Math.random().toString(36).slice(2)}` })),
+        })),
+      };
+      return { ...s, projects: [...s.projects, cloned], activeProjectId: id };
+    });
+  };
+
+  const duplicateBlock = (projectId: string, blockId: string) => {
+    updateProject(projectId, p => {
+      const src = p.blocks.find(b => b.id === blockId);
+      if (!src) return p;
+      const cloned: CalcBlock = {
+        ...src,
+        id: `b${Date.now()}`,
+        name: `${src.name} (копия)`,
+        rows: src.rows.map(r => ({ ...r, id: `r${Date.now()}${Math.random().toString(36).slice(2)}` })),
+      };
+      const idx = p.blocks.findIndex(b => b.id === blockId);
+      const blocks = [...p.blocks];
+      blocks.splice(idx + 1, 0, cloned);
+      return { ...p, blocks };
+    });
+  };
+
+  const reorderBlocks = (projectId: string, orderedIds: string[]) => {
+    updateProject(projectId, p => {
+      const map = new Map(p.blocks.map(b => [b.id, b]));
+      const blocks = orderedIds.map(id => map.get(id)!).filter(Boolean);
+      return { ...p, blocks };
+    });
+  };
+
   // ===== MANUFACTURERS =====
   const addManufacturer = (m: Omit<Manufacturer, 'id'>) => {
     const id = `mfr${Date.now()}`;
@@ -871,7 +921,8 @@ export function useStore() {
     addServiceBlock, updateServiceBlock, deleteServiceBlock,
     addServiceRow, updateServiceRow, deleteServiceRow,
     updateProjectInfo,
-    createProject, deleteProject,
+    createProject, deleteProject, duplicateProject,
+    duplicateBlock, reorderBlocks,
     addManufacturer, updateManufacturer, deleteManufacturer,
     addVendor, updateVendor, deleteVendor,
     addMaterial, updateMaterial, deleteMaterial, importSkatBatch, updateSkatPrices, patchSkatMaterials,

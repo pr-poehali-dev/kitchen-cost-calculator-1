@@ -78,7 +78,7 @@ export default function App() {
 
   return (
     <Layout active={section} onNav={setSection} user={user} onLogout={logout}>
-      {section === 'home'     && <HomePage />}
+      {section === 'home'     && <HomePage onNav={setSection} />}
       {section === 'clients'  && <ClientsPage />}
       {section === 'calc'     && <CalcPage />}
       {section === 'blocks'   && <BlocksPage />}

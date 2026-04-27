@@ -8,6 +8,64 @@ import CalcSummary from './calc/CalcSummary';
 import TemplatesPanel from './calc/TemplatesPanel';
 import ClientViewPanel from './calc/ClientViewPanel';
 import { exportProjectPdf } from './calc/exportPdf';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  verticalListSortingStrategy,
+  useSortable,
+  arrayMove,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import type { CalcBlock as CalcBlockType } from '@/store/types';
+
+function SortableBlock({ block, ...props }: {
+  block: CalcBlockType;
+  projectId: string;
+  currency: string;
+  isFirst: boolean;
+  isLast: boolean;
+  isEditingName: boolean;
+  editingName: string;
+  onStartEditName: () => void;
+  onEditNameChange: (v: string) => void;
+  onFinishEditName: () => void;
+  onOpenSettings: () => void;
+  onMoveUp: () => void;
+  onMoveDown: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: block.id });
+
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+    zIndex: isDragging ? 999 : undefined,
+  };
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <CalcBlock
+        {...props}
+        block={block}
+        dragHandleProps={{ ...attributes, ...listeners }}
+      />
+    </div>
+  );
+}
 
 export default function CalcPage() {
   const store = useStore();
@@ -23,6 +81,21 @@ export default function CalcPage() {
   const [showSummarySettings, setShowSummarySettings] = useState(false);
   const [refreshed, setRefreshed] = useState(false);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    if (!project) return;
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldOrder = project.blocks.map(b => b.id);
+    const oldIdx = oldOrder.indexOf(active.id as string);
+    const newIdx = oldOrder.indexOf(over.id as string);
+    const newOrder = arrayMove(oldOrder, oldIdx, newIdx);
+    store.reorderBlocks(project.id, newOrder);
+  };
 
   const handleRefreshPrices = () => {
     store.refreshProjectPrices(project!.id);
@@ -89,24 +162,28 @@ export default function CalcPage() {
       />
 
       <div className="flex-1 overflow-auto scrollbar-thin p-6 space-y-4">
-        {project.blocks.map((block, idx) => (
-          <CalcBlock
-            key={block.id}
-            block={block}
-            projectId={project.id}
-            currency={store.settings.currency}
-            isFirst={idx === 0}
-            isLast={idx === project.blocks.length - 1}
-            isEditingName={editingBlockId === block.id}
-            editingName={editingBlockName}
-            onStartEditName={() => { setEditingBlockId(block.id); setEditingBlockName(block.name); }}
-            onEditNameChange={setEditingBlockName}
-            onFinishEditName={() => handleFinishEditName(block.id, block.name)}
-            onOpenSettings={() => setBlockSettingsId(block.id)}
-            onMoveUp={() => store.moveBlock(project.id, block.id, 'up')}
-            onMoveDown={() => store.moveBlock(project.id, block.id, 'down')}
-          />
-        ))}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={project.blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+            {project.blocks.map((block, idx) => (
+              <SortableBlock
+                key={block.id}
+                block={block}
+                projectId={project.id}
+                currency={store.settings.currency}
+                isFirst={idx === 0}
+                isLast={idx === project.blocks.length - 1}
+                isEditingName={editingBlockId === block.id}
+                editingName={editingBlockName}
+                onStartEditName={() => { setEditingBlockId(block.id); setEditingBlockName(block.name); }}
+                onEditNameChange={setEditingBlockName}
+                onFinishEditName={() => handleFinishEditName(block.id, block.name)}
+                onOpenSettings={() => setBlockSettingsId(block.id)}
+                onMoveUp={() => store.moveBlock(project.id, block.id, 'up')}
+                onMoveDown={() => store.moveBlock(project.id, block.id, 'down')}
+              />
+            ))}
+          </SortableContext>
+        </DndContext>
 
         <button
           onClick={() => store.addBlock(project.id)}

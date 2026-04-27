@@ -91,13 +91,22 @@ export default function CalcHeader({
                             </div>
                             {p.client && <div className="text-xs text-[hsl(var(--text-muted))] truncate">{p.client}</div>}
                           </button>
-                          <button
-                            onClick={() => onRequestDeleteProject(p.id)}
-                            className="ml-2 p-1 text-[hsl(var(--text-muted))] hover:text-destructive opacity-0 group-hover:opacity-100 transition-all shrink-0"
-                            title="Удалить проект"
-                          >
-                            <Icon name="Trash2" size={12} />
-                          </button>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-all shrink-0 ml-2">
+                            <button
+                              onClick={e => { e.stopPropagation(); store.duplicateProject(p.id); onToggleProjects(); }}
+                              className="p-1 text-[hsl(var(--text-muted))] hover:text-gold transition-colors"
+                              title="Дублировать проект"
+                            >
+                              <Icon name="Copy" size={12} />
+                            </button>
+                            <button
+                              onClick={() => onRequestDeleteProject(p.id)}
+                              className="p-1 text-[hsl(var(--text-muted))] hover:text-destructive transition-colors"
+                              title="Удалить проект"
+                            >
+                              <Icon name="Trash2" size={12} />
+                            </button>
+                          </div>
                         </>
                       )}
                     </div>
