@@ -36,13 +36,23 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
     ? store.materials
     : store.materials.filter(m => m.typeId === matTypeFilter);
 
-  const filteredMaterials = catFilter === 'all'
+  const catFiltered = catFilter === 'all'
     ? typeFiltered
     : catFilter === 'none'
       ? typeFiltered.filter(m => !m.categoryId)
       : typeFiltered.filter(m => m.categoryId === catFilter);
 
+  const q = search.trim().toLowerCase();
+  const filteredMaterials = q
+    ? catFiltered.filter(m =>
+        m.name.toLowerCase().includes(q) ||
+        (m.article || '').toLowerCase().includes(q) ||
+        (m.color || '').toLowerCase().includes(q)
+      )
+    : catFiltered;
+
   const [showImportMenu, setShowImportMenu] = useState(false);
+  const [search, setSearch] = useState('');
 
   const visibleCategories = allCategories.filter(c => typeFiltered.some(m => m.categoryId === c.id));
   const hasNoCat = typeFiltered.some(m => !m.categoryId);
@@ -130,31 +140,50 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
           </div>
         </div>
 
-        {/* Строка 2: фильтр по категории — select вместо кучи кнопок */}
-        {(visibleCategories.length > 0 || hasNoCat) && (
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-xs text-[hsl(var(--text-muted))] shrink-0">Категория:</span>
-            <select
-              value={catFilter}
-              onChange={e => setCatFilter(e.target.value)}
-              className="bg-[hsl(220,12%,14%)] border border-border rounded px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors cursor-pointer"
-            >
-              <option value="all">Все категории</option>
-              {visibleCategories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-              {hasNoCat && <option value="none">Без категории</option>}
-            </select>
-            {catFilter !== 'all' && (
-              <button onClick={() => setCatFilter('all')} className="text-xs text-[hsl(var(--text-muted))] hover:text-foreground transition-colors flex items-center gap-1">
-                <Icon name="X" size={12} /> Сбросить
+        {/* Строка 2: поиск + фильтр по категории */}
+        <div className="flex items-center gap-2 mb-3 flex-wrap">
+          {/* Поиск */}
+          <div className="relative flex items-center">
+            <Icon name="Search" size={13} className="absolute left-2.5 text-[hsl(var(--text-muted))] pointer-events-none" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Поиск по названию, артикулу, цвету..."
+              className="bg-[hsl(220,12%,14%)] border border-border rounded pl-8 pr-8 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors w-72"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-2 text-[hsl(var(--text-muted))] hover:text-foreground transition-colors">
+                <Icon name="X" size={12} />
               </button>
             )}
-            <span className="text-xs text-[hsl(var(--text-muted))]">
-              {filteredMaterials.length} позиций
-            </span>
           </div>
-        )}
+
+          {/* Категория */}
+          {(visibleCategories.length > 0 || hasNoCat) && (
+            <>
+              <select
+                value={catFilter}
+                onChange={e => setCatFilter(e.target.value)}
+                className="bg-[hsl(220,12%,14%)] border border-border rounded px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors cursor-pointer"
+              >
+                <option value="all">Все категории</option>
+                {visibleCategories.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+                {hasNoCat && <option value="none">Без категории</option>}
+              </select>
+              {catFilter !== 'all' && (
+                <button onClick={() => setCatFilter('all')} className="text-xs text-[hsl(var(--text-muted))] hover:text-foreground transition-colors flex items-center gap-1">
+                  <Icon name="X" size={12} /> Сбросить
+                </button>
+              )}
+            </>
+          )}
+
+          <span className="text-xs text-[hsl(var(--text-muted))] ml-auto">
+            {filteredMaterials.length} позиций
+          </span>
+        </div>
 
 
 
