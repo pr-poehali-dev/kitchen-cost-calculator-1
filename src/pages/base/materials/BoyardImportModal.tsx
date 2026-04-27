@@ -80,17 +80,17 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
 
     // Каждый товар — один материал с одним вариантом (розница руб)
     const materials = items.map(item => {
-      const article = boyardArticle(item.article);
+      const internalId = boyardArticle(item.article); // для variantId и матчинга
       return {
         name: item.name,
         typeId: item.type_id,
         vendorId: BOYARD_VENDOR_ID,
-        article,
+        article: item.article, // оригинальный артикул из прайса (K100BN.12)
         categoryKey: item.category,
         unit: item.unit as 'шт',
         variants: [{
-          variantId: `${article}__retail`,
-          size: item.article, // оригинальный артикул в поле size для отображения
+          variantId: `${internalId}__retail`,
+          size: item.article,
           params: 'розница',
           basePrice: item.price_retail,
         }],

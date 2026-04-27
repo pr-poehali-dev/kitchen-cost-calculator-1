@@ -53,17 +53,18 @@ export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
       setAllItems(items);
       setRate(data.rate || 0);
 
-      // Строим карту normalizedArticle → item
+      // Строим карту originalArticle → item (по оригинальному артикулу прайса)
       const priceMap = new Map<string, BoyardItem>();
       for (const item of items) {
-        priceMap.set(boyardArticle(item.article), item);
+        priceMap.set(item.article, item); // K100BN.12 → item
       }
 
-      // Ищем изменившиеся цены среди материалов BOYARD в базе
+      // Идентифицируем материалы BOYARD по производителю
+      const boyardMfr = store.manufacturers.find(m => m.name.toLowerCase() === 'boyard');
       const result: ChangedMaterial[] = [];
       for (const mat of store.materials) {
-        if (!mat.article || !mat.article.startsWith('boyard__')) continue;
-        const item = priceMap.get(mat.article);
+        if (!mat.article || mat.manufacturerId !== boyardMfr?.id) continue;
+        const item = priceMap.get(mat.article); // ищем по оригинальному артикулу
         if (!item) continue;
 
         const variant = mat.variants?.find(v => v.params === 'розница');
@@ -102,12 +103,12 @@ export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
     const updates = selected.map(m => ({
       article: m.article,
       variants: [{
-        variantId: `${m.article}__retail`,
+        variantId: `${boyardArticle(m.article)}__retail`, // внутренний ID варианта
         basePrice: m.newPrice,
         params: 'розница',
       }],
     }));
-    store.updateSkatPrices(updates); // переиспользуем тот же механизм
+    store.updateSkatPrices(updates);
     setSaved(true);
     setTimeout(onClose, 1500);
   };

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import type { Vendor, Material } from '@/store/types';
 import Icon from '@/components/ui/icon';
@@ -21,29 +21,36 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
   const vendor = store.vendors.find(v => v.id === selectedId);
   const allTypes = store.settings.materialTypes;
 
-  const vendorMaterials = store.materials.filter(m => m.vendorId === selectedId);
+  const vendorMaterials = useMemo(() =>
+    store.materials.filter(m => m.vendorId === selectedId),
+    [store.materials, selectedId]
+  );
 
-  const sq = sideSearch.trim().toLowerCase();
-  const visibleVendors = sq
-    ? store.vendors.filter(v => v.name.toLowerCase().includes(sq))
-    : store.vendors;
+  const visibleVendors = useMemo(() => {
+    const sq = sideSearch.trim().toLowerCase();
+    return sq ? store.vendors.filter(v => v.name.toLowerCase().includes(sq)) : store.vendors;
+  }, [store.vendors, sideSearch]);
 
-  const mq = matSearch.trim().toLowerCase();
-  const filteredVendorMaterials = mq
-    ? vendorMaterials.filter(m =>
-        m.name.toLowerCase().includes(mq) ||
-        (m.article || '').toLowerCase().includes(mq) ||
-        (m.color || '').toLowerCase().includes(mq)
-      )
-    : vendorMaterials;
+  const filteredVendorMaterials = useMemo(() => {
+    const mq = matSearch.trim().toLowerCase();
+    if (!mq) return vendorMaterials;
+    return vendorMaterials.filter(m =>
+      m.name.toLowerCase().includes(mq) ||
+      (m.article || '').toLowerCase().includes(mq) ||
+      (m.color || '').toLowerCase().includes(mq)
+    );
+  }, [vendorMaterials, matSearch]);
 
   // Производители у которых уже есть материалы у этого поставщика
-  const mfrWithMaterials = store.manufacturers
-    .filter(mfr => filteredVendorMaterials.some(m => m.manufacturerId === mfr.id))
-    .map(mfr => ({
-      manufacturer: mfr,
-      materials: filteredVendorMaterials.filter(m => m.manufacturerId === mfr.id),
-    }));
+  const mfrWithMaterials = useMemo(() =>
+    store.manufacturers
+      .filter(mfr => filteredVendorMaterials.some(m => m.manufacturerId === mfr.id))
+      .map(mfr => ({
+        manufacturer: mfr,
+        materials: filteredVendorMaterials.filter(m => m.manufacturerId === mfr.id),
+      })),
+    [store.manufacturers, filteredVendorMaterials]
+  );
 
   // Все доступные производители (для добавления связи)
   const availableMfrs = store.manufacturers;

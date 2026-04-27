@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import type { Material } from '@/store/types';
 import Icon from '@/components/ui/icon';
@@ -34,27 +34,42 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
   const allTypes = store.settings.materialTypes;
   const allCategories = store.settings.materialCategories || [];
 
-  const typeFiltered = matTypeFilter === 'all'
-    ? store.materials
-    : store.materials.filter(m => m.typeId === matTypeFilter);
+  const typeFiltered = useMemo(() =>
+    matTypeFilter === 'all'
+      ? store.materials
+      : store.materials.filter(m => m.typeId === matTypeFilter),
+    [store.materials, matTypeFilter]
+  );
 
-  const catFiltered = catFilter === 'all'
-    ? typeFiltered
-    : catFilter === 'none'
-      ? typeFiltered.filter(m => !m.categoryId)
-      : typeFiltered.filter(m => m.categoryId === catFilter);
+  const catFiltered = useMemo(() =>
+    catFilter === 'all'
+      ? typeFiltered
+      : catFilter === 'none'
+        ? typeFiltered.filter(m => !m.categoryId)
+        : typeFiltered.filter(m => m.categoryId === catFilter),
+    [typeFiltered, catFilter]
+  );
 
-  const q = search.trim().toLowerCase();
-  const filteredMaterials = q
-    ? catFiltered.filter(m =>
-        m.name.toLowerCase().includes(q) ||
-        (m.article || '').toLowerCase().includes(q) ||
-        (m.color || '').toLowerCase().includes(q)
-      )
-    : catFiltered;
+  const filteredMaterials = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return catFiltered;
+    return catFiltered.filter(m =>
+      m.name.toLowerCase().includes(q) ||
+      (m.article || '').toLowerCase().includes(q) ||
+      (m.color || '').toLowerCase().includes(q)
+    );
+  }, [catFiltered, search]);
 
-  const visibleCategories = allCategories.filter(c => typeFiltered.some(m => m.categoryId === c.id));
-  const hasNoCat = typeFiltered.some(m => !m.categoryId);
+  const typeMatSet = useMemo(() => {
+    const catIds = new Set(typeFiltered.map(m => m.categoryId).filter(Boolean));
+    return { catIds, hasNoCat: typeFiltered.some(m => !m.categoryId) };
+  }, [typeFiltered]);
+
+  const visibleCategories = useMemo(() =>
+    allCategories.filter(c => typeMatSet.catIds.has(c.id)),
+    [allCategories, typeMatSet]
+  );
+  const hasNoCat = typeMatSet.hasNoCat;
 
   return (
     <>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import type { Manufacturer, Material } from '@/store/types';
 import Icon from '@/components/ui/icon';
@@ -23,24 +23,25 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
   const allTypes = store.settings.materialTypes;
   const allCategories = store.settings.materialCategories || [];
 
-  const sq = sideSearch.trim().toLowerCase();
-  const visibleMfrs = sq
-    ? store.manufacturers.filter(m => m.name.toLowerCase().includes(sq))
-    : store.manufacturers;
+  const visibleMfrs = useMemo(() => {
+    const sq = sideSearch.trim().toLowerCase();
+    return sq ? store.manufacturers.filter(m => m.name.toLowerCase().includes(sq)) : store.manufacturers;
+  }, [store.manufacturers, sideSearch]);
 
-  const mq = matSearch.trim().toLowerCase();
-  const catMaterials = catFilter === 'all'
-    ? mfrMaterials
-    : catFilter === 'none'
-      ? mfrMaterials.filter(m => !m.categoryId)
-      : mfrMaterials.filter(m => m.categoryId === catFilter);
-  const filteredMfrMaterials = mq
-    ? catMaterials.filter(m =>
-        m.name.toLowerCase().includes(mq) ||
-        (m.article || '').toLowerCase().includes(mq) ||
-        (m.color || '').toLowerCase().includes(mq)
-      )
-    : catMaterials;
+  const filteredMfrMaterials = useMemo(() => {
+    const catMaterials = catFilter === 'all'
+      ? mfrMaterials
+      : catFilter === 'none'
+        ? mfrMaterials.filter(m => !m.categoryId)
+        : mfrMaterials.filter(m => m.categoryId === catFilter);
+    const mq = matSearch.trim().toLowerCase();
+    if (!mq) return catMaterials;
+    return catMaterials.filter(m =>
+      m.name.toLowerCase().includes(mq) ||
+      (m.article || '').toLowerCase().includes(mq) ||
+      (m.color || '').toLowerCase().includes(mq)
+    );
+  }, [mfrMaterials, catFilter, matSearch]);
 
   const groupedByType = allTypes
     .filter(t => filteredMfrMaterials.some(m => m.typeId === t.id))
