@@ -15,18 +15,34 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
   const [editingVendor, setEditingVendor] = useState<Partial<Vendor> | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Partial<Material> | null>(null);
   const [expandedMfr, setExpandedMfr] = useState<Record<string, boolean>>({});
+  const [sideSearch, setSideSearch] = useState('');
+  const [matSearch, setMatSearch] = useState('');
 
   const vendor = store.vendors.find(v => v.id === selectedId);
   const allTypes = store.settings.materialTypes;
 
   const vendorMaterials = store.materials.filter(m => m.vendorId === selectedId);
 
+  const sq = sideSearch.trim().toLowerCase();
+  const visibleVendors = sq
+    ? store.vendors.filter(v => v.name.toLowerCase().includes(sq))
+    : store.vendors;
+
+  const mq = matSearch.trim().toLowerCase();
+  const filteredVendorMaterials = mq
+    ? vendorMaterials.filter(m =>
+        m.name.toLowerCase().includes(mq) ||
+        (m.article || '').toLowerCase().includes(mq) ||
+        (m.color || '').toLowerCase().includes(mq)
+      )
+    : vendorMaterials;
+
   // Производители у которых уже есть материалы у этого поставщика
   const mfrWithMaterials = store.manufacturers
-    .filter(mfr => vendorMaterials.some(m => m.manufacturerId === mfr.id))
+    .filter(mfr => filteredVendorMaterials.some(m => m.manufacturerId === mfr.id))
     .map(mfr => ({
       manufacturer: mfr,
-      materials: vendorMaterials.filter(m => m.manufacturerId === mfr.id),
+      materials: filteredVendorMaterials.filter(m => m.manufacturerId === mfr.id),
     }));
 
   // Все доступные производители (для добавления связи)
@@ -40,11 +56,25 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
       <div className="flex gap-6 h-full min-h-0">
         {/* Sidebar */}
         <div className="w-64 shrink-0 flex flex-col gap-2">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-2">
             <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))]">Поставщики</div>
             <span className="text-xs text-[hsl(var(--text-muted))]">{store.vendors.length}</span>
           </div>
-          {store.vendors.map(v => {
+          <div className="relative mb-2">
+            <Icon name="Search" size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] pointer-events-none" />
+            <input
+              value={sideSearch}
+              onChange={e => setSideSearch(e.target.value)}
+              placeholder="Поиск..."
+              className="w-full bg-[hsl(220,12%,14%)] border border-border rounded pl-7 pr-6 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors"
+            />
+            {sideSearch && (
+              <button onClick={() => setSideSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] hover:text-foreground">
+                <Icon name="X" size={11} />
+              </button>
+            )}
+          </div>
+          {visibleVendors.map(v => {
             const matCount = store.materials.filter(m => m.vendorId === v.id).length;
             const mfrCount = store.manufacturers.filter(mfr =>
               store.materials.some(m => m.vendorId === v.id && m.manufacturerId === mfr.id)
@@ -84,8 +114,10 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
               </button>
             );
           })}
-          {store.vendors.length === 0 && (
-            <div className="text-center py-8 text-xs text-[hsl(var(--text-muted))] opacity-60">Нет поставщиков</div>
+          {visibleVendors.length === 0 && (
+            <div className="text-center py-8 text-xs text-[hsl(var(--text-muted))] opacity-60">
+              {sideSearch ? 'Не найдено' : 'Нет поставщиков'}
+            </div>
           )}
           <button
             onClick={() => setEditingVendor({ name: '', contact: '', phone: '', materialTypeIds: [] })}
@@ -246,8 +278,25 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
 
             {/* Ассортимент grouped by manufacturer */}
             <div className="bg-[hsl(220,14%,11%)] rounded border border-border">
-              <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-                <span className="text-sm font-medium">Ассортимент поставщика ({vendorMaterials.length} позиций)</span>
+              <div className="px-4 py-3 border-b border-border flex items-center justify-between gap-3">
+                <span className="text-sm font-medium shrink-0">Ассортимент ({vendorMaterials.length} позиций)</span>
+                <div className="flex items-center gap-2 flex-1 min-w-0">
+                  <div className="relative flex items-center flex-1 min-w-0 max-w-xs">
+                    <Icon name="Search" size={12} className="absolute left-2.5 text-[hsl(var(--text-muted))] pointer-events-none" />
+                    <input
+                      value={matSearch}
+                      onChange={e => setMatSearch(e.target.value)}
+                      placeholder="Поиск по материалам..."
+                      className="w-full bg-[hsl(220,12%,14%)] border border-border rounded pl-7 pr-6 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors"
+                    />
+                    {matSearch && (
+                      <button onClick={() => setMatSearch('')} className="absolute right-2 text-[hsl(var(--text-muted))] hover:text-foreground">
+                        <Icon name="X" size={11} />
+                      </button>
+                    )}
+                  </div>
+                  {matSearch && <span className="text-xs text-[hsl(var(--text-muted))] shrink-0">{filteredVendorMaterials.length} найдено</span>}
+                </div>
                 <button
                   onClick={() => setEditingMaterial({
                     vendorId: vendor.id,
@@ -255,9 +304,9 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
                     typeId: allTypes[0]?.id,
                     basePrice: 0,
                   })}
-                  className="flex items-center gap-1.5 text-xs text-gold hover:opacity-80"
+                  className="flex items-center gap-1.5 text-xs text-gold hover:opacity-80 shrink-0"
                 >
-                  <Icon name="Plus" size={12} /> Добавить позицию
+                  <Icon name="Plus" size={12} /> Добавить
                 </button>
               </div>
 

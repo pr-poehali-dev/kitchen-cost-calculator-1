@@ -7,15 +7,38 @@ import { fmt, Field, Modal } from './BaseShared';
 export default function ServicesTab() {
   const store = useStore();
   const [editingService, setEditingService] = useState<Partial<Service> | null>(null);
+  const [search, setSearch] = useState('');
+
+  const q = search.trim().toLowerCase();
+  const filteredServices = q
+    ? store.services.filter(sv =>
+        sv.name.toLowerCase().includes(q) ||
+        (sv.category || '').toLowerCase().includes(q)
+      )
+    : store.services;
 
   return (
     <>
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <div className="text-sm text-[hsl(var(--text-muted))]">Услуги в базе: {store.services.length}</div>
+        <div className="flex items-center gap-3 mb-4">
+          <div className="relative flex items-center flex-1 max-w-sm">
+            <Icon name="Search" size={13} className="absolute left-2.5 text-[hsl(var(--text-muted))] pointer-events-none" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Поиск по названию или категории..."
+              className="w-full bg-[hsl(220,12%,14%)] border border-border rounded pl-8 pr-7 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors"
+            />
+            {search && (
+              <button onClick={() => setSearch('')} className="absolute right-2 text-[hsl(var(--text-muted))] hover:text-foreground">
+                <Icon name="X" size={12} />
+              </button>
+            )}
+          </div>
+          <span className="text-xs text-[hsl(var(--text-muted))]">{filteredServices.length} из {store.services.length}</span>
           <button
             onClick={() => setEditingService({ category: '', unit: 'шт', basePrice: 0 })}
-            className="flex items-center gap-2 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90"
+            className="flex items-center gap-2 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90 ml-auto"
           >
             <Icon name="Plus" size={14} /> Добавить услугу
           </button>
@@ -25,7 +48,12 @@ export default function ServicesTab() {
             style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 28px' }}>
             <span>Наименование</span><span>Категория</span><span>Ед. изм.</span><span className="text-right">Цена</span><span></span>
           </div>
-          {store.services.map(sv => (
+          {filteredServices.length === 0 && (
+            <div className="px-4 py-8 text-center text-[hsl(var(--text-muted))] text-sm">
+              {search ? 'Ничего не найдено' : 'Нет услуг'}
+            </div>
+          )}
+          {filteredServices.map(sv => (
             <div key={sv.id} className="grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,14%)] hover:bg-[hsl(220,12%,12%)] group transition-colors text-sm"
               style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 28px' }}>
               <div>

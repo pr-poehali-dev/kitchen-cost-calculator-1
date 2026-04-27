@@ -15,17 +15,32 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
   const [editingMfr, setEditingMfr] = useState<Partial<Manufacturer> | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Partial<Material> | null>(null);
   const [catFilter, setCatFilter] = useState<string>('all');
+  const [sideSearch, setSideSearch] = useState('');
+  const [matSearch, setMatSearch] = useState('');
 
   const manufacturer = store.manufacturers.find(m => m.id === selectedId);
   const mfrMaterials = store.materials.filter(m => m.manufacturerId === selectedId);
   const allTypes = store.settings.materialTypes;
   const allCategories = store.settings.materialCategories || [];
 
-  const filteredMfrMaterials = catFilter === 'all'
+  const sq = sideSearch.trim().toLowerCase();
+  const visibleMfrs = sq
+    ? store.manufacturers.filter(m => m.name.toLowerCase().includes(sq))
+    : store.manufacturers;
+
+  const mq = matSearch.trim().toLowerCase();
+  const catMaterials = catFilter === 'all'
     ? mfrMaterials
     : catFilter === 'none'
       ? mfrMaterials.filter(m => !m.categoryId)
       : mfrMaterials.filter(m => m.categoryId === catFilter);
+  const filteredMfrMaterials = mq
+    ? catMaterials.filter(m =>
+        m.name.toLowerCase().includes(mq) ||
+        (m.article || '').toLowerCase().includes(mq) ||
+        (m.color || '').toLowerCase().includes(mq)
+      )
+    : catMaterials;
 
   const groupedByType = allTypes
     .filter(t => filteredMfrMaterials.some(m => m.typeId === t.id))
@@ -45,11 +60,25 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
       <div className="flex gap-6 h-full min-h-0">
         {/* Sidebar */}
         <div className="w-64 shrink-0 flex flex-col gap-2">
-          <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center justify-between mb-2">
             <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))]">Производители</div>
             <span className="text-xs text-[hsl(var(--text-muted))]">{store.manufacturers.length}</span>
           </div>
-          {store.manufacturers.map(m => {
+          <div className="relative mb-2">
+            <Icon name="Search" size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] pointer-events-none" />
+            <input
+              value={sideSearch}
+              onChange={e => setSideSearch(e.target.value)}
+              placeholder="Поиск..."
+              className="w-full bg-[hsl(220,12%,14%)] border border-border rounded pl-7 pr-6 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors"
+            />
+            {sideSearch && (
+              <button onClick={() => setSideSearch('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] hover:text-foreground">
+                <Icon name="X" size={11} />
+              </button>
+            )}
+          </div>
+          {visibleMfrs.map(m => {
             const matCount = store.materials.filter(mat => mat.manufacturerId === m.id).length;
             const types = (m.materialTypeIds || []).slice(0, 4).map(tid => store.getTypeById(tid)).filter(Boolean);
             const isActive = selectedId === m.id;
@@ -88,8 +117,10 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
               </button>
             );
           })}
-          {store.manufacturers.length === 0 && (
-            <div className="text-center py-8 text-xs text-[hsl(var(--text-muted))] opacity-60">Нет производителей</div>
+          {visibleMfrs.length === 0 && (
+            <div className="text-center py-8 text-xs text-[hsl(var(--text-muted))] opacity-60">
+              {sideSearch ? 'Не найдено' : 'Нет производителей'}
+            </div>
           )}
           <button
             onClick={() => setEditingMfr({ name: '', contact: '', phone: '', materialTypeIds: [] })}
@@ -202,29 +233,34 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
                 </button>
               </div>
 
-              {/* Category filter */}
+              {/* Search + Category filter */}
               {mfrMaterials.length > 0 && (
-                <div className="px-4 py-2 border-b border-border flex flex-wrap gap-1.5">
-                  <button onClick={() => setCatFilter('all')}
-                    className={`px-2.5 py-1 rounded text-xs transition-colors ${catFilter === 'all' ? 'bg-gold text-[hsl(220,16%,8%)] font-medium' : 'bg-[hsl(220,12%,18%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}>
-                    Все
-                  </button>
-                  {allCategories.filter(c => mfrMaterials.some(m => m.categoryId === c.id)).map(c => {
-                    const ct = c.typeId ? store.getTypeById(c.typeId) : null;
-                    return (
-                      <button key={c.id} onClick={() => setCatFilter(c.id)}
-                        className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${catFilter === c.id ? 'text-[hsl(220,16%,8%)]' : 'bg-[hsl(220,12%,18%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
-                        style={catFilter === c.id ? { backgroundColor: ct?.color || '#c8a96e' } : {}}>
-                        {c.name}
+                <div className="px-4 py-2 border-b border-border flex items-center gap-2 flex-wrap">
+                  <div className="relative flex items-center">
+                    <Icon name="Search" size={12} className="absolute left-2.5 text-[hsl(var(--text-muted))] pointer-events-none" />
+                    <input
+                      value={matSearch}
+                      onChange={e => setMatSearch(e.target.value)}
+                      placeholder="Поиск по материалам..."
+                      className="bg-[hsl(220,12%,14%)] border border-border rounded pl-7 pr-6 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors w-52"
+                    />
+                    {matSearch && (
+                      <button onClick={() => setMatSearch('')} className="absolute right-2 text-[hsl(var(--text-muted))] hover:text-foreground">
+                        <Icon name="X" size={11} />
                       </button>
-                    );
-                  })}
-                  {mfrMaterials.some(m => !m.categoryId) && (
-                    <button onClick={() => setCatFilter('none')}
-                      className={`px-2.5 py-1 rounded text-xs transition-colors ${catFilter === 'none' ? 'bg-[hsl(220,12%,30%)] text-foreground font-medium' : 'bg-[hsl(220,12%,18%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}>
-                      Без категории
-                    </button>
+                    )}
+                  </div>
+                  {allCategories.filter(c => mfrMaterials.some(m => m.categoryId === c.id)).length > 0 && (
+                    <select value={catFilter} onChange={e => setCatFilter(e.target.value)}
+                      className="bg-[hsl(220,12%,14%)] border border-border rounded px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors cursor-pointer">
+                      <option value="all">Все категории</option>
+                      {allCategories.filter(c => mfrMaterials.some(m => m.categoryId === c.id)).map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                      ))}
+                      {mfrMaterials.some(m => !m.categoryId) && <option value="none">Без категории</option>}
+                    </select>
                   )}
+                  <span className="text-xs text-[hsl(var(--text-muted))] ml-auto">{filteredMfrMaterials.length} позиций</span>
                 </div>
               )}
 
