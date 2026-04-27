@@ -14,7 +14,7 @@ function apiUrl(action: string, clientId: string, doc: string) {
   return `${API}/?action=${action}&client_id=${clientId}&doc=${doc}&token=${encodeURIComponent(getToken())}`;
 }
 
-type DocType = 'contract' | 'act' | 'tech' | 'delivery' | 'assembly' | 'rules' | 'act_delivery' | 'act_assembly';
+type DocType = 'contract' | 'act' | 'tech' | 'delivery' | 'assembly' | 'rules' | 'act_delivery' | 'act_assembly' | 'addendum';
 
 interface DocDef {
   id: DocType;
@@ -89,6 +89,14 @@ const DOCS: DocDef[] = [
     icon: 'ClipboardList',
     appendix: '',
     group: 'Доставка и монтаж',
+  },
+  {
+    id: 'addendum',
+    title: 'Дополнительное соглашение',
+    subtitle: 'К договору бытового подряда на изготовление мебели',
+    icon: 'FilePlus2',
+    appendix: '',
+    group: 'Прочее',
   },
 ];
 
