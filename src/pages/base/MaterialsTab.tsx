@@ -37,6 +37,10 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
   const [showArchived, setShowArchived] = useState(false);
   const [showExcelImport, setShowExcelImport] = useState(false);
 
+  // Массовое выделение
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
   const allTypes = store.settings.materialTypes;
   const allCategories = store.settings.materialCategories || [];
 
@@ -67,7 +71,9 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
     );
   }, [catFiltered, search, showArchived]);
 
-  // Предупреждение: материалы с ценами > 30 дней
+  // Сбрасываем выделение при смене фильтра
+  useEffect(() => { setSelected(new Set()); }, [filteredMaterials]);
+
   const staleCount = useMemo(() => {
     const now = Date.now();
     return store.materials.filter(m => {
@@ -90,7 +96,6 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
   );
   const hasNoCat = typeMatSet.hasNoCat;
 
-  // Предварительные Map для O(1) lookups вместо find() в каждой строке
   const mfrMap = useMemo(() =>
     new Map(store.manufacturers.map(m => [m.id, m])),
     [store.manufacturers]
@@ -108,11 +113,50 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
     [allCategories]
   );
 
-  // Виртуальный рендер — показываем порциями по 100
   const PAGE = 100;
   const [visibleCount, setVisibleCount] = useState(PAGE);
   useEffect(() => { setVisibleCount(PAGE); }, [filteredMaterials]);
   const visibleMaterials = filteredMaterials.slice(0, visibleCount);
+
+  // Вспомогательные функции выделения
+  const allVisibleIds = visibleMaterials.map(m => m.id);
+  const allFilteredIds = filteredMaterials.map(m => m.id);
+  const isAllVisibleSelected = allVisibleIds.length > 0 && allVisibleIds.every(id => selected.has(id));
+  const isIndeterminate = !isAllVisibleSelected && allVisibleIds.some(id => selected.has(id));
+
+  const toggleOne = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) { next.delete(id); } else { next.add(id); }
+      return next;
+    });
+  };
+
+  const toggleAllVisible = () => {
+    if (isAllVisibleSelected) {
+      setSelected(prev => {
+        const next = new Set(prev);
+        allVisibleIds.forEach(id => next.delete(id));
+        return next;
+      });
+    } else {
+      setSelected(prev => new Set([...prev, ...allVisibleIds]));
+    }
+  };
+
+  const selectAll = () => setSelected(new Set(allFilteredIds));
+  const clearSelection = () => setSelected(new Set());
+
+  const handleBulkDelete = () => {
+    selected.forEach(id => store.deleteMaterial(id));
+    setSelected(new Set());
+    setConfirmDelete(false);
+  };
+
+  const handleBulkArchive = () => {
+    selected.forEach(id => store.updateMaterial(id, { archived: true }));
+    setSelected(new Set());
+  };
 
   return (
     <>
@@ -139,7 +183,6 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
           </div>
 
           <div className="flex gap-2 shrink-0">
-            {/* Dropdown: импорт и обновление цен */}
             <div className="relative">
               <button
                 onClick={() => setShowImportMenu(v => !v)}
@@ -206,7 +249,6 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
           </div>
         </div>
 
-        {/* Предупреждение о старых ценах */}
         {staleCount > 0 && !showArchived && (
           <div className="flex items-center gap-3 px-3 py-2 mb-3 bg-amber-400/10 border border-amber-400/30 rounded-lg text-xs text-amber-400">
             <Icon name="Clock" size={13} className="shrink-0" />
@@ -216,7 +258,6 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
           </div>
         )}
 
-        {/* Кнопки фильтра архива */}
         <div className="flex items-center gap-2 mb-3">
           <button
             onClick={() => setShowArchived(false)}
@@ -245,9 +286,8 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
           )}
         </div>
 
-        {/* Строка 2: поиск + фильтр по категории */}
+        {/* Поиск + фильтр */}
         <div className="flex items-center gap-2 mb-3 flex-wrap">
-          {/* Поиск */}
           <div className="relative flex items-center">
             <Icon name="Search" size={13} className="absolute left-2.5 text-[hsl(var(--text-muted))] pointer-events-none" />
             <input
@@ -263,7 +303,6 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
             )}
           </div>
 
-          {/* Категория */}
           {(visibleCategories.length > 0 || hasNoCat) && (
             <>
               <select
@@ -290,11 +329,59 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
           </span>
         </div>
 
+        {/* Панель массовых действий */}
+        {selected.size > 0 && (
+          <div className="flex items-center gap-3 px-3 py-2 mb-3 bg-[hsl(220,12%,16%)] border border-gold/30 rounded-lg">
+            <span className="text-xs text-gold font-medium">
+              Выбрано: {selected.size}
+            </span>
+            {selected.size < filteredMaterials.length && (
+              <button
+                onClick={selectAll}
+                className="text-xs text-[hsl(var(--text-muted))] hover:text-gold transition-colors"
+              >
+                Выбрать все {filteredMaterials.length}
+              </button>
+            )}
+            <div className="flex items-center gap-2 ml-auto">
+              {!showArchived && (
+                <button
+                  onClick={handleBulkArchive}
+                  className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[hsl(220,12%,20%)] border border-border rounded hover:border-[hsl(220,12%,30%)] text-[hsl(var(--text-dim))] hover:text-foreground transition-all"
+                >
+                  <Icon name="Archive" size={12} /> В архив
+                </button>
+              )}
+              <button
+                onClick={() => setConfirmDelete(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-destructive/10 border border-destructive/30 rounded hover:bg-destructive/20 text-destructive transition-all"
+              >
+                <Icon name="Trash2" size={12} /> Удалить {selected.size}
+              </button>
+              <button
+                onClick={clearSelection}
+                className="text-[hsl(var(--text-muted))] hover:text-foreground transition-colors"
+              >
+                <Icon name="X" size={14} />
+              </button>
+            </div>
+          </div>
+        )}
 
-
+        {/* Таблица */}
         <div className="bg-[hsl(220,14%,11%)] rounded border border-border">
           <div className="grid text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider px-4 py-2.5 border-b border-border"
-            style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 0.8fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
+            style={{ gridTemplateColumns: '20px 2fr 1fr 1fr 1fr 0.8fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
+            {/* Чекбокс "выбрать все видимые" */}
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                checked={isAllVisibleSelected}
+                ref={el => { if (el) el.indeterminate = isIndeterminate; }}
+                onChange={toggleAllVisible}
+                className="w-3.5 h-3.5 rounded accent-gold cursor-pointer"
+              />
+            </div>
             <span>Наименование</span><span>Производитель</span><span>Поставщик</span><span>Тип</span>
             <span>Категория</span><span>Толщ.</span><span>Цвет</span><span>Артикул</span><span className="text-right">Цена</span><span></span>
           </div>
@@ -306,9 +393,26 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
             const vendor = vendorMap.get(m.vendorId || '');
             const t = typeMap.get(m.typeId);
             const cat = catMap.get(m.categoryId || '');
+            const isSelected = selected.has(m.id);
             return (
-              <div key={m.id} className="grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,14%)] hover:bg-[hsl(220,12%,12%)] group transition-colors text-sm"
-                style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 0.8fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
+              <div
+                key={m.id}
+                onClick={() => toggleOne(m.id)}
+                className={`grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,14%)] group transition-colors text-sm cursor-pointer ${
+                  isSelected
+                    ? 'bg-gold/5 border-b-gold/10'
+                    : 'hover:bg-[hsl(220,12%,12%)]'
+                }`}
+                style={{ gridTemplateColumns: '20px 2fr 1fr 1fr 1fr 0.8fr 0.7fr 1fr 0.7fr 1fr 28px' }}
+              >
+                <div className="flex items-center" onClick={e => e.stopPropagation()}>
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleOne(m.id)}
+                    className="w-3.5 h-3.5 rounded accent-gold cursor-pointer"
+                  />
+                </div>
                 <div className="flex items-center gap-2 truncate">
                   {t && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: t.color || '#888' }} />}
                   <span className="truncate text-foreground">{m.name}</span>
@@ -324,7 +428,10 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
                 <span className="text-xs text-[hsl(var(--text-dim))] truncate">{m.color || '—'}</span>
                 <span className="text-xs text-[hsl(var(--text-dim))]">{m.article || '—'}</span>
                 <span className="text-right font-mono text-sm">{fmt(m.basePrice)} <span className="text-[hsl(var(--text-muted))] text-xs">/{m.unit}</span></span>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div
+                  className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={e => e.stopPropagation()}
+                >
                   <button onClick={() => setEditingMaterial(m)} className="text-[hsl(var(--text-muted))] hover:text-foreground"><Icon name="Pencil" size={12} /></button>
                   <button onClick={() => store.deleteMaterial(m.id)} className="text-[hsl(var(--text-muted))] hover:text-destructive"><Icon name="Trash2" size={12} /></button>
                 </div>
@@ -338,131 +445,103 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
                 onClick={() => setVisibleCount(c => c + PAGE)}
                 className="px-3 py-1.5 bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,20%)] rounded transition-colors text-foreground"
               >
-                Показать ещё {Math.min(PAGE, filteredMaterials.length - visibleCount)}
+                Показать ещё
               </button>
             </div>
           )}
         </div>
       </div>
 
-      {/* Modal: SKAT import */}
-      {showSkatImport && (
-        <SkatImportModal onClose={() => setShowSkatImport(false)} />
-      )}
-
-      {/* Modal: SKAT price update */}
-      {showSkatPrice && (
-        <SkatPriceModal onClose={() => setShowSkatPrice(false)} />
-      )}
-
-      {/* Modal: BOYARD import */}
-      {showBoyardImport && (
-        <BoyardImportModal onClose={() => setShowBoyardImport(false)} />
-      )}
-
-      {/* Modal: BOYARD price update */}
-      {showBoyardPrice && (
-        <BoyardPriceModal onClose={() => setShowBoyardPrice(false)} />
-      )}
-
-      {/* Modal: Excel price update */}
-      {showExcelPrice && (
-        <ExcelPriceModal onClose={() => setShowExcelPrice(false)} />
-      )}
-
-      {/* Modal: Pricelist update */}
-      {showPricelistUpdate && (
-        <PricelistUpdateModal onClose={() => setShowPricelistUpdate(false)} />
-      )}
-
-      {/* Modal: Bulk price */}
-      {showBulkPrice && (
-        <BulkPriceModal
-          materials={filteredMaterials}
-          onClose={() => setShowBulkPrice(false)}
-        />
-      )}
-
-      {/* Modal: Material */}
-      {editingMaterial !== null && (
-        <MaterialEditModal
-          editingMaterial={editingMaterial}
-          onChange={setEditingMaterial}
-          onClose={() => setEditingMaterial(null)}
-        />
-      )}
-
-      {/* Modal: Массовое обновление цен на % */}
-      {showPercentModal && (
+      {/* Диалог подтверждения удаления */}
+      {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg shadow-2xl w-full max-w-sm mx-4 animate-fade-in">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-border">
-              <span className="font-semibold text-sm">Изменить цены на %</span>
-              <button onClick={() => { setShowPercentModal(false); setPercentApplied(false); }} className="text-[hsl(var(--text-muted))] hover:text-foreground">
-                <Icon name="X" size={16} />
-              </button>
-            </div>
-            <div className="px-5 py-4 space-y-4">
-              <p className="text-xs text-[hsl(var(--text-muted))]">
-                Применяется к <span className="text-foreground font-medium">{filteredMaterials.length}</span> материалам
-                {matTypeFilter !== 'all' && <> типа «{allTypes.find(t => t.id === matTypeFilter)?.name}»</>}
-                {catFilter !== 'all' && <> в выбранной категории</>}.
-              </p>
+          <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg shadow-2xl p-6 w-full max-w-sm mx-4 animate-fade-in">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+                <Icon name="Trash2" size={18} className="text-destructive" />
+              </div>
               <div>
-                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">
-                  Процент изменения
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    type="number"
-                    value={percentVal}
-                    onChange={e => setPercentVal(e.target.value)}
-                    placeholder="например +5 или -10"
-                    className="flex-1 bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm outline-none focus:border-gold transition-colors [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-                    autoFocus
-                  />
-                  <span className="text-[hsl(var(--text-muted))]">%</span>
+                <div className="font-semibold text-sm">Удалить материалы?</div>
+                <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5">
+                  Будет удалено {selected.size} позиций без возможности восстановления
                 </div>
-                <p className="text-xs text-[hsl(var(--text-muted))] mt-1">
-                  Положительное — повышение, отрицательное — снижение
-                </p>
               </div>
-              {percentApplied && (
-                <div className="flex items-center gap-2 px-3 py-2 bg-emerald-500/10 border border-emerald-500/30 rounded text-xs text-emerald-400">
-                  <Icon name="Check" size={12} /> Цены обновлены
-                </div>
-              )}
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    const pct = parseFloat(percentVal);
-                    if (isNaN(pct) || pct === 0) return;
-                    filteredMaterials.forEach(m => {
-                      const newPrice = Math.round(m.basePrice * (1 + pct / 100));
-                      store.updateMaterial(m.id, { basePrice: Math.max(0, newPrice) });
-                    });
-                    setPercentApplied(true);
-                    setPercentVal('');
-                  }}
-                  className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90"
-                >
-                  Применить
-                </button>
-                <button
-                  onClick={() => { setShowPercentModal(false); setPercentApplied(false); }}
-                  className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground"
-                >
-                  Закрыть
-                </button>
-              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleBulkDelete}
+                className="flex-1 py-2 bg-destructive text-white rounded text-sm font-medium hover:opacity-90 transition-opacity"
+              >
+                Удалить {selected.size}
+              </button>
+              <button
+                onClick={() => setConfirmDelete(false)}
+                className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground transition-colors"
+              >
+                Отмена
+              </button>
             </div>
           </div>
         </div>
       )}
 
-      {/* Modal: Импорт из Excel с маппингом */}
-      {showExcelImport && (
-        <ExcelMappingImportModal onClose={() => setShowExcelImport(false)} />
+      {/* Модалки */}
+      {editingMaterial !== null && (
+        <MaterialEditModal
+          material={editingMaterial}
+          onClose={() => setEditingMaterial(null)}
+        />
+      )}
+      {showBulkPrice && <BulkPriceModal onClose={() => setShowBulkPrice(false)} />}
+      {showPricelistUpdate && <PricelistUpdateModal onClose={() => setShowPricelistUpdate(false)} />}
+      {showExcelPrice && <ExcelPriceModal onClose={() => setShowExcelPrice(false)} />}
+      {showSkatPrice && <SkatPriceModal onClose={() => setShowSkatPrice(false)} />}
+      {showSkatImport && <SkatImportModal onClose={() => setShowSkatImport(false)} />}
+      {showBoyardImport && <BoyardImportModal onClose={() => setShowBoyardImport(false)} />}
+      {showBoyardPrice && <BoyardPriceModal onClose={() => setShowBoyardPrice(false)} />}
+      {showExcelImport && <ExcelMappingImportModal onClose={() => setShowExcelImport(false)} />}
+
+      {/* Модалка изменения цен на % */}
+      {showPercentModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg shadow-2xl p-5 w-full max-w-xs mx-4 animate-fade-in">
+            <div className="font-semibold text-sm mb-1">Изменить цены на %</div>
+            <div className="text-xs text-[hsl(var(--text-muted))] mb-3">
+              Применится к <span className="text-foreground">{filteredMaterials.length} материалам</span> текущего фильтра
+            </div>
+            <input
+              type="number"
+              value={percentVal}
+              onChange={e => { setPercentVal(e.target.value); setPercentApplied(false); }}
+              placeholder="Например: 10 или -5"
+              className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold mb-3"
+              autoFocus
+            />
+            {percentApplied && (
+              <div className="text-xs text-emerald-400 mb-2">Применено к {filteredMaterials.length} позициям</div>
+            )}
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  const pct = parseFloat(percentVal);
+                  if (isNaN(pct) || pct === 0) return;
+                  filteredMaterials.forEach(m => {
+                    const newPrice = Math.round(m.basePrice * (1 + pct / 100));
+                    store.updateMaterial(m.id, { basePrice: newPrice });
+                  });
+                  setPercentApplied(true);
+                }}
+                className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90"
+              >
+                Применить
+              </button>
+              <button onClick={() => { setShowPercentModal(false); setPercentVal(''); setPercentApplied(false); }}
+                className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground">
+                Закрыть
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
