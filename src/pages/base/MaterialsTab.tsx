@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import type { Material } from '@/store/types';
 import Icon from '@/components/ui/icon';
@@ -70,6 +70,30 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
     [allCategories, typeMatSet]
   );
   const hasNoCat = typeMatSet.hasNoCat;
+
+  // Предварительные Map для O(1) lookups вместо find() в каждой строке
+  const mfrMap = useMemo(() =>
+    new Map(store.manufacturers.map(m => [m.id, m])),
+    [store.manufacturers]
+  );
+  const vendorMap = useMemo(() =>
+    new Map(store.vendors.map(v => [v.id, v])),
+    [store.vendors]
+  );
+  const typeMap = useMemo(() =>
+    new Map(store.settings.materialTypes.map(t => [t.id, t])),
+    [store.settings.materialTypes]
+  );
+  const catMap = useMemo(() =>
+    new Map(allCategories.map(c => [c.id, c])),
+    [allCategories]
+  );
+
+  // Виртуальный рендер — показываем порциями по 100
+  const PAGE = 100;
+  const [visibleCount, setVisibleCount] = useState(PAGE);
+  useEffect(() => { setVisibleCount(PAGE); }, [filteredMaterials]);
+  const visibleMaterials = filteredMaterials.slice(0, visibleCount);
 
   return (
     <>
@@ -210,11 +234,11 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
           {filteredMaterials.length === 0 && (
             <div className="px-4 py-8 text-center text-[hsl(var(--text-muted))] text-sm">Нет материалов</div>
           )}
-          {filteredMaterials.map(m => {
-            const mfr = store.getManufacturerById(m.manufacturerId);
-            const vendor = store.getVendorById(m.vendorId);
-            const t = store.getTypeById(m.typeId);
-            const cat = store.getCategoryById(m.categoryId);
+          {visibleMaterials.map(m => {
+            const mfr = mfrMap.get(m.manufacturerId);
+            const vendor = vendorMap.get(m.vendorId || '');
+            const t = typeMap.get(m.typeId);
+            const cat = catMap.get(m.categoryId || '');
             return (
               <div key={m.id} className="grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,14%)] hover:bg-[hsl(220,12%,12%)] group transition-colors text-sm"
                 style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 0.8fr 0.7fr 1fr 0.7fr 1fr 28px' }}>
@@ -240,6 +264,17 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
               </div>
             );
           })}
+          {visibleCount < filteredMaterials.length && (
+            <div className="px-4 py-3 border-t border-border flex items-center justify-between text-xs text-[hsl(var(--text-muted))]">
+              <span>Показано {visibleCount} из {filteredMaterials.length}</span>
+              <button
+                onClick={() => setVisibleCount(c => c + PAGE)}
+                className="px-3 py-1.5 bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,20%)] rounded transition-colors text-foreground"
+              >
+                Показать ещё {Math.min(PAGE, filteredMaterials.length - visibleCount)}
+              </button>
+            </div>
+          )}
         </div>
       </div>
 

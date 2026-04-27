@@ -21,6 +21,19 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
   const vendor = store.vendors.find(v => v.id === selectedId);
   const allTypes = store.settings.materialTypes;
 
+  // Map: vendorId → {count, mfrIds} — O(1) для сайдбара
+  const vendorStats = useMemo(() => {
+    const countMap = new Map<string, number>();
+    const mfrMap = new Map<string, Set<string>>();
+    for (const m of store.materials) {
+      if (!m.vendorId) continue;
+      countMap.set(m.vendorId, (countMap.get(m.vendorId) || 0) + 1);
+      if (!mfrMap.has(m.vendorId)) mfrMap.set(m.vendorId, new Set());
+      if (m.manufacturerId) mfrMap.get(m.vendorId)!.add(m.manufacturerId);
+    }
+    return { countMap, mfrMap };
+  }, [store.materials]);
+
   const vendorMaterials = useMemo(() =>
     store.materials.filter(m => m.vendorId === selectedId),
     [store.materials, selectedId]
@@ -82,10 +95,8 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
             )}
           </div>
           {visibleVendors.map(v => {
-            const matCount = store.materials.filter(m => m.vendorId === v.id).length;
-            const mfrCount = store.manufacturers.filter(mfr =>
-              store.materials.some(m => m.vendorId === v.id && m.manufacturerId === mfr.id)
-            ).length;
+            const matCount = vendorStats.countMap.get(v.id) || 0;
+            const mfrCount = vendorStats.mfrMap.get(v.id)?.size || 0;
             const types = (v.materialTypeIds || []).slice(0, 4).map(tid => store.getTypeById(tid)).filter(Boolean);
             const isActive = selectedId === v.id;
             return (

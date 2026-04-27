@@ -19,9 +19,22 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
   const [matSearch, setMatSearch] = useState('');
 
   const manufacturer = store.manufacturers.find(m => m.id === selectedId);
-  const mfrMaterials = store.materials.filter(m => m.manufacturerId === selectedId);
   const allTypes = store.settings.materialTypes;
   const allCategories = store.settings.materialCategories || [];
+
+  // Map: manufacturerId → count (O(1) вместо filter() внутри map сайдбара)
+  const mfrMatCount = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const m of store.materials) {
+      map.set(m.manufacturerId, (map.get(m.manufacturerId) || 0) + 1);
+    }
+    return map;
+  }, [store.materials]);
+
+  const mfrMaterials = useMemo(() =>
+    store.materials.filter(m => m.manufacturerId === selectedId),
+    [store.materials, selectedId]
+  );
 
   const visibleMfrs = useMemo(() => {
     const sq = sideSearch.trim().toLowerCase();
@@ -80,7 +93,7 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
             )}
           </div>
           {visibleMfrs.map(m => {
-            const matCount = store.materials.filter(mat => mat.manufacturerId === m.id).length;
+            const matCount = mfrMatCount.get(m.id) || 0;
             const types = (m.materialTypeIds || []).slice(0, 4).map(tid => store.getTypeById(tid)).filter(Boolean);
             const isActive = selectedId === m.id;
             return (
