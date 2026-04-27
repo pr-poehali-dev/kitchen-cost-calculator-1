@@ -373,7 +373,7 @@ def handler(event: dict, context) -> dict:
         cdn_url = f'https://cdn.poehali.dev/projects/{S3_KEY}/bucket/{key}'
         return ok({'url': cdn_url})
 
-    # ── DOCUMENT: generate DOCX ───────────────────────────────────
+    # ── DOCUMENT: generate DOCX (возвращаем base64 напрямую, без S3) ─
     if action == 'doc_docx':
         cid = qs.get('client_id')
         doc_type = qs.get('doc', 'contract')
@@ -390,12 +390,13 @@ def handler(event: dict, context) -> dict:
         client = dict(zip(cols, row))
         conn.close()
         docx_bytes = _build_docx(client, doc_type)
-        doc_id = str(uuid.uuid4())
-        key = f'documents/{doc_id}.docx'
-        s3c = s3_client()
-        s3c.put_object(Bucket='files', Key=key, Body=docx_bytes, ContentType='application/vnd.openxmlformats-officedocument.wordprocessingml.document')
-        cdn_url = f'https://cdn.poehali.dev/projects/{S3_KEY}/bucket/{key}'
-        return ok({'url': cdn_url})
+        import base64
+        b64 = base64.b64encode(docx_bytes).decode('utf-8')
+        return {
+            'statusCode': 200,
+            'headers': {**CORS, 'Content-Type': 'application/json'},
+            'body': json.dumps({'data': b64}),
+        }
 
     return err('Неизвестное действие', 404)
 

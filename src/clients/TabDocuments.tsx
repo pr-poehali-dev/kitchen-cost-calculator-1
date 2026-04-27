@@ -173,10 +173,12 @@ function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterShare }: 
       await ensureSaved();
       const res = await fetch(apiUrl('doc_docx', clientId, doc.id));
       const data = await res.json();
-      if (data.url) {
-        // Скачиваем через fetch→blob чтобы браузер не открывал файл онлайн
-        const fileRes = await fetch(data.url);
-        const blob = await fileRes.blob();
+      if (data.data) {
+        // base64 → Blob → скачивание без CORS
+        const binary = atob(data.data);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
         const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = blobUrl;
@@ -185,7 +187,7 @@ function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterShare }: 
         a.click();
         document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-        toast.success('Word-файл готов');
+        toast.success('Word-файл скачан');
       } else {
         toast.error('Ошибка генерации файла');
       }
@@ -200,14 +202,25 @@ function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterShare }: 
     setLoading('pdf');
     try {
       await ensureSaved();
-      const url = apiUrl('doc_html', clientId, doc.id);
-      const win = window.open(url, '_blank');
+      // Получаем HTML через наш API (без CORS-проблем)
+      const res = await fetch(apiUrl('doc_html', clientId, doc.id));
+      const html = await res.text();
+      // Вставляем скрипт автопечати и открываем в новом окне
+      const htmlWithPrint = html.replace('</body>', `<script>
+        window.addEventListener('load', function() {
+          setTimeout(function() { window.print(); }, 400);
+        });
+      </script></body>`);
+      const blob = new Blob([htmlWithPrint], { type: 'text/html;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      const win = window.open(blobUrl, '_blank');
       if (win) {
-        win.addEventListener('load', () => {
-          setTimeout(() => { win.print(); }, 500);
+        win.addEventListener('afterprint', () => {
+          win.close();
+          URL.revokeObjectURL(blobUrl);
         });
       }
-      toast.success('Откройте "Сохранить как PDF" в диалоге печати');
+      toast.success('В диалоге выберите "Сохранить как PDF"');
     } finally {
       setLoading(null);
     }
@@ -407,9 +420,11 @@ export default function TabDocuments({ client, hasDraft, onSave }: {
       for (const doc of DOCS) {
         const res = await fetch(apiUrl('doc_docx', client.id, doc.id));
         const data = await res.json();
-        if (data.url) {
-          const fileRes = await fetch(data.url);
-          const blob = await fileRes.blob();
+        if (data.data) {
+          const binary = atob(data.data);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
           const blobUrl = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = blobUrl;
@@ -418,7 +433,7 @@ export default function TabDocuments({ client, hasDraft, onSave }: {
           a.click();
           document.body.removeChild(a);
           setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-          await new Promise(r => setTimeout(r, 400));
+          await new Promise(r => setTimeout(r, 600));
         }
       }
       toast.success('Все документы скачаны');
