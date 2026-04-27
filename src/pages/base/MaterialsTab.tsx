@@ -28,6 +28,8 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
   const [showSkatImport, setShowSkatImport] = useState(false);
   const [showBoyardImport, setShowBoyardImport] = useState(false);
   const [showBoyardPrice, setShowBoyardPrice] = useState(false);
+  const [showImportMenu, setShowImportMenu] = useState(false);
+  const [search, setSearch] = useState('');
 
   const allTypes = store.settings.materialTypes;
   const allCategories = store.settings.materialCategories || [];
@@ -50,9 +52,6 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
         (m.color || '').toLowerCase().includes(q)
       )
     : catFiltered;
-
-  const [showImportMenu, setShowImportMenu] = useState(false);
-  const [search, setSearch] = useState('');
 
   const visibleCategories = allCategories.filter(c => typeFiltered.some(m => m.categoryId === c.id));
   const hasNoCat = typeFiltered.some(m => !m.categoryId);
