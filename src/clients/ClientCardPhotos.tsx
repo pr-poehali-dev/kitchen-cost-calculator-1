@@ -74,11 +74,35 @@ export function TabPhotos({ clientId, photos, onUpload, onDelete }: {
       {CATS.map(cat => {
         const catPhotos = byCategory(cat.id);
         if (catPhotos.length === 0) return null;
+
+        const downloadCategory = async () => {
+          for (const photo of catPhotos) {
+            try {
+              const res = await fetch(photo.url);
+              const blob = await res.blob();
+              const ext = photo.name.split('.').pop() || 'jpg';
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = `${cat.label}_${photo.name || photo.id}.${ext}`;
+              a.click();
+              URL.revokeObjectURL(a.href);
+              await new Promise(r => setTimeout(r, 300));
+            } catch (e) { console.warn('Download error', e); }
+          }
+        };
+
         return (
           <div key={cat.id} className="bg-[hsl(220,14%,11%)] border border-border rounded-lg p-5">
             <div className="flex items-center gap-2 mb-4 text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider">
               <Icon name={cat.icon} size={13} />{cat.label}
-              <span className="ml-auto bg-[hsl(220,12%,18%)] rounded-full px-1.5 py-0.5">{catPhotos.length}</span>
+              <span className="bg-[hsl(220,12%,18%)] rounded-full px-1.5 py-0.5">{catPhotos.length}</span>
+              <button
+                onClick={downloadCategory}
+                title={`Скачать все фото «${cat.label}»`}
+                className="ml-auto flex items-center gap-1 text-[hsl(var(--text-muted))] hover:text-gold transition-colors"
+              >
+                <Icon name="Download" size={12} /> Скачать все
+              </button>
             </div>
             <div className="grid grid-cols-3 gap-3">
               {catPhotos.map(photo => (

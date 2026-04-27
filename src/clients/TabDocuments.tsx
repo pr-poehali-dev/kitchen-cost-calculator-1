@@ -140,12 +140,13 @@ const DOCS: DocDef[] = [
   },
 ];
 
-function DocCard({ doc, clientId, clientName, onSave, hasDraft }: {
+function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterShare }: {
   doc: DocDef;
   clientId: string;
   clientName: string;
   onSave?: () => Promise<void>;
   hasDraft?: boolean;
+  onAfterShare?: (channel: string) => void;
 }) {
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -214,6 +215,7 @@ function DocCard({ doc, clientId, clientName, onSave, hasDraft }: {
       if (data.url) {
         await navigator.clipboard.writeText(data.url);
         toast.success('Ссылка скопирована в буфер обмена');
+        onAfterShare?.('Ссылка');
       } else {
         toast.error('Ошибка создания ссылки');
       }
@@ -234,6 +236,7 @@ function DocCard({ doc, clientId, clientName, onSave, hasDraft }: {
         const text = encodeURIComponent(`${doc.title}`);
         const url = encodeURIComponent(data.url);
         window.open(`https://t.me/share/url?url=${url}&text=${text}`, '_blank');
+        onAfterShare?.('Telegram');
       } else {
         toast.error('Ошибка создания ссылки');
       }
@@ -254,6 +257,7 @@ function DocCard({ doc, clientId, clientName, onSave, hasDraft }: {
         const url = encodeURIComponent(data.url);
         const title = encodeURIComponent(doc.title);
         window.open(`https://vk.com/share.php?url=${url}&title=${title}`, '_blank');
+        onAfterShare?.('VK');
       } else {
         toast.error('Ошибка создания ссылки');
       }
@@ -273,6 +277,7 @@ function DocCard({ doc, clientId, clientName, onSave, hasDraft }: {
       if (data.url) {
         const text = encodeURIComponent(`${doc.title}: ${data.url}`);
         window.open(`https://max.ru/share?text=${text}`, '_blank');
+        onAfterShare?.('Max');
       } else {
         toast.error('Ошибка создания ссылки');
       }
@@ -361,12 +366,56 @@ function DocCard({ doc, clientId, clientName, onSave, hasDraft }: {
   );
 }
 
+const SENT_KEY = (clientId: string, docId: string) => `doc_sent_${clientId}_${docId}`;
+
+function getSentStatus(clientId: string, docId: string): { date: string; channel: string } | null {
+  try { return JSON.parse(localStorage.getItem(SENT_KEY(clientId, docId)) || 'null'); } catch { return null; }
+}
+function setSentStatus(clientId: string, docId: string, channel: string) {
+  localStorage.setItem(SENT_KEY(clientId, docId), JSON.stringify({ date: new Date().toISOString().slice(0, 10), channel }));
+}
+
 export default function TabDocuments({ client, hasDraft, onSave }: {
   client: Client;
   hasDraft?: boolean;
   onSave?: () => Promise<void>;
 }) {
   const clientName = clientFullName(client);
+  const [sentMap, setSentMap] = useState<Record<string, { date: string; channel: string } | null>>(() => {
+    const m: Record<string, ReturnType<typeof getSentStatus>> = {};
+    DOCS.forEach(d => { m[d.id] = getSentStatus(client.id, d.id); });
+    return m;
+  });
+  const [downloadingAll, setDownloadingAll] = useState(false);
+
+  const markSent = (docId: string, channel: string) => {
+    setSentStatus(client.id, docId, channel);
+    setSentMap(prev => ({ ...prev, [docId]: { date: new Date().toISOString().slice(0, 10), channel } }));
+  };
+
+  const handleDownloadAll = async () => {
+    setDownloadingAll(true);
+    try {
+      if (hasDraft && onSave) await onSave();
+      // Скачиваем все docx последовательно
+      for (const doc of DOCS) {
+        const res = await fetch(apiUrl('doc_docx', client.id, doc.id));
+        const data = await res.json();
+        if (data.url) {
+          const a = document.createElement('a');
+          a.href = data.url;
+          a.download = `${doc.title} — ${clientName}.docx`;
+          a.click();
+          await new Promise(r => setTimeout(r, 400));
+        }
+      }
+      toast.success('Все документы скачаны');
+    } catch {
+      toast.error('Ошибка при скачивании');
+    } finally {
+      setDownloadingAll(false);
+    }
+  };
 
   const hasData = client.contract_number || client.last_name;
 
@@ -381,29 +430,21 @@ export default function TabDocuments({ client, hasDraft, onSave }: {
         </div>
       )}
 
-      <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg p-4">
-        <div className="flex items-center gap-2 mb-3 text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider">
-          <Icon name="Info" size={13} />
-          Как пользоваться документами
+      {/* Кнопка скачать всё + подсказка */}
+      <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg p-4 flex items-center justify-between gap-4">
+        <div className="space-y-1.5 text-xs text-[hsl(var(--text-muted))]">
+          <div className="flex items-start gap-1.5"><span className="text-gold">•</span><span><strong className="text-white">Просмотр</strong> — открывает в браузере</span></div>
+          <div className="flex items-start gap-1.5"><span className="text-gold">•</span><span><strong className="text-white">Word/PDF</strong> — скачивает файл</span></div>
+          <div className="flex items-start gap-1.5"><span className="text-gold">•</span><span><strong className="text-white">Ссылка</strong> — клиент открывает на телефоне</span></div>
         </div>
-        <div className="grid grid-cols-1 gap-2 text-xs text-[hsl(var(--text-muted))]">
-          <div className="flex items-start gap-2">
-            <span className="text-gold mt-0.5">•</span>
-            <span><strong className="text-white">Просмотр</strong> — открывает документ в браузере для проверки</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-gold mt-0.5">•</span>
-            <span><strong className="text-white">PDF</strong> — откроется диалог печати, выберите «Сохранить как PDF»</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-gold mt-0.5">•</span>
-            <span><strong className="text-white">Word</strong> — скачивает .docx файл для редактирования</span>
-          </div>
-          <div className="flex items-start gap-2">
-            <span className="text-gold mt-0.5">•</span>
-            <span><strong className="text-white">Ссылка / мессенджер</strong> — клиент открывает документ на своём телефоне</span>
-          </div>
-        </div>
+        <button
+          onClick={handleDownloadAll}
+          disabled={downloadingAll}
+          className="flex items-center gap-2 px-4 py-2 border border-border rounded text-xs text-[hsl(var(--text-dim))] hover:text-gold hover:border-gold/50 transition-all shrink-0 disabled:opacity-60"
+        >
+          {downloadingAll ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="Download" size={13} />}
+          Скачать все (.docx)
+        </button>
       </div>
 
       {[
@@ -417,17 +458,48 @@ export default function TabDocuments({ client, hasDraft, onSave }: {
         return (
           <div key={group}>
             <div className="flex items-center gap-2 mb-2 text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider">
-              <Icon name={icon} size={12} />
-              {group}
+              <Icon name={icon} size={12} />{group}
             </div>
             <div className="grid grid-cols-1 gap-3">
               {docs.map(doc => (
-                <DocCard key={doc.id} doc={doc} clientId={client.id} clientName={clientName} onSave={onSave} hasDraft={hasDraft} />
+                <DocCardWithStatus
+                  key={doc.id}
+                  doc={doc}
+                  clientId={client.id}
+                  clientName={clientName}
+                  onSave={onSave}
+                  hasDraft={hasDraft}
+                  sentStatus={sentMap[doc.id] || null}
+                  onMarkSent={(ch) => markSent(doc.id, ch)}
+                />
               ))}
             </div>
           </div>
         );
       })}
+    </div>
+  );
+}
+
+// Обёртка DocCard со статусом отправки
+function DocCardWithStatus({ doc, clientId, clientName, onSave, hasDraft, sentStatus, onMarkSent }: {
+  doc: DocDef; clientId: string; clientName: string;
+  onSave?: () => Promise<void>; hasDraft?: boolean;
+  sentStatus: { date: string; channel: string } | null;
+  onMarkSent: (channel: string) => void;
+}) {
+  return (
+    <div>
+      <DocCard doc={doc} clientId={clientId} clientName={clientName} onSave={onSave} hasDraft={hasDraft} onAfterShare={onMarkSent} />
+      {sentStatus && (
+        <div className="flex items-center gap-1.5 mt-1.5 px-3 py-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded text-[11px] text-emerald-400">
+          <Icon name="CheckCircle" size={11} />
+          Отправлен {sentStatus.date} · {sentStatus.channel}
+          <button onClick={() => onMarkSent('')} className="ml-auto text-[hsl(var(--text-muted))] hover:text-foreground">
+            <Icon name="X" size={10} />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

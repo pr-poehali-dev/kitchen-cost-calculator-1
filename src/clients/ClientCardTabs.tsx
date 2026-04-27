@@ -2,6 +2,7 @@ import Icon from '@/components/ui/icon';
 import type { Client, ClientStatus, ClientHistoryItem } from './types';
 import { CLIENT_STATUSES } from './types';
 import { INPUT, SELECT, TEXTAREA, Field, Section } from './ClientCardShared';
+import { useStore } from '@/store/useStore';
 
 function formatPhone(raw: string): string {
   const digits = raw.replace(/\D/g, '');
@@ -359,6 +360,7 @@ export function TabData({ client, onChange }: { client: Client; onChange: (f: ke
 
 // ── Вкладка: Договор ───────────────────────────────────────────
 export function TabContract({ client, onChange }: { client: Client; onChange: (f: keyof Client, v: string | number | object) => void }) {
+  const store = useStore();
   const addProduct = () => {
     const products = [...(client.products || []), { id: Date.now().toString(), name: '', qty: 1 }];
     onChange('products', products);
@@ -370,13 +372,34 @@ export function TabContract({ client, onChange }: { client: Client; onChange: (f
 
   const showBalance = client.payment_type === '50% предоплата' || client.payment_type === 'Рассрочка';
 
+  const handleGenContractNumber = () => {
+    const prefix = store.settings.company?.contractPrefix || 'К-';
+    const year = new Date().getFullYear();
+    const num = String(Date.now()).slice(-4);
+    onChange('contract_number', `${prefix}${year}-${num}`);
+    if (!client.contract_date) {
+      onChange('contract_date', new Date().toISOString().slice(0, 10));
+    }
+  };
+
   return (
     <div className="space-y-4">
       {/* Договор */}
       <Section title="Договор" icon="FileText">
         <div className="grid grid-cols-2 gap-4">
           <Field label="Номер договора">
-            <input className={INPUT} value={client.contract_number} onChange={e => onChange('contract_number', e.target.value)} placeholder="№ договора" />
+            <div className="flex gap-1.5">
+              <input className={INPUT + ' flex-1'} value={client.contract_number} onChange={e => onChange('contract_number', e.target.value)} placeholder="№ договора" />
+              {!client.contract_number && (
+                <button
+                  onClick={handleGenContractNumber}
+                  title="Сгенерировать номер"
+                  className="px-2.5 py-2 bg-[hsl(220,12%,20%)] border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-gold hover:border-gold/50 transition-all shrink-0"
+                >
+                  <Icon name="Wand2" size={13} />
+                </button>
+              )}
+            </div>
           </Field>
           <Field label="Дата заключения">
             <input type="date" className={INPUT} value={client.contract_date} onChange={e => onChange('contract_date', e.target.value)} />

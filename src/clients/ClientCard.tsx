@@ -1,12 +1,27 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import Icon from '@/components/ui/icon';
-import { useClient } from './useClients';
-import { CLIENT_STATUSES, clientFullName } from './types';
+import { useClient, useClients } from './useClients';
+import { CLIENT_STATUSES, clientFullName, emptyClient } from './types';
 import type { Client, ClientStatus } from './types';
 import TabDocuments from './TabDocuments';
 import { TabOverview, TabData, TabContract, TabHistory } from './ClientCardTabs';
 import { TabPhotos } from './ClientCardPhotos';
 import { Skeleton } from '@/components/Skeleton';
+
+function calcProfileProgress(c: Client): { pct: number; filled: number; total: number } {
+  const fields: (keyof Client)[] = [
+    'last_name', 'first_name', 'phone', 'email', 'messenger',
+    'delivery_city', 'delivery_street', 'delivery_house',
+    'contract_number', 'contract_date', 'total_amount',
+    'delivery_date', 'designer',
+    'passport_series', 'passport_number',
+  ];
+  const filled = fields.filter(f => {
+    const v = c[f];
+    return v !== null && v !== undefined && v !== '' && v !== 0;
+  }).length;
+  return { pct: Math.round((filled / fields.length) * 100), filled, total: fields.length };
+}
 
 type Tab = 'overview' | 'data' | 'contract' | 'photos' | 'documents' | 'history';
 
@@ -21,9 +36,11 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
 
 export default function ClientCard({ clientId, onBack }: { clientId: string; onBack: () => void }) {
   const { client, photos, history, loading, saving, save, changeStatus, uploadPhoto, deletePhoto } = useClient(clientId);
+  const { createClient } = useClients();
   const [tab, setTab] = useState<Tab>('overview');
   const [draft, setDraft] = useState<Client | null>(null);
   const [saved, setSaved] = useState(false);
+  const [duplicating, setDuplicating] = useState(false);
 
   const current = draft ?? client;
 
@@ -42,6 +59,45 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
     onChange('status', status);
     if (client) await changeStatus(status);
   };
+
+  const handleDuplicate = async () => {
+    if (!current) return;
+    setDuplicating(true);
+    const base = emptyClient();
+    const copy = {
+      ...base,
+      last_name: current.last_name,
+      first_name: current.first_name,
+      middle_name: current.middle_name,
+      phone: current.phone,
+      phone2: current.phone2,
+      messenger: current.messenger,
+      email: current.email,
+      delivery_city: current.delivery_city,
+      delivery_street: current.delivery_street,
+      delivery_house: current.delivery_house,
+      delivery_apt: current.delivery_apt,
+      delivery_entrance: current.delivery_entrance,
+      delivery_floor: current.delivery_floor,
+      delivery_elevator: current.delivery_elevator,
+      delivery_note: current.delivery_note,
+      designer: current.designer,
+      measurer: current.measurer,
+      comment: `Копия клиента: ${clientFullName(current)}`,
+    };
+    await createClient(copy);
+    setDuplicating(false);
+    onBack();
+  };
+
+  const progress = useMemo(() => current ? calcProfileProgress(current) : null, [current]);
+
+  const yandexMapUrl = useMemo(() => {
+    if (!current) return null;
+    const parts = [current.delivery_city, current.delivery_street, current.delivery_house].filter(Boolean);
+    if (parts.length < 2) return null;
+    return `https://maps.yandex.ru/?text=${encodeURIComponent(parts.join(', '))}`;
+  }, [current]);
 
   if (loading || !current) {
     return (
@@ -107,16 +163,48 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
           </div>
           <div className="flex-1 min-w-0">
             <h1 className="text-base font-semibold text-foreground truncate">{name}</h1>
-            <div className="flex items-center gap-2 mt-0.5">
+            <div className="flex items-center gap-2 mt-0.5 flex-wrap">
               {statusInfo && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-medium" style={{ background: statusInfo.color + '22', color: statusInfo.color }}>
                   {statusInfo.label}
                 </span>
               )}
               {current.phone && <span className="text-xs text-[hsl(var(--text-muted))]">{current.phone}</span>}
+              {/* Прогресс заполнения */}
+              {progress && (
+                <div className="flex items-center gap-1.5" title={`Профиль заполнен на ${progress.pct}% (${progress.filled}/${progress.total} полей)`}>
+                  <div className="w-16 h-1.5 bg-[hsl(220,12%,18%)] rounded-full overflow-hidden">
+                    <div
+                      className="h-full rounded-full transition-all"
+                      style={{
+                        width: `${progress.pct}%`,
+                        backgroundColor: progress.pct >= 80 ? '#10b981' : progress.pct >= 50 ? '#f59e0b' : '#ef4444',
+                      }}
+                    />
+                  </div>
+                  <span className="text-[10px] text-[hsl(var(--text-muted))]">{progress.pct}%</span>
+                </div>
+              )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
+            {/* Карта Яндекс */}
+            {yandexMapUrl && (
+              <a href={yandexMapUrl} target="_blank" rel="noopener noreferrer"
+                title="Открыть адрес на карте"
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-[hsl(220,12%,16%)] border border-border text-[hsl(var(--text-muted))] hover:text-amber-400 hover:border-amber-400/40 transition-all">
+                <Icon name="MapPin" size={13} />
+              </a>
+            )}
+            {/* Дублировать */}
+            <button
+              onClick={handleDuplicate}
+              disabled={duplicating}
+              title="Дублировать клиента"
+              className="w-8 h-8 flex items-center justify-center rounded-lg bg-[hsl(220,12%,16%)] border border-border text-[hsl(var(--text-muted))] hover:text-gold hover:border-gold/40 transition-all disabled:opacity-50"
+            >
+              {duplicating ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="Copy" size={13} />}
+            </button>
             {/* Быстрые действия */}
             {current.phone && (
               <div className="flex items-center gap-1">
