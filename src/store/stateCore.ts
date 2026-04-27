@@ -116,6 +116,7 @@ export function setStoreToken(token: string) {
 function scheduleSaveToDb(state: AppState) {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
+    saveTimer = null;
     if (!currentToken) return;
     fetch(`${STATE_URL}?token=${encodeURIComponent(currentToken)}`, {
       method: 'POST',
@@ -152,6 +153,7 @@ export function setState(updater: (s: AppState) => AppState) {
 export function forceSetGlobalState(state: AppState) {
   globalState = state;
   saveLocalState(state);
+  scheduleSaveToDb(state);
   listeners.forEach(fn => fn());
 }
 

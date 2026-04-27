@@ -60,29 +60,29 @@ export default function VendorHeroCard({
                 <div className="flex flex-col gap-1 mt-1.5">
                   {vendor.contact && <ContactRow icon="User" value={vendor.contact} />}
                   {vendor.phone && <ContactRow icon="Phone" value={vendor.phone} href={`tel:${vendor.phone.replace(/\D/g,'')}`} />}
-                  {(vendor as Vendor).email && <ContactRow icon="Mail" value={(vendor as Vendor).email!} href={`mailto:${(vendor as Vendor).email}`} />}
-                  {(vendor as Vendor).telegram && <ContactRow icon="Send" value={(vendor as Vendor).telegram!} href={`https://t.me/${(vendor as Vendor).telegram!.replace('@','')}`} />}
-                  {(vendor as Vendor).website && <ContactRow icon="Globe" value={(vendor as Vendor).website!} href={(vendor as Vendor).website} />}
+                  {vendor.email && <ContactRow icon="Mail" value={vendor.email} href={`mailto:${vendor.email}`} />}
+                  {vendor.telegram && <ContactRow icon="Send" value={vendor.telegram} href={`https://t.me/${vendor.telegram.replace('@','')}`} />}
+                  {vendor.website && <ContactRow icon="Globe" value={vendor.website} href={vendor.website} />}
                 </div>
                 {/* Логистика */}
-                {((vendor as Vendor).deliveryDays || (vendor as Vendor).minOrderAmount || (vendor as Vendor).deliverySchedule) && (
+                {(vendor.deliveryDays || vendor.minOrderAmount || vendor.deliverySchedule) && (
                   <div className="flex flex-wrap gap-2 mt-2">
-                    {(vendor as Vendor).deliveryDays && (
+                    {vendor.deliveryDays && (
                       <span className="flex items-center gap-1 text-xs bg-[hsl(220,12%,16%)] px-2 py-1 rounded border border-border text-[hsl(var(--text-dim))]">
                         <Icon name="Clock" size={11} className="text-[hsl(var(--text-muted))]" />
-                        Срок: {(vendor as Vendor).deliveryDays} дн.
+                        Срок: {vendor.deliveryDays} дн.
                       </span>
                     )}
-                    {(vendor as Vendor).minOrderAmount && (
+                    {vendor.minOrderAmount && (
                       <span className="flex items-center gap-1 text-xs bg-[hsl(220,12%,16%)] px-2 py-1 rounded border border-border text-[hsl(var(--text-dim))]">
                         <Icon name="ShoppingCart" size={11} className="text-[hsl(var(--text-muted))]" />
-                        Мин.: {(vendor as Vendor).minOrderAmount?.toLocaleString('ru')} ₽
+                        Мин.: {vendor.minOrderAmount.toLocaleString('ru')} ₽
                       </span>
                     )}
-                    {(vendor as Vendor).deliverySchedule && (
+                    {vendor.deliverySchedule && (
                       <span className="flex items-center gap-1 text-xs bg-[hsl(220,12%,16%)] px-2 py-1 rounded border border-border text-[hsl(var(--text-dim))]">
                         <Icon name="CalendarDays" size={11} className="text-[hsl(var(--text-muted))]" />
-                        {(vendor as Vendor).deliverySchedule}
+                        {vendor.deliverySchedule}
                       </span>
                     )}
                   </div>

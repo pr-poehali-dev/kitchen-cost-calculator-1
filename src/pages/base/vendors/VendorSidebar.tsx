@@ -76,7 +76,7 @@ export default function VendorSidebar({
                   )}
                 </div>
                 {/* Контакты в карточке */}
-                {isActive && (v.phone || (v as typeof v & { email?: string }).email || (v as typeof v & { telegram?: string }).telegram) && (
+                {isActive && (v.phone || v.email || v.telegram) && (
                   <div className="flex flex-col gap-0.5 mt-1.5">
                     {v.phone && (
                       <a href={`tel:${v.phone.replace(/\D/g,'')}`} onClick={e => e.stopPropagation()}
@@ -84,17 +84,17 @@ export default function VendorSidebar({
                         <Icon name="Phone" size={9} />{v.phone}
                       </a>
                     )}
-                    {(v as typeof v & { email?: string }).email && (
-                      <a href={`mailto:${(v as typeof v & { email?: string }).email}`} onClick={e => e.stopPropagation()}
+                    {v.email && (
+                      <a href={`mailto:${v.email}`} onClick={e => e.stopPropagation()}
                         className="flex items-center gap-1 text-[10px] text-[hsl(var(--text-muted))] hover:text-gold transition-colors truncate">
-                        <Icon name="Mail" size={9} />{(v as typeof v & { email?: string }).email}
+                        <Icon name="Mail" size={9} />{v.email}
                       </a>
                     )}
-                    {(v as typeof v & { telegram?: string }).telegram && (
-                      <a href={`https://t.me/${((v as typeof v & { telegram?: string }).telegram || '').replace('@','')}`}
+                    {v.telegram && (
+                      <a href={`https://t.me/${v.telegram.replace('@','')}`}
                         target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
                         className="flex items-center gap-1 text-[10px] text-[hsl(var(--text-muted))] hover:text-sky-400 transition-colors">
-                        <Icon name="Send" size={9} />{(v as typeof v & { telegram?: string }).telegram}
+                        <Icon name="Send" size={9} />{v.telegram}
                       </a>
                     )}
                   </div>
