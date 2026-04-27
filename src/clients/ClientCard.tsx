@@ -6,6 +6,7 @@ import type { Client, ClientStatus } from './types';
 import TabDocuments from './TabDocuments';
 import { TabOverview, TabData, TabContract, TabHistory } from './ClientCardTabs';
 import { TabPhotos } from './ClientCardPhotos';
+import { Skeleton } from '@/components/Skeleton';
 
 type Tab = 'overview' | 'data' | 'contract' | 'photos' | 'documents' | 'history';
 
@@ -44,9 +45,41 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
 
   if (loading || !current) {
     return (
-      <div className="flex items-center justify-center h-full gap-2 text-[hsl(var(--text-muted))]">
-        <Icon name="Loader2" size={18} className="animate-spin" />
-        <span className="text-sm">Загрузка...</span>
+      <div className="flex flex-col h-full animate-fade-in">
+        {/* Header skeleton */}
+        <div className="border-b border-border bg-[hsl(220,14%,11%)] px-6 py-4 shrink-0">
+          <div className="flex items-center gap-2 mb-3">
+            <Skeleton className="h-3 w-16" />
+            <Skeleton className="h-3 w-3 rounded-full" />
+            <Skeleton className="h-3 w-32" />
+          </div>
+          <div className="flex items-center gap-4">
+            <Skeleton className="w-10 h-10 rounded-full shrink-0" />
+            <div className="flex-1 space-y-1.5">
+              <Skeleton className="h-4 w-48" />
+              <Skeleton className="h-3 w-24" />
+            </div>
+          </div>
+        </div>
+        {/* Tabs skeleton */}
+        <div className="border-b border-border px-6 flex gap-1">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton key={i} className="h-10 w-20 mt-1 rounded-t" />
+          ))}
+        </div>
+        {/* Content skeleton */}
+        <div className="flex-1 px-6 py-6 max-w-3xl mx-auto w-full space-y-4">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div key={i} className="bg-[hsl(220,14%,11%)] border border-border rounded-lg p-5 space-y-3">
+              <Skeleton className="h-3 w-32" />
+              <Skeleton className="h-9 w-full rounded" />
+              <div className="grid grid-cols-2 gap-3">
+                <Skeleton className="h-9 rounded" />
+                <Skeleton className="h-9 rounded" />
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   }

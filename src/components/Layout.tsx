@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import type { AuthUser } from '@/auth/useAuth';
 
@@ -9,6 +10,7 @@ interface LayoutProps {
   children: React.ReactNode;
   user?: AuthUser;
   onLogout?: () => void;
+  onOpenSearch?: () => void;
 }
 
 const NAV_BASE = [
@@ -24,8 +26,20 @@ const NAV_BASE = [
 
 const NAV_ADMIN = { id: 'users' as Section, label: 'Пользователи', icon: 'ShieldCheck' };
 
-export default function Layout({ active, onNav, children, user, onLogout }: LayoutProps) {
+export default function Layout({ active, onNav, children, user, onLogout, onOpenSearch }: LayoutProps) {
   const nav = user?.role === 'admin' ? [...NAV_BASE, NAV_ADMIN] : NAV_BASE;
+
+  // Ctrl+K / Cmd+K
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        onOpenSearch?.();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [onOpenSearch]);
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -34,7 +48,20 @@ export default function Layout({ active, onNav, children, user, onLogout }: Layo
           <div className="text-gold font-semibold text-base tracking-wide">КухниПро</div>
           <div className="text-[hsl(var(--text-muted))] text-xs mt-0.5 tracking-wider uppercase">Калькулятор мебели</div>
         </div>
-        <nav className="flex-1 py-3 overflow-y-auto scrollbar-thin">
+
+        {/* Поиск */}
+        <button
+          onClick={onOpenSearch}
+          className="mx-3 mt-3 mb-1 flex items-center gap-2 px-3 py-2 bg-[hsl(220,12%,12%)] border border-border rounded-lg text-xs text-[hsl(var(--text-muted))] hover:border-gold/40 hover:text-foreground transition-all group"
+        >
+          <Icon name="Search" size={13} />
+          <span className="flex-1 text-left">Поиск...</span>
+          <kbd className="flex items-center gap-0.5 px-1 py-0.5 bg-[hsl(220,12%,18%)] rounded text-[10px] border border-border opacity-60 group-hover:opacity-100">
+            Ctrl K
+          </kbd>
+        </button>
+
+        <nav className="flex-1 py-2 overflow-y-auto scrollbar-thin">
           {nav.map(item => (
             <button
               key={item.id}

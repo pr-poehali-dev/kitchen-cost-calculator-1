@@ -1,6 +1,9 @@
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
+import GlobalSearch from '@/components/GlobalSearch';
+import { AppLoadingSkeleton } from '@/components/Skeleton';
 import { useStore, loadStateFromDb, setStoreToken, forceSetGlobalState, saveStateToDb } from '@/store/useStore';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import HomePage from '@/pages/HomePage';
 import ClientsPage from '@/clients/ClientsPage';
 import CalcPage from '@/pages/CalcPage';
@@ -19,10 +22,30 @@ type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'e
 export default function App() {
   const [section, setSection] = useState<Section>('home');
   const [stateLoading, setStateLoading] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchClients, setSearchClients] = useState<{
+    id: string; last_name: string; first_name: string; middle_name: string;
+    phone: string; status: string; reminder_date: string; reminder_note: string;
+  }[]>([]);
+
   const { state, login, logout, getToken } = useAuth();
   const store = useStore();
 
-  // Когда пользователь авторизовался — грузим общий state из БД
+  // Push-уведомления
+  usePushNotifications(searchClients);
+
+  // Загружаем клиентов для поиска и push-уведомлений
+  useEffect(() => {
+    if (state.status !== 'authenticated') return;
+    const token = getToken();
+    if (!token) return;
+    fetch(`https://functions.poehali.dev/48534318-9b07-4f30-9a75-98efb43248e7/?action=list&token=${encodeURIComponent(token)}`)
+      .then(r => r.json())
+      .then(d => setSearchClients(d.clients || []))
+      .catch(() => {});
+  }, [state.status]);
+
+  // Загружаем state из БД
   useEffect(() => {
     if (state.status !== 'authenticated') return;
     const token = getToken();
@@ -33,61 +56,58 @@ export default function App() {
 
     loadStateFromDb(token).then(dbState => {
       if (dbState) {
-        // В БД есть данные — применяем их всем пользователям
         forceSetGlobalState(dbState);
       } else {
-        // БД пустая — первый вход, сохраняем текущий localStorage в БД
         saveStateToDb();
       }
-      // Патч СКАТ после загрузки
       store.patchSkatMaterials('mt2', 'v2');
       setStateLoading(false);
     });
   }, [state.status]);
 
-  // Экран загрузки авторизации
   if (state.status === 'loading') {
-    return (
-      <div className="min-h-screen bg-[hsl(220,16%,7%)] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Icon name="Loader2" size={24} className="animate-spin text-gold" />
-          <span className="text-sm text-[hsl(var(--text-muted))]">Загрузка...</span>
-        </div>
-      </div>
-    );
+    return <AppLoadingSkeleton />;
   }
 
   if (state.status === 'unauthenticated') {
     return <LoginPage onLogin={login} />;
   }
 
-  // Экран загрузки данных из БД
   if (stateLoading) {
-    return (
-      <div className="min-h-screen bg-[hsl(220,16%,7%)] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <Icon name="Loader2" size={24} className="animate-spin text-gold" />
-          <span className="text-sm text-[hsl(var(--text-muted))]">Загрузка данных...</span>
-        </div>
-      </div>
-    );
+    return <AppLoadingSkeleton />;
   }
 
   const user = state.user;
   const token = getToken() || '';
 
   return (
-    <Layout active={section} onNav={setSection} user={user} onLogout={logout}>
-      {section === 'home'     && <HomePage onNav={setSection} />}
-      {section === 'clients'  && <ClientsPage />}
-      {section === 'calc'     && <CalcPage />}
-      {section === 'blocks'   && <BlocksPage />}
-      {section === 'services' && <ServicesPage />}
-      {section === 'base'     && <BasePage />}
-      {section === 'expenses' && <ExpensesPage />}
-      {section === 'settings' && <SettingsPage />}
-      {section === 'users'    && user.role === 'admin' && <AdminPanel currentUser={user} token={token} inline />}
-      {section === 'users'    && user.role !== 'admin' && <HomePage />}
-    </Layout>
+    <>
+      <Layout
+        active={section}
+        onNav={setSection}
+        user={user}
+        onLogout={logout}
+        onOpenSearch={() => setShowSearch(true)}
+      >
+        {section === 'home'     && <HomePage onNav={setSection} />}
+        {section === 'clients'  && <ClientsPage />}
+        {section === 'calc'     && <CalcPage />}
+        {section === 'blocks'   && <BlocksPage />}
+        {section === 'services' && <ServicesPage />}
+        {section === 'base'     && <BasePage />}
+        {section === 'expenses' && <ExpensesPage />}
+        {section === 'settings' && <SettingsPage />}
+        {section === 'users'    && user.role === 'admin' && <AdminPanel currentUser={user} token={token} inline />}
+        {section === 'users'    && user.role !== 'admin' && <HomePage onNav={setSection} />}
+      </Layout>
+
+      {showSearch && (
+        <GlobalSearch
+          clients={searchClients}
+          onNav={s => setSection(s as Section)}
+          onClose={() => setShowSearch(false)}
+        />
+      )}
+    </>
   );
 }

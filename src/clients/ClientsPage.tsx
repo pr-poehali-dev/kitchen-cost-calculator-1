@@ -4,6 +4,7 @@ import { useClients } from './useClients';
 import { CLIENT_STATUSES, clientFullName, emptyClient } from './types';
 import type { Client, ClientStatus } from './types';
 import ClientCard from './ClientCard';
+import { ClientsListSkeleton } from '@/components/Skeleton';
 
 type View = 'list' | 'kanban';
 type SortField = 'name' | 'created_at' | 'delivery_date' | 'total_amount';
@@ -208,6 +209,10 @@ export default function ClientsPage() {
     if (id) setSelectedId(id);
   };
 
+  if (loading && clients.length === 0) {
+    return <ClientsListSkeleton />;
+  }
+
   if (selectedId) {
     return (
       <ClientCard
@@ -329,12 +334,7 @@ export default function ClientsPage() {
 
       {/* Content */}
       <div className="flex-1 overflow-auto scrollbar-thin">
-        {loading ? (
-          <div className="flex items-center justify-center h-full gap-2 text-[hsl(var(--text-muted))]">
-            <Icon name="Loader2" size={18} className="animate-spin" />
-            <span className="text-sm">Загрузка...</span>
-          </div>
-        ) : filtered.length === 0 ? (
+        {filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <Icon name="Users" size={32} className="text-[hsl(var(--text-muted))]" />
             <p className="text-[hsl(var(--text-muted))] text-sm">
