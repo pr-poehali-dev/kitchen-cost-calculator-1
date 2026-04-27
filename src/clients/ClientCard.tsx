@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useRef } from 'react';
 import Icon from '@/components/ui/icon';
 import { useClient, useClients } from './useClients';
 import { CLIENT_STATUSES, clientFullName, emptyClient } from './types';
@@ -43,8 +43,23 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
   const [draft, setDraft] = useState<Client | null>(null);
   const [saved, setSaved] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const current = draft ?? client;
+
+  // Автосохранение через 2с после последнего изменения
+  useEffect(() => {
+    if (!draft) return;
+    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    autoSaveTimer.current = setTimeout(async () => {
+      autoSaveTimer.current = null;
+      const ok = await save(draft);
+      if (ok) { setSaved(true); setDraft(null); setTimeout(() => setSaved(false), 2000); }
+    }, 2000);
+    return () => {
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
+    };
+  }, [draft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onChange = (field: keyof Client, value: unknown) => {
     setDraft(prev => ({ ...(prev ?? client!), [field]: value } as Client));
@@ -53,6 +68,7 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
 
   const handleSave = async () => {
     if (!draft) return;
+    if (autoSaveTimer.current) { clearTimeout(autoSaveTimer.current); autoSaveTimer.current = null; }
     const ok = await save(draft);
     if (ok) { setSaved(true); setDraft(null); setTimeout(() => setSaved(false), 2000); }
   };
@@ -290,7 +306,7 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
           {tab === 'data'       && <TabData client={current} onChange={onChange} />}
           {tab === 'contract'   && <TabContract client={current} onChange={onChange} />}
           {tab === 'photos'     && <TabPhotos clientId={clientId} photos={photos} onUpload={uploadPhoto} onDelete={deletePhoto} />}
-          {tab === 'documents'  && <TabDocuments client={current} hasDraft={!!draft} onSave={handleSave} />}
+          {tab === 'documents'  && <TabDocuments client={current} hasDraft={!!draft} onSave={handleSave} saving={saving} />}
           {tab === 'history'    && <TabHistory history={history} />}
         </div>
       </div>

@@ -395,10 +395,11 @@ function setSentStatus(clientId: string, docId: string, channel: string) {
   localStorage.setItem(SENT_KEY(clientId, docId), JSON.stringify({ date: new Date().toISOString().slice(0, 10), channel }));
 }
 
-export default function TabDocuments({ client, hasDraft, onSave }: {
+export default function TabDocuments({ client, hasDraft, onSave, saving }: {
   client: Client;
   hasDraft?: boolean;
   onSave?: () => Promise<void>;
+  saving?: boolean;
 }) {
   const clientName = clientFullName(client);
   const [sentMap, setSentMap] = useState<Record<string, { date: string; channel: string } | null>>(() => {
@@ -454,6 +455,13 @@ export default function TabDocuments({ client, hasDraft, onSave }: {
           <div className="text-sm text-amber-300">
             Заполните данные клиента на вкладках <strong>«Данные»</strong> и <strong>«Договор»</strong> перед созданием документов — иначе поля будут пустыми.
           </div>
+        </div>
+      )}
+      {/* Статус сохранения */}
+      {(hasDraft || saving) && (
+        <div className="flex items-center gap-2 px-3 py-2 bg-amber-400/10 border border-amber-400/30 rounded-lg text-xs text-amber-300">
+          <Icon name={saving ? 'Loader2' : 'Clock'} size={13} className={`shrink-0 ${saving ? 'animate-spin' : ''}`} />
+          {saving ? 'Сохранение данных…' : 'Есть несохранённые изменения — будут сохранены автоматически при скачивании'}
         </div>
       )}
 
