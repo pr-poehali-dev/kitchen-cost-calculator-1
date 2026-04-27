@@ -410,16 +410,53 @@ export function TabContract({ client, onChange }: { client: Client; onChange: (f
       {/* Изделия */}
       <Section title="Изделия" icon="Package">
         <div className="space-y-2">
-          {client.products?.map(p => (
-            <div key={p.id} className="flex items-center gap-2">
-              <input className={INPUT + ' flex-1'} value={p.name} onChange={e => updateProduct(p.id, 'name', e.target.value)} placeholder="Наименование изделия" />
-              <input type="number" min={1} className={INPUT + ' w-20 text-center'} value={p.qty} onChange={e => updateProduct(p.id, 'qty', Math.max(1, parseInt(e.target.value) || 1))} />
-              <button onClick={() => removeProduct(p.id)} className="p-2 text-[hsl(var(--text-muted))] hover:text-red-400 transition-colors">
-                <Icon name="Trash2" size={13} />
+          {(client.products || []).length === 0 && (
+            <div className="text-xs text-[hsl(var(--text-muted))] text-center py-2 opacity-60">Изделия не добавлены</div>
+          )}
+          {client.products?.map((p, idx) => (
+            <div key={p.id} className="flex items-center gap-2 bg-[hsl(220,12%,13%)] border border-[hsl(220,12%,18%)] rounded-lg px-3 py-2 group">
+              <span className="text-[10px] font-bold text-[hsl(var(--text-muted))] w-5 text-center shrink-0 opacity-50">
+                {idx + 1}
+              </span>
+              <input
+                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-[hsl(var(--text-muted))] outline-none border-b border-transparent focus:border-gold/40 transition-colors min-w-0"
+                value={p.name}
+                onChange={e => updateProduct(p.id, 'name', e.target.value)}
+                placeholder="Наименование изделия"
+              />
+              <div className="flex items-center gap-1 shrink-0">
+                <button
+                  onClick={() => updateProduct(p.id, 'qty', Math.max(1, p.qty - 1))}
+                  className="w-6 h-6 rounded flex items-center justify-center text-[hsl(var(--text-muted))] hover:text-foreground hover:bg-[hsl(220,12%,20%)] transition-colors"
+                >
+                  <Icon name="Minus" size={11} />
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  className="w-10 text-center bg-transparent text-sm text-foreground outline-none"
+                  value={p.qty}
+                  onChange={e => updateProduct(p.id, 'qty', Math.max(1, parseInt(e.target.value) || 1))}
+                />
+                <button
+                  onClick={() => updateProduct(p.id, 'qty', p.qty + 1)}
+                  className="w-6 h-6 rounded flex items-center justify-center text-[hsl(var(--text-muted))] hover:text-foreground hover:bg-[hsl(220,12%,20%)] transition-colors"
+                >
+                  <Icon name="Plus" size={11} />
+                </button>
+              </div>
+              <button
+                onClick={() => removeProduct(p.id)}
+                className="w-6 h-6 flex items-center justify-center rounded text-[hsl(var(--text-muted))] hover:text-red-400 hover:bg-red-400/10 opacity-0 group-hover:opacity-100 transition-all"
+              >
+                <Icon name="Trash2" size={12} />
               </button>
             </div>
           ))}
-          <button onClick={addProduct} className="flex items-center gap-2 px-4 py-2 border border-dashed border-border rounded text-sm text-[hsl(var(--text-muted))] hover:text-gold hover:border-gold transition-all w-full justify-center">
+          <button
+            onClick={addProduct}
+            className="flex items-center gap-2 px-4 py-2.5 border border-dashed border-[hsl(220,12%,22%)] rounded-lg text-sm text-[hsl(var(--text-muted))] hover:text-gold hover:border-gold/40 hover:bg-gold/5 transition-all w-full justify-center"
+          >
             <Icon name="Plus" size={13} /> Добавить изделие
           </button>
         </div>

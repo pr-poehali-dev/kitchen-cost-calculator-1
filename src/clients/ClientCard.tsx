@@ -150,11 +150,13 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
       {/* Header */}
       <div className="border-b border-border bg-[hsl(220,14%,11%)] px-6 py-4 shrink-0">
         <div className="flex items-center gap-3 mb-3">
-          <button onClick={onBack} className="flex items-center gap-1.5 text-xs text-[hsl(var(--text-muted))] hover:text-foreground transition-colors">
-            <Icon name="ChevronLeft" size={14} />
+          <button onClick={onBack} className="flex items-center gap-1 text-xs text-[hsl(var(--text-muted))] hover:text-gold transition-colors group">
+            <span className="w-5 h-5 rounded flex items-center justify-center group-hover:bg-gold/10 transition-colors">
+              <Icon name="ChevronLeft" size={14} />
+            </span>
             Клиенты
           </button>
-          <span className="text-[hsl(var(--text-muted))] text-xs">/</span>
+          <Icon name="ChevronRight" size={11} className="text-[hsl(var(--text-muted))] opacity-40 shrink-0" />
           <span className="text-xs text-foreground truncate">{name}</span>
         </div>
         <div className="flex items-center gap-4">

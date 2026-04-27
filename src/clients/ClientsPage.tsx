@@ -48,9 +48,13 @@ function ClientRow({ client, selected, onSelect, onClick }: {
       {/* Checkbox */}
       <div
         onClick={onSelect}
-        className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${selected ? 'bg-gold border-gold' : 'border-border hover:border-gold/50'}`}
+        className={`w-4 h-4 rounded-[4px] flex items-center justify-center shrink-0 transition-all duration-150 cursor-pointer ${
+          selected
+            ? 'bg-gold shadow-[0_0_0_1px_hsl(var(--gold))]'
+            : 'bg-[hsl(220,12%,14%)] shadow-[0_0_0_1.5px_hsl(220,12%,26%)] hover:shadow-[0_0_0_1.5px_hsl(var(--gold))]'
+        }`}
       >
-        {selected && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
+        {selected && <Icon name="Check" size={9} className="text-[hsl(220,16%,8%)] stroke-[3]" />}
       </div>
       <div className="w-8 h-8 rounded-full bg-gold/10 flex items-center justify-center shrink-0" onClick={onClick}>
         <span className="text-gold text-xs font-bold">{(client.last_name?.[0] || client.first_name?.[0] || '?').toUpperCase()}</span>
@@ -69,7 +73,9 @@ function ClientRow({ client, selected, onSelect, onClick }: {
         <StatusBadge status={client.status as ClientStatus} />
         <DeliveryBadge date={client.delivery_date} />
       </div>
-      <Icon name="ChevronRight" size={14} className="text-[hsl(var(--text-muted))] group-hover:text-gold transition-colors shrink-0" onClick={onClick} />
+      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[hsl(var(--text-muted))] group-hover:text-gold group-hover:bg-gold/10 transition-all shrink-0" onClick={onClick}>
+        <Icon name="ChevronRight" size={13} />
+      </div>
     </div>
   );
 }

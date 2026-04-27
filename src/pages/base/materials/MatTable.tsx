@@ -28,19 +28,20 @@ function GoldCheckbox({ checked, indeterminate, onChange, onClick }: {
   onChange?: () => void;
   onClick?: (e: React.MouseEvent) => void;
 }) {
+  const active = checked || indeterminate;
   return (
     <div
       onClick={e => { onClick?.(e); onChange?.(); }}
-      className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-all shrink-0 ${
-        checked || indeterminate
-          ? 'bg-gold border-gold'
-          : 'border-[hsl(220,12%,28%)] hover:border-gold/60 bg-transparent'
+      className={`w-4 h-4 rounded-[4px] flex items-center justify-center cursor-pointer transition-all duration-150 shrink-0 ${
+        active
+          ? 'bg-gold shadow-[0_0_0_1px_hsl(var(--gold))]'
+          : 'bg-[hsl(220,12%,14%)] shadow-[0_0_0_1.5px_hsl(220,12%,26%)] hover:shadow-[0_0_0_1.5px_hsl(var(--gold))]'
       }`}
     >
       {indeterminate && !checked
-        ? <span className="block w-2 h-0.5 bg-[hsl(220,16%,8%)] rounded-full" />
+        ? <span className="block w-2 h-[1.5px] bg-[hsl(220,16%,8%)] rounded-full" />
         : checked
-          ? <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />
+          ? <Icon name="Check" size={9} className="text-[hsl(220,16%,8%)] stroke-[3]" />
           : null
       }
     </div>
