@@ -33,13 +33,17 @@ export default function TmfImportModal({ onClose }: Props) {
       try {
         const wb = XLSX.read(new Uint8Array(e.target!.result as ArrayBuffer), { type: 'array' });
         const results: ParsedCollection[] = [];
+
+        // Фиксируем имена листов в локальный массив
+        const allSheetNames: string[] = [...wb.SheetNames];
+
         // Нормализованные имена для диагностики
-        setSheetNames(wb.SheetNames.map(n => {
+        setSheetNames(allSheetNames.map(n => {
           const normed = Array.from(n.normalize('NFC')).filter(c => /[a-zа-яё0-9]/i.test(c)).join('').toLowerCase().replace(/ё/g, 'е');
           return `${n} [${normed}]`;
         }));
 
-        // Агрессивная нормализация: Unicode NFC + только буквы и цифры
+        // Нормализация: оставляем только буквы и цифры
         const normName = (s: string) =>
           Array.from(s.normalize('NFC'))
             .filter(c => /[a-zа-яё0-9]/i.test(c))
@@ -50,26 +54,16 @@ export default function TmfImportModal({ onClose }: Props) {
         for (const cfg of TMF_COLLECTIONS) {
           const key = normName(cfg.sheetName);
 
-          // 1. Точное совпадение
-          let wsName = wb.SheetNames.find(n => normName(n) === key);
+          // Ищем по локальному массиву (не по wb.SheetNames напрямую)
+          const found = allSheetNames.find(n => normName(n) === key)
+            ?? allSheetNames.find(n => { const nn = normName(n); return nn.includes(key) || key.includes(nn); })
+            ?? (key.length >= 5 ? allSheetNames.find(n => normName(n).startsWith(key.slice(0, 5))) : undefined);
 
-          // 2. Вхождение в обе стороны
-          if (!wsName) {
-            wsName = wb.SheetNames.find(n => {
-              const nn = normName(n);
-              return nn.includes(key) || key.includes(nn);
-            });
-          }
-
-          // 3. Совпадение первых 5 символов (защита от незначительных отличий)
-          if (!wsName && key.length >= 5) {
-            wsName = wb.SheetNames.find(n => normName(n).startsWith(key.slice(0, 5)));
-          }
-
-          if (!wsName) {
+          if (!found) {
             results.push({ config: cfg, found: false, prices: {}, colors: [] });
             continue;
           }
+          const wsName = found;
 
           const ws = wb.Sheets[wsName];
           const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' });
@@ -83,7 +77,7 @@ export default function TmfImportModal({ onClose }: Props) {
 
           results.push({
             config: cfg,
-            found: Object.keys(prices).length > 0 && colors.length > 0,
+            found: Object.keys(prices).length > 0,
             prices,
             colors,
           });

@@ -72,37 +72,88 @@ export function extractColorVariants(
     return result;
   }
 
-  let inColorSection = false;
-  let currentVariantKey: string | null = null;
+  // Для разделённых коллекций: ищем секцию цветов,
+  // внутри — подсекции по вариантам (одностороннее/категория)
+  // Поддерживаем два режима:
+  // А) Последовательные подсекции (SynchroWood, SynchroStyle, Акрил)
+  // Б) Параллельные колонки (SuperMat: одностор. | двухстор.)
 
-  for (const row of rows) {
-    const cells = row.map(c => String(c ?? '').trim()).filter(Boolean);
-    const line = cells.join(' ').toLowerCase();
-
-    if (!inColorSection && (line.includes('цвета фасадов') || line.includes('цвет фасадов'))) {
-      inColorSection = true; continue;
+  // Сначала определяем режим по colorSection паттернам
+  // Находим строку-заголовок секции цветов
+  let colorSectionStart = -1;
+  for (let i = 0; i < rows.length; i++) {
+    const line = rows[i].map(c => String(c ?? '').trim()).join(' ').toLowerCase();
+    if (line.includes('цвета фасадов') || line.includes('цвет фасадов')) {
+      colorSectionStart = i + 1;
+      break;
     }
-    if (!inColorSection) continue;
+  }
+  if (colorSectionStart < 0) return result;
 
-    let matched = false;
+  // Ищем заголовки подсекций и их колонки
+  // variantColMap: variantKey → индекс колонки в таблице (для параллельного режима)
+  const variantColMap = new Map<string, number>(); // key → colIndex в оригинальной строке
+
+  // Сканируем строки начиная с colorSectionStart
+  let currentVariantKey: string | null = null;
+  let parallelMode = false; // true если несколько вариантов в одной строке-заголовке
+
+  for (let i = colorSectionStart; i < rows.length; i++) {
+    const rawRow = rows[i] as unknown[];
+    const rawCells = rawRow.map(c => String(c ?? '').trim());
+    const line = rawCells.join(' ').toLowerCase();
+
+    // Пропускаем строки с кромками
+    if (line.includes('цвет кромки')) continue;
+
+    // Проверяем — строка-заголовок подсекции?
+    let isHeader = false;
+    const foundVariantsInRow: string[] = [];
     for (const v of cfg.variants) {
       if (v.colorSection && v.colorSection.test(line)) {
-        currentVariantKey = v.key;
-        matched = true;
-        break;
+        foundVariantsInRow.push(v.key);
+        isHeader = true;
       }
     }
-    if (matched) continue;
 
-    if (line.includes('цвет кромки') || line.includes('кромка')) continue;
-    if (!currentVariantKey) continue;
+    if (isHeader) {
+      if (foundVariantsInRow.length > 1) {
+        // Параллельный режим: несколько вариантов в одной заголовочной строке
+        parallelMode = true;
+        variantColMap.clear();
+        for (const vKey of foundVariantsInRow) {
+          const vDef = cfg.variants.find(v => v.key === vKey)!;
+          // Ищем индекс колонки с этим заголовком
+          const colIdx = rawCells.findIndex(c => vDef.colorSection!.test(c.toLowerCase()));
+          if (colIdx >= 0) variantColMap.set(vKey, colIdx);
+        }
+      } else {
+        // Последовательный режим
+        parallelMode = false;
+        currentVariantKey = foundVariantsInRow[0];
+      }
+      continue;
+    }
 
-    const colorName = cells[0];
-    if (!colorName || colorName.length < 2) continue;
-    if (/^\d/.test(colorName)) continue;
-
-    if (!result.has(colorName)) result.set(colorName, new Set());
-    result.get(colorName)!.add(currentVariantKey);
+    if (parallelMode && variantColMap.size > 0) {
+      // Берём цвета из каждой колонки варианта
+      for (const [vKey, colIdx] of variantColMap) {
+        const colorName = rawCells[colIdx]?.trim();
+        if (!colorName || colorName.length < 2) continue;
+        if (/^\d/.test(colorName)) continue;
+        if (colorName.toLowerCase().includes('кромк')) continue;
+        if (!result.has(colorName)) result.set(colorName, new Set());
+        result.get(colorName)!.add(vKey);
+      }
+    } else if (!parallelMode && currentVariantKey) {
+      // Берём первую непустую ячейку как цвет
+      const colorName = rawCells.find(c => c.length >= 2);
+      if (!colorName) continue;
+      if (/^\d/.test(colorName)) continue;
+      if (colorName.toLowerCase().includes('кромк')) continue;
+      if (!result.has(colorName)) result.set(colorName, new Set());
+      result.get(colorName)!.add(currentVariantKey);
+    }
   }
 
   return result;

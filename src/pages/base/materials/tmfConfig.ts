@@ -40,24 +40,24 @@ export const TMF_COLLECTIONS: CollectionConfig[] = [
     sheetName: 'SuperMat', label: 'SuperMat',
     allColorsInAllVariants: false,
     variants: [
-      { key: 'одн',  label: 'Одностороннее', pricePattern: /одностороннее/i, colorSection: /одностороннее.*покрытие/i },
-      { key: 'двух', label: 'Двухстороннее', pricePattern: /двухстороннее/i, colorSection: /двухстороннее.*покрытие/i },
+      { key: 'одн',  label: 'Одностороннее', pricePattern: /одностороннее/i, colorSection: /одностороннее/i },
+      { key: 'двух', label: 'Двухстороннее', pricePattern: /двухстороннее/i, colorSection: /двухстороннее/i },
     ],
   },
   {
     sheetName: 'SynchroWood', label: 'SynchroWood',
     allColorsInAllVariants: false,
     variants: [
-      { key: '1кат', label: '1 категория', pricePattern: /1\s*категория/i, colorSection: /1\s*категория/i },
-      { key: '2кат', label: '2 категория', pricePattern: /2\s*категория/i, colorSection: /2\s*категория/i },
+      { key: '1кат', label: '1 категория', pricePattern: /1\s*категория/i, colorSection: /^1\s*категория$/i },
+      { key: '2кат', label: '2 категория', pricePattern: /2\s*категория/i, colorSection: /^2\s*категория$/i },
     ],
   },
   {
     sheetName: 'SynchroStyle', label: 'SynchroStyle',
     allColorsInAllVariants: false,
     variants: [
-      { key: '1кат', label: '1 категория', pricePattern: /1\s*категория/i, colorSection: /1\s*категория/i },
-      { key: '2кат', label: '2 категория', pricePattern: /2\s*категория/i, colorSection: /2\s*категория/i },
+      { key: '1кат', label: '1 категория', pricePattern: /1\s*категория/i, colorSection: /^1\s*категория$/i },
+      { key: '2кат', label: '2 категория', pricePattern: /2\s*категория/i, colorSection: /^2\s*категория$/i },
     ],
   },
   {
