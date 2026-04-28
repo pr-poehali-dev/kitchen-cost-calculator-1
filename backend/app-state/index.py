@@ -93,11 +93,14 @@ def handler(event: dict, context) -> dict:
 
         conn = get_db()
         cur = conn.cursor()
-        cur.execute('''
-            INSERT INTO app_state (user_id, state, updated_at)
-            VALUES (%s, %s, NOW())
-            ON CONFLICT (user_id) DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()
-        ''', (user_id, json.dumps(state)))
+        cur.execute('SELECT id FROM app_state WHERE user_id = %s', (user_id,))
+        exists = cur.fetchone()
+        if exists:
+            cur.execute('UPDATE app_state SET state = %s, updated_at = NOW() WHERE user_id = %s',
+                        (json.dumps(state), user_id))
+        else:
+            cur.execute('INSERT INTO app_state (user_id, state, updated_at) VALUES (%s, %s, NOW())',
+                        (user_id, json.dumps(state)))
         conn.commit()
         conn.close()
         return ok({'ok': True})
