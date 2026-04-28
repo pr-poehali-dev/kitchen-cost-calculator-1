@@ -93,12 +93,12 @@ def handler(event: dict, context) -> dict:
 
         conn = get_db()
         cur = conn.cursor()
-        cur.execute('SELECT id FROM app_state WHERE user_id = %s', (user_id,))
-        exists = cur.fetchone()
-        if exists:
-            cur.execute('UPDATE app_state SET state = %s, updated_at = NOW() WHERE user_id = %s',
-                        (json.dumps(state), user_id))
-        else:
+        # Пробуем UPDATE существующей записи пользователя
+        cur.execute('UPDATE app_state SET state = %s, updated_at = NOW() WHERE user_id = %s',
+                    (json.dumps(state), user_id))
+        if cur.rowcount == 0:
+            # Нет записи — удаляем старую общую (NULL) и вставляем новую с user_id
+            cur.execute('DELETE FROM app_state WHERE user_id IS NULL')
             cur.execute('INSERT INTO app_state (user_id, state, updated_at) VALUES (%s, %s, NOW())',
                         (user_id, json.dumps(state)))
         conn.commit()
