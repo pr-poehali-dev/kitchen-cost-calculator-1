@@ -122,13 +122,25 @@ export default function PricelistUpdateModal({ onClose }: { onClose: () => void 
 
   const handleSave = () => {
     if (!matches) return;
-    matches.filter(m => m.selected).forEach(m => {
-      const mat = store.materials.find(x => x.id === m.materialId);
-      if (!mat?.variants) return;
-      store.updateMaterial(m.materialId, {
-        variants: mat.variants.map(v => v.id === m.variantId ? { ...v, basePrice: m.newPrice } : v),
+    const selected = matches.filter(m => m.selected);
+
+    // Группируем по materialId — один updateMaterial на материал со всеми изменёнными вариантами
+    const byMaterial = new Map<string, Map<string, number>>();
+    for (const m of selected) {
+      if (!byMaterial.has(m.materialId)) byMaterial.set(m.materialId, new Map());
+      byMaterial.get(m.materialId)!.set(m.variantId, m.newPrice);
+    }
+
+    for (const [materialId, variantPrices] of byMaterial) {
+      const mat = store.materials.find(x => x.id === materialId);
+      if (!mat?.variants) continue;
+      store.updateMaterial(materialId, {
+        variants: mat.variants.map(v =>
+          variantPrices.has(v.id) ? { ...v, basePrice: variantPrices.get(v.id)! } : v
+        ),
       });
-    });
+    }
+
     setSaved(true);
     setTimeout(onClose, 1500);
   };
