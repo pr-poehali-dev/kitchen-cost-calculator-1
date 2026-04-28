@@ -44,6 +44,7 @@ export default function SettingsPage() {
   const [accent, setAccent] = useState<AccentId>(() => (localStorage.getItem(ACCENT_KEY) as AccentId) || 'gold');
   const [importError, setImportError] = useState('');
   const [importOk, setImportOk] = useState(false);
+  const [pendingImportData, setPendingImportData] = useState<Record<string, unknown> | null>(null);
 
   // Применяем тему при монтировании
   useEffect(() => {
@@ -92,27 +93,34 @@ export default function SettingsPage() {
           setImportError('Неверный формат файла');
           return;
         }
-        store.setState(s => ({
-          ...s,
-          materials: data.materials ?? s.materials,
-          manufacturers: data.manufacturers ?? s.manufacturers,
-          vendors: data.vendors ?? s.vendors,
-          services: data.services ?? s.services,
-          expenses: data.expenses ?? s.expenses,
-          expenseGroups: data.expenseGroups ?? s.expenseGroups,
-          projects: data.projects ?? s.projects,
-          savedBlocks: data.savedBlocks ?? s.savedBlocks,
-          templates: data.templates ?? s.templates,
-          settings: data.settings ?? s.settings,
-        }));
-        setImportOk(true);
-        setTimeout(() => setImportOk(false), 3000);
+        setPendingImportData(data);
       } catch {
         setImportError('Ошибка чтения файла');
       }
     };
     reader.readAsText(file);
     e.target.value = '';
+  };
+
+  const confirmImport = () => {
+    if (!pendingImportData) return;
+    const data = pendingImportData;
+    store.setState(s => ({
+      ...s,
+      materials: data.materials as typeof s.materials ?? s.materials,
+      manufacturers: data.manufacturers as typeof s.manufacturers ?? s.manufacturers,
+      vendors: data.vendors as typeof s.vendors ?? s.vendors,
+      services: data.services as typeof s.services ?? s.services,
+      expenses: data.expenses as typeof s.expenses ?? s.expenses,
+      expenseGroups: data.expenseGroups as typeof s.expenseGroups ?? s.expenseGroups,
+      projects: data.projects as typeof s.projects ?? s.projects,
+      savedBlocks: data.savedBlocks as typeof s.savedBlocks ?? s.savedBlocks,
+      templates: data.templates as typeof s.templates ?? s.templates,
+      settings: data.settings as typeof s.settings ?? s.settings,
+    }));
+    setPendingImportData(null);
+    setImportOk(true);
+    setTimeout(() => setImportOk(false), 3000);
   };
 
   const getCatTypeIds = (cat: MaterialCategory): string[] => {
@@ -137,9 +145,17 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col h-full animate-fade-in">
-      <div className="border-b border-border bg-[hsl(220,14%,11%)] px-6 py-4">
-        <h1 className="text-base font-semibold text-foreground">Настройки</h1>
-        <p className="text-[hsl(var(--text-muted))] text-xs mt-0.5">Справочники, единицы измерения, типы и категории материалов</p>
+      <div className="border-b border-border bg-[hsl(220,14%,11%)] px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-base font-semibold text-foreground">Настройки</h1>
+          <p className="text-[hsl(var(--text-muted))] text-xs mt-0.5">Справочники, единицы измерения, типы и категории материалов</p>
+        </div>
+        <button
+          onClick={handleExportBackup}
+          className="flex items-center gap-2 px-3 py-2 bg-gold/10 border border-gold/30 text-gold rounded text-xs font-medium hover:bg-gold/20 transition-all"
+        >
+          <Icon name="Download" size={13} /> Скачать резервную копию
+        </button>
       </div>
 
       <div className="flex-1 overflow-auto scrollbar-thin p-6 space-y-5 max-w-3xl">
@@ -439,6 +455,59 @@ export default function SettingsPage() {
           onChange={setEditingCategory}
           onClose={() => setEditingCategory(null)}
         />
+      )}
+
+      {/* Диалог подтверждения импорта */}
+      {pendingImportData && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[hsl(220,14%,11%)] border border-border rounded-xl p-6 w-full max-w-md shadow-2xl space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-10 h-10 rounded-full bg-amber-500/15 flex items-center justify-center shrink-0">
+                <Icon name="AlertTriangle" size={18} className="text-amber-400" />
+              </div>
+              <div>
+                <div className="font-semibold text-sm text-foreground">Восстановить из резервной копии?</div>
+                <div className="text-xs text-[hsl(var(--text-muted))] mt-1">
+                  Все текущие данные будут заменены данными из файла. Это действие нельзя отменить.
+                </div>
+              </div>
+            </div>
+            <div className="bg-[hsl(220,12%,14%)] rounded border border-border p-3 text-xs text-[hsl(var(--text-muted))] space-y-1">
+              <div className="text-foreground font-medium mb-1.5">Будет загружено:</div>
+              {[
+                ['Материалы', (pendingImportData.materials as unknown[])?.length],
+                ['Проекты', (pendingImportData.projects as unknown[])?.length],
+                ['Производители', (pendingImportData.manufacturers as unknown[])?.length],
+                ['Шаблоны блоков', (pendingImportData.savedBlocks as unknown[])?.length],
+              ].map(([label, count]) => count !== undefined && (
+                <div key={label as string} className="flex justify-between">
+                  <span>{label}</span>
+                  <span className="text-foreground font-medium">{count as number} шт.</span>
+                </div>
+              ))}
+              {(pendingImportData.exportedAt as string) && (
+                <div className="flex justify-between pt-1 border-t border-border mt-1">
+                  <span>Дата копии</span>
+                  <span className="text-foreground">{new Date(pendingImportData.exportedAt as string).toLocaleDateString('ru-RU')}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={confirmImport}
+                className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-semibold hover:opacity-90"
+              >
+                Восстановить
+              </button>
+              <button
+                onClick={() => setPendingImportData(null)}
+                className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
