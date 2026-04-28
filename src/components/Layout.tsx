@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import type { AuthUser } from '@/auth/useAuth';
-import { getGlobalState } from '@/store/stateCore';
+import { getSaveStatus, saveStatusListeners, saveStateToDb, type SaveStatus } from '@/store/stateCore';
 
 type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings' | 'users';
 
@@ -29,19 +29,14 @@ const NAV_ADMIN = { id: 'users' as Section, label: 'Пользователи', i
 
 export default function Layout({ active, onNav, children, user, onLogout, onOpenSearch }: LayoutProps) {
   const nav = user?.role === 'admin' ? [...NAV_BASE, NAV_ADMIN] : NAV_BASE;
-  const [savedAt, setSavedAt] = useState<number | undefined>(undefined);
+  const [saveStatus, setSaveStatus] = useState<SaveStatus>(getSaveStatus());
 
-  // Обновляем время последнего сохранения каждые 5 сек
+  // Подписываемся на статус сохранения
   useEffect(() => {
-    const update = () => setSavedAt(getGlobalState().savedAt);
-    update();
-    const t = setInterval(update, 5000);
-    return () => clearInterval(t);
+    const handler = (s: SaveStatus) => setSaveStatus(s);
+    saveStatusListeners.add(handler);
+    return () => { saveStatusListeners.delete(handler); };
   }, []);
-
-  const savedLabel = savedAt
-    ? new Date(savedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
-    : null;
 
   // Ctrl+K / Cmd+K
   useEffect(() => {
@@ -54,6 +49,24 @@ export default function Layout({ active, onNav, children, user, onLogout, onOpen
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [onOpenSearch]);
+
+  // Предупреждение при закрытии вкладки с несохранёнными данными
+  useEffect(() => {
+    const handler = (e: BeforeUnloadEvent) => {
+      if (saveStatus === 'pending' || saveStatus === 'error') {
+        e.preventDefault();
+        e.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [saveStatus]);
+
+  const statusUI = {
+    saved: { icon: 'Cloud', color: 'text-[hsl(var(--text-muted))]', label: 'Сохранено' },
+    pending: { icon: 'CloudUpload', color: 'text-gold', label: 'Сохраняю...' },
+    error: { icon: 'CloudOff', color: 'text-destructive', label: 'Ошибка сохранения' },
+  }[saveStatus];
 
   return (
     <div className="flex h-screen bg-background overflow-hidden">
@@ -104,6 +117,30 @@ export default function Layout({ active, onNav, children, user, onLogout, onOpen
               </div>
             </div>
           )}
+
+          {/* Статус сохранения */}
+          {user && (
+            <div className={`flex items-center gap-1.5 px-1 text-[10px] ${statusUI.color} transition-colors`}>
+              <Icon name={statusUI.icon} size={10} className="shrink-0" fallback="Cloud" />
+              <span>{statusUI.label}</span>
+              {saveStatus === 'error' && (
+                <button
+                  onClick={saveStateToDb}
+                  className="ml-auto underline hover:no-underline"
+                >
+                  Повторить
+                </button>
+              )}
+            </div>
+          )}
+
+          {/* Баннер ошибки сохранения */}
+          {saveStatus === 'error' && (
+            <div className="mx-0 px-2 py-2 bg-destructive/10 border border-destructive/30 rounded text-[10px] text-destructive leading-relaxed">
+              Нет связи с сервером. Данные сохранены локально — не закрывайте вкладку.
+            </div>
+          )}
+
           {onLogout && (
             <button
               onClick={onLogout}
@@ -112,12 +149,6 @@ export default function Layout({ active, onNav, children, user, onLogout, onOpen
               <Icon name="LogOut" size={12} />
               Выйти
             </button>
-          )}
-          {savedLabel && (
-            <div className="flex items-center gap-1.5 px-1 text-[10px] text-[hsl(var(--text-muted))]">
-              <Icon name="CloudCheck" size={10} className="text-green-500 shrink-0" fallback="Check" />
-              Сохранено {savedLabel}
-            </div>
           )}
           {!user && <div className="text-[hsl(var(--text-muted))] text-xs px-1">v1.0 · 2026</div>}
         </div>

@@ -84,7 +84,21 @@ function parseAndMerge(raw: string): AppState {
 
 const STATE_URL = 'https://functions.poehali.dev/a257bd1a-a3a1-40e0-95b5-bbd561a371e4';
 
-// localStorage — только кэш для мгновенного старта, не источник истины
+// ── Статус сохранения ─────────────────────────────────────────────────────────
+export type SaveStatus = 'saved' | 'pending' | 'error';
+let saveStatus: SaveStatus = 'saved';
+let hasPendingChanges = false; // есть ли несохранённые в БД изменения
+export const saveStatusListeners: Set<(s: SaveStatus) => void> = new Set();
+
+function setSaveStatus(s: SaveStatus) {
+  saveStatus = s;
+  saveStatusListeners.forEach(fn => fn(s));
+}
+
+export function getSaveStatus(): SaveStatus { return saveStatus; }
+export function getHasPendingChanges(): boolean { return hasPendingChanges; }
+
+// ── localStorage (только кэш) ─────────────────────────────────────────────────
 function loadLocalCache(): AppState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -103,6 +117,7 @@ export function saveLocalState(state: AppState) {
   } catch (e) { void e; }
 }
 
+// ── Сохранение в БД ───────────────────────────────────────────────────────────
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let currentToken: string | null = null;
 
@@ -110,20 +125,36 @@ export function setStoreToken(token: string) {
   currentToken = token;
 }
 
-function scheduleSaveToDb(state: AppState) {
-  if (saveTimer) clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    saveTimer = null;
-    if (!currentToken) return;
-    fetch(`${STATE_URL}?token=${encodeURIComponent(currentToken)}`, {
+async function doSaveToDb(state: AppState) {
+  if (!currentToken) return;
+  try {
+    const res = await fetch(`${STATE_URL}?token=${encodeURIComponent(currentToken)}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ state }),
-    }).catch(() => void 0);
+    });
+    if (res.ok) {
+      hasPendingChanges = false;
+      setSaveStatus('saved');
+    } else {
+      setSaveStatus('error');
+    }
+  } catch {
+    setSaveStatus('error');
+  }
+}
+
+function scheduleSaveToDb(state: AppState) {
+  hasPendingChanges = true;
+  setSaveStatus('pending');
+  if (saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    doSaveToDb(state);
   }, 1500);
 }
 
-// БД — единственный источник истины. localStorage — только кэш для быстрого старта.
+// ── Загрузка из БД ────────────────────────────────────────────────────────────
 export async function loadStateFromDb(token: string): Promise<AppState | null> {
   try {
     const res = await fetch(`${STATE_URL}?token=${encodeURIComponent(token)}`);
@@ -131,14 +162,14 @@ export async function loadStateFromDb(token: string): Promise<AppState | null> {
     const data = await res.json();
     if (!data.state) return null;
     const dbState = parseAndMerge(JSON.stringify(data.state));
-    saveLocalState(dbState); // обновляем кэш
+    saveLocalState(dbState);
     return dbState;
   } catch {
     return null;
   }
 }
 
-// Стартуем с кэша — покажем UI мгновенно, потом App.tsx заменит данными из БД
+// ── Глобальный state ──────────────────────────────────────────────────────────
 let globalState: AppState = loadLocalCache();
 export const listeners: Set<() => void> = new Set();
 
@@ -153,16 +184,13 @@ export function setState(updater: (s: AppState) => AppState) {
 export function forceSetGlobalState(state: AppState) {
   globalState = state;
   saveLocalState(state);
+  hasPendingChanges = false;
+  setSaveStatus('saved');
   listeners.forEach(fn => fn());
 }
 
 export function saveStateToDb() {
-  if (!currentToken) return;
-  fetch(`${STATE_URL}?token=${encodeURIComponent(currentToken)}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ state: globalState }),
-  }).catch(() => void 0);
+  doSaveToDb(globalState);
 }
 
 export function getGlobalState(): AppState {
