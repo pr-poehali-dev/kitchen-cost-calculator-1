@@ -11,6 +11,8 @@ import SkatImportModal from './materials/SkatImportModal';
 import BoyardImportModal from './materials/BoyardImportModal';
 import BoyardPriceModal from './materials/BoyardPriceModal';
 import ExcelMappingImportModal from './materials/ExcelMappingImportModal';
+import TmfImportModal from './materials/TmfImportModal';
+import TmfPriceModal from './materials/TmfPriceModal';
 import MatTypeBar from './materials/MatTypeBar';
 import MatFilterBar from './materials/MatFilterBar';
 import MatTable from './materials/MatTable';
@@ -35,6 +37,8 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
   const [showBoyardImport, setShowBoyardImport] = useState(false);
   const [showBoyardPrice, setShowBoyardPrice] = useState(false);
   const [showExcelImport, setShowExcelImport] = useState(false);
+  const [showTmfImport, setShowTmfImport] = useState(false);
+  const [showTmfPrice, setShowTmfPrice] = useState(false);
   const [showImportMenu, setShowImportMenu] = useState(false);
   const [showPercentModal, setShowPercentModal] = useState(false);
   const [percentVal, setPercentVal] = useState('');
@@ -189,6 +193,8 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
             onExcelPrice: () => setShowExcelPrice(true),
             onBulkPrice: () => setShowBulkPrice(true),
             onExcelImport: () => setShowExcelImport(true),
+            onTmfImport: () => setShowTmfImport(true),
+            onTmfPrice: () => setShowTmfPrice(true),
             onPercentModal: () => setShowPercentModal(true),
           }}
         />
@@ -282,6 +288,8 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
       {showBoyardImport && <BoyardImportModal onClose={() => setShowBoyardImport(false)} />}
       {showBoyardPrice && <BoyardPriceModal onClose={() => setShowBoyardPrice(false)} />}
       {showExcelImport && <ExcelMappingImportModal onClose={() => setShowExcelImport(false)} />}
+      {showTmfImport && <TmfImportModal onClose={() => setShowTmfImport(false)} />}
+      {showTmfPrice && <TmfPriceModal onClose={() => setShowTmfPrice(false)} />}
 
       {/* Модалка изменения цен на % */}
       {showPercentModal && (

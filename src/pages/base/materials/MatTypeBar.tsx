@@ -11,6 +11,8 @@ interface PriceMenuCallbacks {
   onExcelPrice: () => void;
   onBulkPrice: () => void;
   onExcelImport: () => void;
+  onTmfImport: () => void;
+  onTmfPrice: () => void;
   onPercentModal: () => void;
 }
 
@@ -86,6 +88,15 @@ export default function MatTypeBar({
                 <button onClick={() => { priceMenu.onBoyardPrice(); onCloseImportMenu(); }}
                   className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
                   <Icon name="RefreshCw" size={13} className="text-[hsl(var(--text-muted))]" /> Цены BOYARD
+                </button>
+                <div className="px-3 py-1 text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider border-b border-t border-border my-1">ТМФ (фасады)</div>
+                <button onClick={() => { priceMenu.onTmfImport(); onCloseImportMenu(); }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
+                  <Icon name="PackagePlus" size={13} className="text-[hsl(var(--text-muted))]" /> Импорт ТМФ
+                </button>
+                <button onClick={() => { priceMenu.onTmfPrice(); onCloseImportMenu(); }}
+                  className="w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,18%)] transition-colors flex items-center gap-2">
+                  <Icon name="RefreshCw" size={13} className="text-[hsl(var(--text-muted))]" /> Цены ТМФ
                 </button>
                 <div className="px-3 py-1 text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider border-b border-t border-border my-1">Другие</div>
                 <button onClick={() => { priceMenu.onPricelistUpdate(); onCloseImportMenu(); }}
