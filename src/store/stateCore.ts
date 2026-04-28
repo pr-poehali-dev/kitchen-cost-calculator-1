@@ -169,11 +169,40 @@ export async function loadStateFromDb(token: string): Promise<AppState | null> {
   }
 }
 
+// ── Undo (история проектов) ───────────────────────────────────────────────────
+const UNDO_LIMIT = 20;
+type UndoSnapshot = { projects: AppState['projects']; activeProjectId: string | null };
+const undoStack: UndoSnapshot[] = [];
+export const undoListeners: Set<() => void> = new Set();
+
+function notifyUndo() { undoListeners.forEach(fn => fn()); }
+
+export function pushUndo(state: AppState) {
+  undoStack.push({ projects: state.projects, activeProjectId: state.activeProjectId });
+  if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+  notifyUndo();
+}
+
+export function canUndo(): boolean { return undoStack.length > 0; }
+
+export function undoProjects(): boolean {
+  const snap = undoStack.pop();
+  if (!snap) return false;
+  globalState = { ...globalState, projects: snap.projects, activeProjectId: snap.activeProjectId };
+  saveLocalState(globalState);
+  scheduleSaveToDb(globalState);
+  listeners.forEach(fn => fn());
+  notifyUndo();
+  return true;
+}
+
 // ── Глобальный state ──────────────────────────────────────────────────────────
 let globalState: AppState = loadLocalCache();
 export const listeners: Set<() => void> = new Set();
 
 export function setState(updater: (s: AppState) => AppState) {
+  // Сохраняем снимок проектов перед изменением (для undo)
+  pushUndo(globalState);
   globalState = updater(globalState);
   globalState = { ...globalState, savedAt: Date.now() };
   saveLocalState(globalState);

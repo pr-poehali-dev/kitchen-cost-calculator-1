@@ -1,5 +1,5 @@
-import { useState, useRef } from 'react';
-import { useStore } from '@/store/useStore';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { useStore, undoProjects, canUndo, undoListeners } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
 import CalcHeader from './calc/CalcHeader';
 import CalcBlock from './calc/CalcBlock';
@@ -84,6 +84,39 @@ export default function CalcPage() {
   const [refreshed, setRefreshed] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [undoToast, setUndoToast] = useState(false);
+  const [undoAvailable, setUndoAvailable] = useState(canUndo());
+  const undoToastTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Следим за стеком undo
+  useEffect(() => {
+    const handler = () => setUndoAvailable(canUndo());
+    undoListeners.add(handler);
+    return () => { undoListeners.delete(handler); };
+  }, []);
+
+  const handleUndo = useCallback(() => {
+    if (!canUndo()) return;
+    undoProjects();
+    if (undoToastTimer.current) clearTimeout(undoToastTimer.current);
+    setUndoToast(true);
+    undoToastTimer.current = setTimeout(() => setUndoToast(false), 2000);
+  }, []);
+
+  // Ctrl+Z / Cmd+Z
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
+        // Не перехватываем если фокус в поле ввода
+        const tag = (e.target as HTMLElement).tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        e.preventDefault();
+        handleUndo();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [handleUndo]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -237,6 +270,27 @@ export default function CalcPage() {
       )}
       {showCompare && (
         <ComparePanel currentProjectId={project.id} onClose={() => setShowCompare(false)} />
+      )}
+
+      {/* Кнопка Undo (показывается когда есть история) */}
+      {undoAvailable && (
+        <button
+          onClick={handleUndo}
+          title="Отменить последнее действие (Ctrl+Z)"
+          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-3 py-2 bg-[hsl(220,14%,16%)] border border-border rounded-lg text-xs text-[hsl(var(--text-dim))] hover:text-foreground hover:border-gold/40 shadow-lg transition-all"
+        >
+          <Icon name="Undo2" size={13} />
+          Отменить
+          <kbd className="ml-1 px-1 py-0.5 bg-[hsl(220,12%,22%)] rounded text-[10px] border border-border">Ctrl+Z</kbd>
+        </button>
+      )}
+
+      {/* Тост подтверждения undo */}
+      {undoToast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-2 px-4 py-2.5 bg-[hsl(220,14%,16%)] border border-border rounded-lg text-sm text-foreground shadow-xl animate-fade-in">
+          <Icon name="Undo2" size={14} className="text-gold" />
+          Действие отменено
+        </div>
       )}
     </div>
   );

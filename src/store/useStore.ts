@@ -13,9 +13,12 @@ import {
   loadStateFromDb,
   forceSetGlobalState,
   saveStateToDb,
+  undoProjects,
+  canUndo,
+  undoListeners,
 } from './stateCore';
 
-export { setStoreToken, loadStateFromDb, forceSetGlobalState, saveStateToDb };
+export { setStoreToken, loadStateFromDb, forceSetGlobalState, saveStateToDb, undoProjects, canUndo, undoListeners };
 
 export function useStore() {
   const [, forceUpdate] = useState(0);
