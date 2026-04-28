@@ -141,12 +141,14 @@ export default function TmfImportModal({ onClose }: Props) {
 
           if (variants.length === 0) continue;
 
+          const thickness = col.config.thickness;
           const existingIdx = materials.findIndex(m => m.id === matId);
           if (existingIdx >= 0) {
             materials[existingIdx] = {
               ...materials[existingIdx],
               vendorId: evseyevVendor?.id,
               typeId: 'mt2',
+              thickness,
               variants,
               basePrice: variants[0].basePrice,
               priceUpdatedAt: today,
@@ -159,6 +161,7 @@ export default function TmfImportModal({ onClose }: Props) {
               manufacturerId: tmfMfr?.id,
               vendorId: evseyevVendor?.id,
               typeId: 'mt2',
+              thickness,
               unit: 'м²',
               basePrice: variants[0].basePrice,
               variants,

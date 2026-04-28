@@ -84,19 +84,15 @@ export function extractColorVariants(
   for (let i = 0; i < rows.length; i++) {
     const line = rows[i].map(c => String(c ?? '').trim()).join(' ').toLowerCase();
     if (line.includes('цвета фасадов') || line.includes('цвет фасадов')) {
-      colorSectionStart = i + 1;
+      colorSectionStart = i; // включаем саму строку — в ней могут быть заголовки вариантов
       break;
     }
   }
   if (colorSectionStart < 0) return result;
 
-  // Ищем заголовки подсекций и их колонки
-  // variantColMap: variantKey → индекс колонки в таблице (для параллельного режима)
-  const variantColMap = new Map<string, number>(); // key → colIndex в оригинальной строке
-
-  // Сканируем строки начиная с colorSectionStart
+  const variantColMap = new Map<string, number>();
   let currentVariantKey: string | null = null;
-  let parallelMode = false; // true если несколько вариантов в одной строке-заголовке
+  let parallelMode = false;
 
   for (let i = colorSectionStart; i < rows.length; i++) {
     const rawRow = rows[i] as unknown[];
@@ -115,6 +111,9 @@ export function extractColorVariants(
         isHeader = true;
       }
     }
+
+    // Строка с «цвета фасадов» — пропускаем только если не содержит заголовков вариантов
+    if ((line.includes('цвета фасадов') || line.includes('цвет фасадов')) && !isHeader) continue;
 
     if (isHeader) {
       if (foundVariantsInRow.length > 1) {
