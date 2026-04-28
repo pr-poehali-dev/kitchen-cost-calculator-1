@@ -33,23 +33,37 @@ export default function TmfImportModal({ onClose }: Props) {
       try {
         const wb = XLSX.read(new Uint8Array(e.target!.result as ArrayBuffer), { type: 'array' });
         const results: ParsedCollection[] = [];
-        setSheetNames(wb.SheetNames);
+        // Нормализованные имена для диагностики
+        setSheetNames(wb.SheetNames.map(n => {
+          const normed = Array.from(n.normalize('NFC')).filter(c => /[a-zа-яё0-9]/i.test(c)).join('').toLowerCase().replace(/ё/g, 'е');
+          return `${n} [${normed}]`;
+        }));
 
-        // Нормализация: убираем все виды пробелов и Unicode-мусор, приводим к нижнему регистру
+        // Агрессивная нормализация: Unicode NFC + только буквы и цифры
         const normName = (s: string) =>
-          s.toLowerCase()
-            .replace(/[\s\u00a0\u200b\u2009\u202f\ufeff]/g, '') // все виды пробелов
-            .replace(/[её]/g, 'е') // е/ё унификация
-            .trim();
+          Array.from(s.normalize('NFC'))
+            .filter(c => /[a-zа-яё0-9]/i.test(c))
+            .join('')
+            .toLowerCase()
+            .replace(/ё/g, 'е');
 
         for (const cfg of TMF_COLLECTIONS) {
-          // Точное совпадение после нормализации
-          let wsName = wb.SheetNames.find(n => normName(n) === normName(cfg.sheetName));
+          const key = normName(cfg.sheetName);
 
-          // Если не нашли — пробуем вхождение (лист содержит ключевое слово)
+          // 1. Точное совпадение
+          let wsName = wb.SheetNames.find(n => normName(n) === key);
+
+          // 2. Вхождение в обе стороны
           if (!wsName) {
-            const key = normName(cfg.sheetName);
-            wsName = wb.SheetNames.find(n => normName(n).includes(key) || key.includes(normName(n)));
+            wsName = wb.SheetNames.find(n => {
+              const nn = normName(n);
+              return nn.includes(key) || key.includes(nn);
+            });
+          }
+
+          // 3. Совпадение первых 5 символов (защита от незначительных отличий)
+          if (!wsName && key.length >= 5) {
+            wsName = wb.SheetNames.find(n => normName(n).startsWith(key.slice(0, 5)));
           }
 
           if (!wsName) {
