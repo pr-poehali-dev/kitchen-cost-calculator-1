@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { useStore } from '@/store/useStore';
+import { useStore, saveStateToDb } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
 import { Modal } from '../BaseShared';
 
@@ -243,6 +243,8 @@ export default function TmfImportModal({ onClose }: Props) {
     const tmfMfr = store.manufacturers.find(m =>
       m.name.toLowerCase() === 'тмф' || m.name.toLowerCase().includes('томск')
     );
+    // Поставщик — Евсеев
+    const evseyevVendor = store.vendors.find(v => v.name.toLowerCase().includes('евсеев'));
 
     const today = new Date().toISOString().slice(0, 10);
     let created = 0;
@@ -255,8 +257,6 @@ export default function TmfImportModal({ onClose }: Props) {
       const matId = tmfMaterialId(col.config.label);
       const matName = `Фасад ТМФ ${col.config.label}`;
 
-      // Строим варианты: один вариант = одна ценовая строка (с кромкой)
-      // params = label варианта (напр. «С кромкой», «Одностороннее с кромкой»)
       const variants = col.config.priceRows
         .filter(pr => col.prices[pr.variantKey] !== undefined)
         .map(pr => ({
@@ -273,13 +273,14 @@ export default function TmfImportModal({ onClose }: Props) {
 
       if (existing) {
         store.updateMaterial(matId, {
+          vendorId: evseyevVendor?.id,
+          typeId: 'mt2', // МДФ
           variants,
           basePrice: variants[0].basePrice,
           priceUpdatedAt: today,
         });
         updated++;
       } else {
-        // Добавляем с явным фиксированным id через setState
         store.setState(s => ({
           ...s,
           materials: [
@@ -288,7 +289,8 @@ export default function TmfImportModal({ onClose }: Props) {
               id: matId,
               name: matName,
               manufacturerId: tmfMfr?.id,
-              typeId: col.config.typeId,
+              vendorId: evseyevVendor?.id,
+              typeId: 'mt2', // МДФ
               unit: 'м²',
               basePrice: variants[0].basePrice,
               variants,
@@ -300,6 +302,8 @@ export default function TmfImportModal({ onClose }: Props) {
       }
     }
 
+    // Немедленно сохраняем в БД не дожидаясь дебаунса
+    saveStateToDb();
     setResult({ created, updated });
     setStep('done');
   };

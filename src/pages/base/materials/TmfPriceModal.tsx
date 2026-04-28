@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { useStore } from '@/store/useStore';
+import { useStore, saveStateToDb } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
 import { fmt, Modal } from '../BaseShared';
 
@@ -216,6 +216,8 @@ export default function TmfPriceModal({ onClose }: Props) {
       });
     }
 
+    // Немедленно сохраняем в БД не дожидаясь дебаунса
+    saveStateToDb();
     setSaved(true);
     setTimeout(onClose, 1500);
   };
