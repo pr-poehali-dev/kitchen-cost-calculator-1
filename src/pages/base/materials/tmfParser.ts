@@ -63,7 +63,9 @@ export function extractColorVariants(
         inSection = true; continue;
       }
       if (!inSection) continue;
-      if (line.includes('цвет кромки')) continue;
+      // Пропускаем строки-заголовки колонок (содержат «цвета», «кромки», название коллекции)
+      if (line.includes('цвет кромки') || line.includes('цвета кромки')) continue;
+      if (line.includes('цвета фасадов') || line.includes('цвет фасадов')) continue;
       const colorName = cells[0];
       if (!colorName || colorName.length < 2) continue;
       const allKeys = new Set(cfg.variants.map(v => v.key));
