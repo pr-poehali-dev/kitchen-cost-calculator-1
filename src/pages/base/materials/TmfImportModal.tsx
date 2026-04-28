@@ -4,86 +4,96 @@ import { useStore } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
 import { Modal } from '../BaseShared';
 
-// ─── Конфигурация листов ТМФ ──────────────────────────────────────────────────
+// ─── Конфигурация коллекций ТМФ ───────────────────────────────────────────────
+// Для каждой коллекции: как называется лист, какие ценовые строки искать
+// Вариант = цвет × покрытие × категория (где есть)
+// Берём только цену «с кромкой»
 
-interface TmfSheet {
-  key: string;
-  label: string;
-  // Варианты: { id варианта, label, признак поиска в прайсе }
-  variants: { id: string; label: string; searchLabel: string }[];
+interface CollectionConfig {
+  sheetName: string;       // название листа в Excel
+  label: string;           // отображаемое название
+  typeId: string;          // mt9 = Фасад
+  // Какие ценовые строки искать: [ключ варианта, regexp для поиска строки с ценой]
+  priceRows: { variantKey: string; label: string; pattern: RegExp }[];
 }
 
-// Листы с простой структурой: одна цена или с кромкой/без кромки
-const TMF_SHEETS: TmfSheet[] = [
+const TMF_COLLECTIONS: CollectionConfig[] = [
   {
-    key: 'NanoШпон',
+    sheetName: 'NanoШпон',
     label: 'NanoШпон',
-    variants: [
-      { id: 'с кромкой',   label: 'С кромкой [18мм]',   searchLabel: 'с кромкой' },
-      { id: 'без кромки',  label: 'Без кромки [18мм]',  searchLabel: 'без кромки' },
+    typeId: 'mt9',
+    priceRows: [
+      { variantKey: 'с кромкой', label: 'С кромкой', pattern: /прямые фасады с кромкой/i },
     ],
   },
   {
-    key: 'UltraPet',
+    sheetName: 'UltraPet',
     label: 'UltraPet',
-    variants: [
-      { id: 'с кромкой',   label: 'С кромкой [18мм]',   searchLabel: 'с кромкой' },
-      { id: 'без кромки',  label: 'Без кромки [18мм]',  searchLabel: 'без кромки' },
+    typeId: 'mt9',
+    priceRows: [
+      { variantKey: 'с кромкой', label: 'С кромкой', pattern: /прямые фасады с кромкой/i },
     ],
   },
   {
-    key: 'ExtraMat',
+    sheetName: 'ExtraMat',
     label: 'ExtraMat',
-    variants: [
-      { id: 'с кромкой',   label: 'С кромкой [18мм]',   searchLabel: 'с кромкой' },
-      { id: 'без кромки',  label: 'Без кромки [18мм]',  searchLabel: 'без кромки' },
+    typeId: 'mt9',
+    priceRows: [
+      { variantKey: 'с кромкой', label: 'С кромкой', pattern: /прямые фасады с кромкой/i },
     ],
   },
   {
-    key: 'SuperMat',
+    sheetName: 'SuperMat',
     label: 'SuperMat',
-    variants: [
-      { id: 'одн с кромкой',   label: 'Одностороннее с кромкой',   searchLabel: 'одностороннее.*с кромкой' },
-      { id: 'одн без кромки',  label: 'Одностороннее без кромки',  searchLabel: 'одностороннее.*без кромки' },
-      { id: 'двух с кромкой',  label: 'Двухстороннее с кромкой',   searchLabel: 'двухстороннее.*с кромкой' },
-      { id: 'двух без кромки', label: 'Двухстороннее без кромки',  searchLabel: 'двухстороннее.*без кромки' },
+    typeId: 'mt9',
+    priceRows: [
+      { variantKey: 'одн с кромкой',  label: 'Одностороннее с кромкой',  pattern: /одностороннее/i },
+      { variantKey: 'двух с кромкой', label: 'Двухстороннее с кромкой',  pattern: /двухстороннее/i },
     ],
   },
   {
-    key: 'SynchroWood',
+    sheetName: 'SynchroWood',
     label: 'SynchroWood',
-    variants: [
-      { id: '1кат с кромкой',  label: '1 кат. с кромкой',  searchLabel: '1 категория' },
-      { id: '1кат без кромки', label: '1 кат. без кромки', searchLabel: '1 категория' },
-      { id: '2кат с кромкой',  label: '2 кат. с кромкой',  searchLabel: '2 категория' },
-      { id: '2кат без кромки', label: '2 кат. без кромки', searchLabel: '2 категория' },
+    typeId: 'mt9',
+    priceRows: [
+      { variantKey: '1кат с кромкой', label: '1 категория с кромкой', pattern: /1\s*категория/i },
+      { variantKey: '2кат с кромкой', label: '2 категория с кромкой', pattern: /2\s*категория/i },
     ],
   },
   {
-    key: 'SynchroStyle',
+    sheetName: 'SynchroStyle',
     label: 'SynchroStyle',
-    variants: [
-      { id: '1кат с кромкой',  label: '1 кат. с кромкой',  searchLabel: '1 категория' },
-      { id: '1кат без кромки', label: '1 кат. без кромки', searchLabel: '1 категория' },
-      { id: '2кат с кромкой',  label: '2 кат. с кромкой',  searchLabel: '2 категория' },
-      { id: '2кат без кромки', label: '2 кат. без кромки', searchLabel: '2 категория' },
+    typeId: 'mt9',
+    priceRows: [
+      { variantKey: '1кат с кромкой', label: '1 категория с кромкой', pattern: /1\s*категория/i },
+      { variantKey: '2кат с кромкой', label: '2 категория с кромкой', pattern: /2\s*категория/i },
     ],
   },
   {
-    key: 'Акрил',
+    sheetName: 'Акрил',
     label: 'Акрил',
-    variants: [
-      { id: '1кат одн с кромкой',   label: '1 кат. одностор. с кромкой',   searchLabel: '1 категория.*односторонн.*с кромкой' },
-      { id: '1кат одн без кромки',  label: '1 кат. одностор. без кромки',  searchLabel: '1 категория.*односторонн.*без кромки' },
-      { id: '2кат одн с кромкой',   label: '2 кат. одностор. с кромкой',   searchLabel: '2 категория.*односторонн.*с кромкой' },
-      { id: '2кат одн без кромки',  label: '2 кат. одностор. без кромки',  searchLabel: '2 категория.*односторонн.*без кромки' },
-      { id: '3кат с кромкой',       label: '3 кат. с кромкой',              searchLabel: '3 категория.*с кромкой' },
-      { id: '3кат без кромки',      label: '3 кат. без кромки',             searchLabel: '3 категория.*без кромки' },
+    typeId: 'mt9',
+    priceRows: [
+      { variantKey: '1кат одн с кромкой', label: '1 кат. одностороннее с кромкой', pattern: /1\s*категория.*одностор/i },
+      { variantKey: '2кат одн с кромкой', label: '2 кат. одностороннее с кромкой', pattern: /2\s*категория.*одностор/i },
+      { variantKey: '3кат с кромкой',     label: '3 категория с кромкой',           pattern: /3\s*категория/i },
     ],
   },
 ];
 
-// ─── Парсер прайса ТМФ ────────────────────────────────────────────────────────
+// Стабильный ID материала ТМФ по коллекции
+function tmfMaterialId(collectionLabel: string): string {
+  return `tmf__${collectionLabel.toLowerCase().replace(/[^a-zа-яё0-9]/gi, '_')}`;
+}
+
+// Стабильный ID варианта
+function tmfVariantId(collectionLabel: string, variantKey: string): string {
+  const col = collectionLabel.toLowerCase().replace(/[^a-zа-яё0-9]/gi, '_');
+  const vk = variantKey.toLowerCase().replace(/[^a-zа-яё0-9]/gi, '_');
+  return `tmf__${col}__${vk}`;
+}
+
+// ─── Парсинг Excel ────────────────────────────────────────────────────────────
 
 function parsePrice(v: unknown): number {
   if (v === null || v === undefined || v === '') return 0;
@@ -92,109 +102,93 @@ function parsePrice(v: unknown): number {
   return isNaN(n) ? 0 : n;
 }
 
-function normStr(s: string): string {
-  return s.toLowerCase().replace(/\s+/g, ' ').trim();
-}
-
-interface SheetPrices {
-  sheetKey: string;
-  prices: Record<string, number>; // variantId → цена
-  colorsCount: number;
-}
-
-function parseTmfSheet(ws: XLSX.WorkSheet, sheet: TmfSheet): SheetPrices {
-  const rows: unknown[][] = XLSX.utils.sheet_to_json(ws, { header: 1, defval: '' });
+// Извлекает цены из листа по паттернам строк
+// Ищет строку содержащую паттерн → берёт первое число > 1000 в строке или ближайших 3 строках
+function extractPrices(
+  rows: unknown[][],
+  priceRows: CollectionConfig['priceRows']
+): Record<string, number> {
   const prices: Record<string, number> = {};
-  let colorsCount = 0;
-
-  // Ищем строки с ценами — ищем ячейки которые содержат нужные метки
-  // Для простых листов (NanoШпон, UltraPet, ExtraMat): ищем строки "Прямые фасады с кромкой" / "без кромки"
-  // Для сложных (SuperMat, SynchroWood, SynchroStyle, Акрил): ищем по категориям
 
   for (let i = 0; i < rows.length; i++) {
-    const row = rows[i] as unknown[];
+    const row = rows[i];
+    // Склеиваем все ячейки строки в одну строку для поиска паттерна
+    const lineText = row.map(c => String(c ?? '')).join(' ').replace(/\s+/g, ' ').trim();
 
-    for (let j = 0; j < row.length; j++) {
-      const cellStr = normStr(String(row[j] || ''));
-      if (!cellStr) continue;
+    for (const pr of priceRows) {
+      if (prices[pr.variantKey] !== undefined) continue; // уже нашли
+      if (!pr.pattern.test(lineText)) continue;
 
-      for (const variant of sheet.variants) {
-        // Уже нашли эту цену
-        if (prices[variant.id] !== undefined) continue;
+      // Ищем цену в этой строке
+      for (const cell of row) {
+        const p = parsePrice(cell);
+        if (p > 1000) { prices[pr.variantKey] = p; break; }
+      }
 
-        const pattern = new RegExp(variant.searchLabel, 'i');
-        if (!pattern.test(cellStr)) continue;
-
-        // Ищем цену в этой строке — первое число > 1000
-        for (let k = j + 1; k < Math.min(j + 6, row.length); k++) {
-          const price = parsePrice(row[k]);
-          if (price > 1000) {
-            prices[variant.id] = price;
-            break;
+      // Если не нашли — смотрим 3 следующие строки
+      if (prices[pr.variantKey] === undefined) {
+        for (let di = 1; di <= 3 && i + di < rows.length; di++) {
+          for (const cell of rows[i + di]) {
+            const p = parsePrice(cell);
+            if (p > 1000) { prices[pr.variantKey] = p; break; }
           }
-        }
-        // Если не нашли в строке — ищем в следующих строках (та же колонка или рядом)
-        if (prices[variant.id] === undefined) {
-          for (let di = 1; di <= 3; di++) {
-            if (i + di >= rows.length) break;
-            const nextRow = rows[i + di] as unknown[];
-            for (let k = j; k < Math.min(j + 4, nextRow.length); k++) {
-              const price = parsePrice(nextRow[k]);
-              if (price > 1000) {
-                prices[variant.id] = price;
-                break;
-              }
-            }
-            if (prices[variant.id] !== undefined) break;
-          }
+          if (prices[pr.variantKey] !== undefined) break;
         }
       }
     }
   }
 
-  // Считаем цвета — ищем секцию "Цвета фасадов" и считаем строки после неё
-  let inColors = false;
+  return prices;
+}
+
+// Считает цвета в секции «Цвета фасадов»
+function countColors(rows: unknown[][]): string[] {
+  const colors: string[] = [];
+  let inSection = false;
   for (const row of rows) {
-    const firstCell = normStr(String((row as unknown[])[0] || (row as unknown[])[1] || ''));
-    if (firstCell.includes('цвета фасадов') || firstCell.includes('цвет фасадов')) {
-      inColors = true;
+    const cells = row.map(c => String(c ?? '').trim()).filter(Boolean);
+    const line = cells.join(' ').toLowerCase();
+
+    if (!inSection && (line.includes('цвета фасадов') || line.includes('цвет фасадов'))) {
+      inSection = true;
       continue;
     }
-    if (inColors) {
-      const val = String((row as unknown[])[0] || (row as unknown[])[1] || '').trim();
-      if (val && !val.toLowerCase().includes('цвет') && !val.toLowerCase().includes('кромк')) {
-        colorsCount++;
-      }
-    }
-  }
+    if (!inSection) continue;
 
-  return { sheetKey: sheet.key, prices, colorsCount };
+    // Строки-заголовки секций пропускаем
+    if (line.includes('цвет кромки') || line.includes('одностороннее') ||
+        line.includes('двухстороннее') || line.includes('категория')) continue;
+
+    // Берём первую непустую ячейку как название цвета
+    const colorName = cells[0];
+    if (colorName && colorName.length > 1) colors.push(colorName);
+  }
+  return colors;
+}
+
+// ─── Типы результата ──────────────────────────────────────────────────────────
+
+interface ParsedCollection {
+  config: CollectionConfig;
+  found: boolean;           // лист найден в файле
+  prices: Record<string, number>; // variantKey → цена
+  colors: string[];         // список цветов
 }
 
 // ─── Компонент ────────────────────────────────────────────────────────────────
 
-interface ParsedResult {
-  sheetKey: string;
-  label: string;
-  prices: Record<string, number>;
-  colorsCount: number;
-  found: boolean;
-}
-
-interface Props {
-  onClose: () => void;
-}
+interface Props { onClose: () => void }
 
 export default function TmfImportModal({ onClose }: Props) {
   const store = useStore();
-  const fileRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload');
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [parsed, setParsed] = useState<ParsedResult[]>([]);
-  const [selectedSheets, setSelectedSheets] = useState<Set<string>>(new Set());
+  const [collections, setCollections] = useState<ParsedCollection[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
   const [result, setResult] = useState({ created: 0, updated: 0 });
 
   const handleFile = (file: File) => {
@@ -206,34 +200,33 @@ export default function TmfImportModal({ onClose }: Props) {
     reader.onload = e => {
       try {
         const wb = XLSX.read(new Uint8Array(e.target!.result as ArrayBuffer), { type: 'array' });
-        const results: ParsedResult[] = [];
+        const results: ParsedCollection[] = [];
 
-        for (const sheet of TMF_SHEETS) {
-          // Ищем лист по имени (регистронезависимо)
-          const wsName = wb.SheetNames.find(n =>
-            n.toLowerCase().replace(/\s/g, '') === sheet.key.toLowerCase().replace(/\s/g, '')
-          );
+        for (const cfg of TMF_COLLECTIONS) {
+          // Ищем лист по имени (нормализованный)
+          const norm = (s: string) => s.toLowerCase().replace(/\s/g, '');
+          const wsName = wb.SheetNames.find(n => norm(n) === norm(cfg.sheetName));
+
           if (!wsName) {
-            results.push({ sheetKey: sheet.key, label: sheet.label, prices: {}, colorsCount: 0, found: false });
+            results.push({ config: cfg, found: false, prices: {}, colors: [] });
             continue;
           }
 
           const ws = wb.Sheets[wsName];
-          const { prices, colorsCount } = parseTmfSheet(ws, sheet);
-          const variantsFound = Object.keys(prices).length;
+          const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, { header: 1, defval: '' });
+          const prices = extractPrices(rows, cfg.priceRows);
+          const colors = countColors(rows);
 
           results.push({
-            sheetKey: sheet.key,
-            label: sheet.label,
+            config: cfg,
+            found: Object.keys(prices).length > 0,
             prices,
-            colorsCount,
-            found: variantsFound > 0,
+            colors,
           });
         }
 
-        setParsed(results);
-        // Авто-выбираем все найденные листы
-        setSelectedSheets(new Set(results.filter(r => r.found).map(r => r.sheetKey)));
+        setCollections(results);
+        setSelected(new Set(results.filter(r => r.found).map(r => r.config.sheetName)));
         setStep('preview');
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ошибка чтения файла');
@@ -245,70 +238,64 @@ export default function TmfImportModal({ onClose }: Props) {
     reader.readAsArrayBuffer(file);
   };
 
-  const toggleSheet = (key: string) => {
-    setSelectedSheets(prev => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  };
-
   const handleImport = () => {
-    const tmfMfr = store.manufacturers.find(m => m.name.toLowerCase() === 'тмф') ||
-                   store.manufacturers.find(m => m.name.toLowerCase().includes('томск'));
-
-    // Тип материала — «Фасад» (ищем по имени)
-    const facadeType = store.settings.materialTypes.find(t =>
-      t.name.toLowerCase().includes('фасад') || t.name.toLowerCase().includes('facade')
+    // Ищем производителя ТМФ
+    const tmfMfr = store.manufacturers.find(m =>
+      m.name.toLowerCase() === 'тмф' || m.name.toLowerCase().includes('томск')
     );
 
     const today = new Date().toISOString().slice(0, 10);
     let created = 0;
     let updated = 0;
 
-    for (const res of parsed) {
-      if (!selectedSheets.has(res.sheetKey)) continue;
-      if (!res.found) continue;
+    for (const col of collections) {
+      if (!selected.has(col.config.sheetName)) continue;
+      if (!col.found) continue;
 
-      const sheet = TMF_SHEETS.find(s => s.key === res.sheetKey)!;
-      const matName = `Фасад ТМФ ${res.label}`;
+      const matId = tmfMaterialId(col.config.label);
+      const matName = `Фасад ТМФ ${col.config.label}`;
 
-      // Варианты из распарсенных цен
-      const variants = sheet.variants
-        .filter(v => res.prices[v.id] !== undefined)
-        .map((v, idx) => ({
-          id: `tmf_${res.sheetKey.toLowerCase().replace(/[^a-zа-яё0-9]/gi, '_')}_v${idx + 1}`,
-          size: undefined,
-          thickness: undefined,
-          params: v.label,
-          basePrice: res.prices[v.id],
+      // Строим варианты: один вариант = одна ценовая строка (с кромкой)
+      // params = label варианта (напр. «С кромкой», «Одностороннее с кромкой»)
+      const variants = col.config.priceRows
+        .filter(pr => col.prices[pr.variantKey] !== undefined)
+        .map(pr => ({
+          id: tmfVariantId(col.config.label, pr.variantKey),
+          params: pr.label,
+          basePrice: col.prices[pr.variantKey],
+          size: undefined as string | undefined,
+          thickness: undefined as number | undefined,
         }));
 
       if (variants.length === 0) continue;
 
-      // Проверяем существует ли уже
-      const existing = store.materials.find(m => m.name === matName);
+      const existing = store.materials.find(m => m.id === matId);
 
       if (existing) {
-        // Обновляем варианты
-        store.updateMaterial(existing.id, {
+        store.updateMaterial(matId, {
           variants,
-          basePrice: variants[0]?.basePrice ?? 0,
+          basePrice: variants[0].basePrice,
           priceUpdatedAt: today,
         });
         updated++;
       } else {
-        // Создаём новый
-        store.addMaterial({
-          name: matName,
-          manufacturerId: tmfMfr?.id,
-          typeId: facadeType?.id ?? store.settings.materialTypes[0]?.id ?? '',
-          unit: 'м²',
-          basePrice: variants[0]?.basePrice ?? 0,
-          variants,
-          priceUpdatedAt: today,
-        });
+        // Добавляем с явным фиксированным id через setState
+        store.setState(s => ({
+          ...s,
+          materials: [
+            ...s.materials,
+            {
+              id: matId,
+              name: matName,
+              manufacturerId: tmfMfr?.id,
+              typeId: col.config.typeId,
+              unit: 'м²',
+              basePrice: variants[0].basePrice,
+              variants,
+              priceUpdatedAt: today,
+            },
+          ],
+        }));
         created++;
       }
     }
@@ -317,92 +304,95 @@ export default function TmfImportModal({ onClose }: Props) {
     setStep('done');
   };
 
-  const sheetConfig = (key: string) => TMF_SHEETS.find(s => s.key === key);
-
   return (
     <Modal title="Импорт фасадов ТМФ" onClose={onClose}>
       <div className="space-y-4">
 
-        {/* Шаг 1: загрузка файла */}
+        {/* Шаг 1: загрузка */}
         {step === 'upload' && (
           <>
             <div className="text-xs text-[hsl(var(--text-muted))]">
-              Загрузи прайс-лист ТМФ (.xlsx). Система распознает листы:<br />
-              <span className="text-foreground">NanoШпон, UltraPet, ExtraMat, SuperMat, SynchroWood, SynchroStyle, Акрил</span>
+              Загрузи Excel-прайс ТМФ. Будут созданы материалы по коллекциям с вариантами цен и списком цветов.
             </div>
-
             <div
-              onClick={() => fileRef.current?.click()}
-              className="border-2 border-dashed border-border hover:border-gold rounded-xl px-6 py-8 text-center cursor-pointer transition-colors group"
+              onClick={() => inputRef.current?.click()}
+              onDrop={e => { e.preventDefault(); if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]); }}
+              onDragOver={e => e.preventDefault()}
+              className="border-2 border-dashed border-border hover:border-gold rounded-xl px-6 py-10 text-center cursor-pointer transition-colors group"
             >
-              <Icon name="FileSpreadsheet" size={32} className="text-[hsl(var(--text-muted))] group-hover:text-gold mx-auto mb-3 transition-colors" />
-              <p className="text-sm text-foreground font-medium">Перетащи файл или нажми для выбора</p>
+              <Icon name="FileSpreadsheet" size={36} className="text-[hsl(var(--text-muted))] group-hover:text-gold mx-auto mb-3 transition-colors" />
+              <p className="text-sm font-medium text-foreground">Перетащи файл или нажми для выбора</p>
               <p className="text-xs text-[hsl(var(--text-muted))] mt-1">.xlsx — прайс-лист ТМФ</p>
-              <input ref={fileRef} type="file" accept=".xlsx,.xls" className="hidden"
+              <input ref={inputRef} type="file" accept=".xlsx,.xls" className="hidden"
                 onChange={e => e.target.files?.[0] && handleFile(e.target.files[0])} />
             </div>
-
             {loading && (
-              <div className="flex items-center justify-center gap-2 py-4 text-[hsl(var(--text-muted))]">
-                <Icon name="Loader2" size={16} className="animate-spin text-gold" />
-                <span className="text-sm">Читаю файл...</span>
+              <div className="flex items-center justify-center gap-2 py-2 text-[hsl(var(--text-muted))] text-sm">
+                <Icon name="Loader2" size={15} className="animate-spin text-gold" /> Читаю файл...
               </div>
             )}
-
             {error && (
-              <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded px-3 py-2 flex items-center gap-2">
-                <Icon name="AlertCircle" size={13} /> {error}
+              <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded px-3 py-2">
+                {error}
               </div>
             )}
           </>
         )}
 
-        {/* Шаг 2: превью найденных листов */}
+        {/* Шаг 2: превью */}
         {step === 'preview' && (
           <>
-            <div className="flex items-center gap-2 bg-[hsl(220,12%,14%)] rounded border border-border px-3 py-2">
-              <Icon name="FileSpreadsheet" size={14} className="text-gold shrink-0" />
-              <span className="text-xs text-foreground truncate flex-1">{fileName}</span>
+            <div className="text-xs text-[hsl(var(--text-muted))] flex items-center gap-2">
+              <Icon name="FileSpreadsheet" size={12} className="text-gold" />
+              {fileName}
             </div>
 
-            <div className="space-y-2 max-h-80 overflow-auto scrollbar-thin">
-              {parsed.map(res => {
-                const cfg = sheetConfig(res.sheetKey);
-                const isSelected = selectedSheets.has(res.sheetKey);
+            <div className="space-y-2 max-h-72 overflow-auto scrollbar-thin">
+              {collections.map(col => {
+                const isSelected = selected.has(col.config.sheetName);
+                const variantCount = Object.keys(col.prices).length;
                 return (
                   <div
-                    key={res.sheetKey}
-                    onClick={() => res.found && toggleSheet(res.sheetKey)}
-                    className={`rounded border p-3 transition-all ${
-                      !res.found
-                        ? 'border-border opacity-40 cursor-not-allowed'
+                    key={col.config.sheetName}
+                    onClick={() => col.found && setSelected(prev => {
+                      const next = new Set(prev);
+                      if (next.has(col.config.sheetName)) next.delete(col.config.sheetName);
+                      else next.add(col.config.sheetName);
+                      return next;
+                    })}
+                    className={`flex items-center gap-3 px-3 py-2.5 rounded-lg border transition-all ${
+                      !col.found
+                        ? 'opacity-40 border-border bg-[hsl(220,12%,13%)] cursor-not-allowed'
                         : isSelected
-                          ? 'border-gold bg-gold/5 cursor-pointer'
-                          : 'border-border hover:border-gold/40 cursor-pointer'
+                          ? 'border-gold/50 bg-gold/5 cursor-pointer'
+                          : 'border-border bg-[hsl(220,12%,14%)] hover:border-gold/30 cursor-pointer'
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
-                        isSelected && res.found ? 'bg-gold border-gold' : 'border-border'
-                      }`}>
-                        {isSelected && res.found && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
-                      </div>
-                      <span className="text-sm font-medium text-foreground">{res.label}</span>
-                      {!res.found && <span className="text-xs text-[hsl(var(--text-muted))] ml-auto">Лист не найден</span>}
-                      {res.found && <span className="text-xs text-green-400 ml-auto">Найдено</span>}
+                    <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                      isSelected && col.found ? 'bg-gold border-gold' : 'border-border'
+                    }`}>
+                      {isSelected && col.found && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
                     </div>
-
-                    {res.found && (
-                      <div className="mt-2 ml-6 space-y-1">
-                        {cfg?.variants.map(v => (
-                          <div key={v.id} className="flex items-center justify-between text-xs">
-                            <span className="text-[hsl(var(--text-dim))]">{v.label}</span>
-                            {res.prices[v.id] !== undefined
-                              ? <span className="text-foreground font-mono">{res.prices[v.id].toLocaleString('ru-RU')} ₽/м²</span>
-                              : <span className="text-[hsl(var(--text-muted))]">не найдено</span>
-                            }
-                          </div>
-                        ))}
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium text-foreground">{col.config.label}</div>
+                      {col.found ? (
+                        <div className="text-[10px] text-[hsl(var(--text-muted))] mt-0.5 flex gap-3">
+                          <span className="text-gold">{variantCount} вар. цен</span>
+                          {col.colors.length > 0 && <span>{col.colors.length} цветов</span>}
+                        </div>
+                      ) : (
+                        <div className="text-[10px] text-[hsl(var(--text-muted))]">лист не найден в файле</div>
+                      )}
+                    </div>
+                    {col.found && (
+                      <div className="text-right text-xs shrink-0 space-y-0.5">
+                        {col.config.priceRows
+                          .filter(pr => col.prices[pr.variantKey] !== undefined)
+                          .map(pr => (
+                            <div key={pr.variantKey} className="text-[hsl(var(--text-dim))]">
+                              {pr.label}: <span className="text-foreground font-mono">{col.prices[pr.variantKey].toLocaleString('ru-RU')} ₽</span>
+                            </div>
+                          ))}
                       </div>
                     )}
                   </div>
@@ -413,38 +403,40 @@ export default function TmfImportModal({ onClose }: Props) {
             <div className="flex gap-2 pt-1">
               <button
                 onClick={handleImport}
-                disabled={selectedSheets.size === 0}
-                className="flex-1 py-2.5 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50"
+                disabled={selected.size === 0}
+                className="flex-1 py-2.5 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2"
               >
-                Импортировать {selectedSheets.size} коллекций
+                <Icon name="Database" size={14} />
+                Импортировать {selected.size} коллекций
               </button>
-              <button onClick={() => { setStep('upload'); setFileName(''); setParsed([]); }}
-                className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground">
-                Назад
+              <button onClick={onClose} className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground">
+                Отмена
               </button>
             </div>
           </>
         )}
 
-        {/* Шаг 3: результат */}
+        {/* Шаг 3: готово */}
         {step === 'done' && (
-          <div className="space-y-4">
-            <div className="flex items-start gap-3 px-4 py-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-              <Icon name="CheckCircle" size={18} className="text-emerald-400 shrink-0 mt-0.5" />
-              <div className="text-sm">
-                {result.created > 0 && <div className="text-emerald-400 font-medium">Создано {result.created} новых материалов</div>}
-                {result.updated > 0 && <div className="text-gold font-medium">Обновлено {result.updated} существующих</div>}
-                {result.created === 0 && result.updated === 0 && (
-                  <div className="text-[hsl(var(--text-muted))]">Изменений нет</div>
-                )}
-                <div className="text-xs text-[hsl(var(--text-muted))] mt-1">
-                  Цены добавлены как варианты (с/без кромки, по категориям)
+          <div className="text-center py-4 space-y-3">
+            <Icon name="CheckCircle" size={36} className="text-green-400 mx-auto" />
+            <div className="text-sm font-medium text-foreground">Готово!</div>
+            <div className="grid grid-cols-2 gap-2 max-w-xs mx-auto">
+              {result.created > 0 && (
+                <div className="bg-green-400/10 border border-green-400/20 rounded p-2 text-center">
+                  <div className="text-xl font-bold text-green-400">{result.created}</div>
+                  <div className="text-[10px] text-[hsl(var(--text-muted))]">создано</div>
                 </div>
-              </div>
+              )}
+              {result.updated > 0 && (
+                <div className="bg-gold/10 border border-gold/20 rounded p-2 text-center">
+                  <div className="text-xl font-bold text-gold">{result.updated}</div>
+                  <div className="text-[10px] text-[hsl(var(--text-muted))]">обновлено</div>
+                </div>
+              )}
             </div>
-            <button onClick={onClose}
-              className="w-full py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90">
-              Готово
+            <button onClick={onClose} className="px-6 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-semibold hover:opacity-90">
+              Закрыть
             </button>
           </div>
         )}
