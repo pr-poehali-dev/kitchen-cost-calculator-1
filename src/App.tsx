@@ -62,10 +62,9 @@ export default function App() {
 
     loadStateFromDb(token).then(dbState => {
       if (dbState) {
-        // БД свежее — применяем
         forceSetGlobalState(dbState);
       } else {
-        // localStorage свежее (или БД пуста) — заливаем локальный в БД
+        // БД пуста — первый вход, сохраняем то что есть
         saveStateToDb();
       }
       store.patchSkatMaterials('mt2', 'v2');

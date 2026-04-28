@@ -84,7 +84,8 @@ function parseAndMerge(raw: string): AppState {
 
 const STATE_URL = 'https://functions.poehali.dev/a257bd1a-a3a1-40e0-95b5-bbd561a371e4';
 
-function loadLocalState(): AppState {
+// localStorage — только кэш для мгновенного старта, не источник истины
+function loadLocalCache(): AppState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
     if (saved) return parseAndMerge(saved);
@@ -122,7 +123,7 @@ function scheduleSaveToDb(state: AppState) {
   }, 1500);
 }
 
-// Возвращает state из БД только если он свежее localStorage, иначе null
+// БД — единственный источник истины. localStorage — только кэш для быстрого старта.
 export async function loadStateFromDb(token: string): Promise<AppState | null> {
   try {
     const res = await fetch(`${STATE_URL}?token=${encodeURIComponent(token)}`);
@@ -130,31 +131,19 @@ export async function loadStateFromDb(token: string): Promise<AppState | null> {
     const data = await res.json();
     if (!data.state) return null;
     const dbState = parseAndMerge(JSON.stringify(data.state));
-
-    // Сравниваем с тем что в localStorage
-    const localState = loadLocalState();
-    const localTs = localState.savedAt ?? 0;
-    const dbTs = dbState.savedAt ?? 0;
-
-    // Берём более свежий
-    if (dbTs >= localTs) {
-      saveLocalState(dbState);
-      return dbState;
-    } else {
-      // localStorage свежее — не перезаписываем, но вернём null чтобы App.tsx сохранил локальный в БД
-      return null;
-    }
+    saveLocalState(dbState); // обновляем кэш
+    return dbState;
   } catch {
     return null;
   }
 }
 
-let globalState: AppState = loadLocalState();
+// Стартуем с кэша — покажем UI мгновенно, потом App.tsx заменит данными из БД
+let globalState: AppState = loadLocalCache();
 export const listeners: Set<() => void> = new Set();
 
 export function setState(updater: (s: AppState) => AppState) {
   globalState = updater(globalState);
-  // Проставляем метку времени при каждом изменении
   globalState = { ...globalState, savedAt: Date.now() };
   saveLocalState(globalState);
   scheduleSaveToDb(globalState);
@@ -164,7 +153,6 @@ export function setState(updater: (s: AppState) => AppState) {
 export function forceSetGlobalState(state: AppState) {
   globalState = state;
   saveLocalState(state);
-  scheduleSaveToDb(state);
   listeners.forEach(fn => fn());
 }
 
