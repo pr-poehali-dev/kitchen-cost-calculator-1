@@ -261,4 +261,5 @@ export interface AppState {
   activeProjectId: string | null;
   templates: CalcTemplate[];
   savedBlocks: SavedBlock[];
+  savedAt?: number; // unix ms — для сравнения свежести БД vs localStorage
 }

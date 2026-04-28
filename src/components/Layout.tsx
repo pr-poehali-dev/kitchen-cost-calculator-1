@@ -1,6 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import Icon from '@/components/ui/icon';
 import type { AuthUser } from '@/auth/useAuth';
+import { getGlobalState } from '@/store/stateCore';
 
 type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings' | 'users';
 
@@ -28,6 +29,19 @@ const NAV_ADMIN = { id: 'users' as Section, label: 'Пользователи', i
 
 export default function Layout({ active, onNav, children, user, onLogout, onOpenSearch }: LayoutProps) {
   const nav = user?.role === 'admin' ? [...NAV_BASE, NAV_ADMIN] : NAV_BASE;
+  const [savedAt, setSavedAt] = useState<number | undefined>(undefined);
+
+  // Обновляем время последнего сохранения каждые 5 сек
+  useEffect(() => {
+    const update = () => setSavedAt(getGlobalState().savedAt);
+    update();
+    const t = setInterval(update, 5000);
+    return () => clearInterval(t);
+  }, []);
+
+  const savedLabel = savedAt
+    ? new Date(savedAt).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })
+    : null;
 
   // Ctrl+K / Cmd+K
   useEffect(() => {
@@ -98,6 +112,12 @@ export default function Layout({ active, onNav, children, user, onLogout, onOpen
               <Icon name="LogOut" size={12} />
               Выйти
             </button>
+          )}
+          {savedLabel && (
+            <div className="flex items-center gap-1.5 px-1 text-[10px] text-[hsl(var(--text-muted))]">
+              <Icon name="CloudCheck" size={10} className="text-green-500 shrink-0" fallback="Check" />
+              Сохранено {savedLabel}
+            </div>
           )}
           {!user && <div className="text-[hsl(var(--text-muted))] text-xs px-1">v1.0 · 2026</div>}
         </div>

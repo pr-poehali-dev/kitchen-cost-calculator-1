@@ -16,14 +16,12 @@ function migrateProjects(projects: AppState['projects']): AppState['projects'] {
     ...p,
     blocks: p.blocks.map(b => {
       let cols = b.visibleColumns?.length ? b.visibleColumns : DEFAULT_VISIBLE_COLUMNS_CORE.slice() as typeof b.visibleColumns;
-      // Добавляем total после price если нет
       if (!cols.includes('total')) {
         const priceIdx = cols.indexOf('price');
         cols = priceIdx >= 0
           ? [...cols.slice(0, priceIdx + 1), 'total', ...cols.slice(priceIdx + 1)]
           : [...cols, 'total'];
       }
-      // Добавляем baseprice после qty если нет
       if (!cols.includes('baseprice')) {
         const qtyIdx = cols.indexOf('qty');
         cols = qtyIdx >= 0
@@ -42,7 +40,6 @@ function isValidMaterialTypes(arr: unknown[]): boolean {
     'id' in (arr[0] as object);
 }
 
-// Универсальный merge по id — пользовательские данные + новые из дефолтов
 function mergeById<T extends { id: string }>(userList: T[] | undefined, defaults: T[]): T[] {
   const existing = userList || [];
   const existingIds = new Set(existing.map(x => x.id));
@@ -81,12 +78,12 @@ function parseAndMerge(raw: string): AppState {
     activeProjectId: parsed.activeProjectId ?? initialState.activeProjectId,
     templates:       parsed.templates  ?? initialState.templates,
     savedBlocks:     parsed.savedBlocks ?? initialState.savedBlocks,
+    savedAt:         parsed.savedAt,
   };
 }
 
 const STATE_URL = 'https://functions.poehali.dev/a257bd1a-a3a1-40e0-95b5-bbd561a371e4';
 
-// Загрузка из localStorage (синхронный кэш для быстрого старта)
 function loadLocalState(): AppState {
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
@@ -105,7 +102,6 @@ export function saveLocalState(state: AppState) {
   } catch (e) { void e; }
 }
 
-// Debounce сохранения в БД
 let saveTimer: ReturnType<typeof setTimeout> | null = null;
 let currentToken: string | null = null;
 
@@ -123,18 +119,31 @@ function scheduleSaveToDb(state: AppState) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ state }),
     }).catch(() => void 0);
-  }, 1500); // сохраняем через 1.5с после последнего изменения
+  }, 1500);
 }
 
+// Возвращает state из БД только если он свежее localStorage, иначе null
 export async function loadStateFromDb(token: string): Promise<AppState | null> {
   try {
     const res = await fetch(`${STATE_URL}?token=${encodeURIComponent(token)}`);
     if (!res.ok) return null;
     const data = await res.json();
     if (!data.state) return null;
-    const state = parseAndMerge(JSON.stringify(data.state));
-    saveLocalState(state); // обновляем кэш
-    return state;
+    const dbState = parseAndMerge(JSON.stringify(data.state));
+
+    // Сравниваем с тем что в localStorage
+    const localState = loadLocalState();
+    const localTs = localState.savedAt ?? 0;
+    const dbTs = dbState.savedAt ?? 0;
+
+    // Берём более свежий
+    if (dbTs >= localTs) {
+      saveLocalState(dbState);
+      return dbState;
+    } else {
+      // localStorage свежее — не перезаписываем, но вернём null чтобы App.tsx сохранил локальный в БД
+      return null;
+    }
   } catch {
     return null;
   }
@@ -145,6 +154,8 @@ export const listeners: Set<() => void> = new Set();
 
 export function setState(updater: (s: AppState) => AppState) {
   globalState = updater(globalState);
+  // Проставляем метку времени при каждом изменении
+  globalState = { ...globalState, savedAt: Date.now() };
   saveLocalState(globalState);
   scheduleSaveToDb(globalState);
   listeners.forEach(fn => fn());
@@ -157,7 +168,6 @@ export function forceSetGlobalState(state: AppState) {
   listeners.forEach(fn => fn());
 }
 
-// Немедленно сохранить текущий state в БД (без debounce)
 export function saveStateToDb() {
   if (!currentToken) return;
   fetch(`${STATE_URL}?token=${encodeURIComponent(currentToken)}`, {
