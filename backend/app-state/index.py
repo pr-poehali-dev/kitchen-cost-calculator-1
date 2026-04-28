@@ -46,32 +46,40 @@ def err(msg, status=400):
 
 def handler(event: dict, context) -> dict:
     """
-    Общий state приложения — один на всех пользователей.
-    GET  ?token=...        — загрузить state
+    State приложения — отдельный для каждого пользователя по user_id из JWT.
+    GET  ?token=...             — загрузить state
     POST ?token=...  body=state — сохранить state
     """
     if event.get('httpMethod') == 'OPTIONS':
         return {'statusCode': 200, 'headers': CORS, 'body': ''}
 
-    # Проверяем авторизацию
     payload = verify_token(event)
     if not payload:
         return err('Не авторизован', 401)
 
+    user_id = payload.get('user_id') or payload.get('id') or payload.get('sub')
+    if not user_id:
+        return err('Нет user_id в токене', 401)
+
+    user_id = int(user_id)
     method = event.get('httpMethod', 'GET')
 
-    # GET — вернуть текущий state
+    # GET — вернуть state пользователя, при отсутствии — общий fallback (id=1, user_id IS NULL)
     if method == 'GET':
         conn = get_db()
         cur = conn.cursor()
-        cur.execute('SELECT state FROM app_state WHERE id = 1')
+        cur.execute('SELECT state FROM app_state WHERE user_id = %s', (user_id,))
         row = cur.fetchone()
+        if not row:
+            # Fallback на старую общую запись (миграция данных)
+            cur.execute('SELECT state FROM app_state WHERE id = 1 AND user_id IS NULL')
+            row = cur.fetchone()
         conn.close()
         if not row:
             return ok({'state': None})
         return ok({'state': row[0]})
 
-    # POST — сохранить state
+    # POST — сохранить state пользователя
     if method == 'POST':
         body_raw = event.get('body') or ''
         try:
@@ -86,10 +94,10 @@ def handler(event: dict, context) -> dict:
         conn = get_db()
         cur = conn.cursor()
         cur.execute('''
-            INSERT INTO app_state (id, state, updated_at)
-            VALUES (1, %s, NOW())
-            ON CONFLICT (id) DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()
-        ''', (json.dumps(state),))
+            INSERT INTO app_state (user_id, state, updated_at)
+            VALUES (%s, %s, NOW())
+            ON CONFLICT (user_id) DO UPDATE SET state = EXCLUDED.state, updated_at = NOW()
+        ''', (user_id, json.dumps(state)))
         conn.commit()
         conn.close()
         return ok({'ok': True})
