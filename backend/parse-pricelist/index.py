@@ -10,6 +10,14 @@ SLOTEX_SERIES = {
     'e3': {'gid': '1324647373', 'name': 'Elga E3'},
     'k3': {'gid': '557309721',  'name': 'kapso K3'},
 }
+# Лист kapso содержит K1, K2, K3 — серия читается из col 1
+SLOTEX_KAPSO_GID = '557309721'
+# Листы E1/E2/E3 — отдельные листы
+SLOTEX_ELGA = {
+    'e1': '1989291696',
+    'e2': '1539284672',
+    'e3': '1324647373',
+}
 
 # ─── СКАТ ─────────────────────────────────────────────────────────────────────
 SKAT_SHEET_ID = '1O9WjIlUzQ4czzWIwVVlM5G77rn-MgAgLh4tgsbXi6Hs'
@@ -101,6 +109,92 @@ def split_csv_line(line: str) -> list:
 
 
 # ─── Парсер Slotex ────────────────────────────────────────────────────────────
+def parse_slotex_kapso(csv_text: str) -> list:
+    """
+    Парсит лист kapso: содержит K1, K2, K3 в одном листе.
+    Серия определяется из col 1 (k1/k2/k3).
+    """
+    results = []
+    lines = csv_text.splitlines()
+    header_found = False
+    col_series = col_product = col_format = col_thickness = col_params = col_unit = col_price = None
+    current_product = None
+    current_series = None
+
+    for line in lines:
+        cells = split_csv_line(line)
+
+        if not header_found:
+            row_lower = ','.join(cells).lower()
+            if 'продукт' in row_lower and ('формат' in row_lower or 'оптовая' in row_lower):
+                header_found = True
+                for i, c in enumerate(cells):
+                    cl = c.lower()
+                    if 'серия' in cl and col_series is None:          col_series = i
+                    elif 'продукт' in cl and col_product is None:     col_product = i
+                    elif 'формат' in cl and col_format is None:       col_format = i
+                    elif 'толщина' in cl and col_thickness is None:   col_thickness = i
+                    elif 'подгиб' in cl and col_params is None:       col_params = i
+                    elif 'ед' in cl and col_unit is None:             col_unit = i
+                    elif 'оптовая' in cl and col_price is None:       col_price = i
+            continue
+
+        def g(idx):
+            return cells[idx].strip() if idx is not None and idx < len(cells) else ''
+
+        series_cell = g(col_series).lower()
+        if series_cell in ('k1', 'k2', 'k3'):
+            current_series = series_cell
+
+        product_cell = g(col_product)
+        if product_cell and not product_cell.startswith('*'):
+            current_product = product_cell
+
+        if not current_product or not current_series:
+            continue
+
+        size_raw = g(col_format)
+        thickness_raw = g(col_thickness)
+        params_raw = g(col_params)
+        unit_raw = g(col_unit)
+        price_raw = g(col_price)
+
+        if not size_raw or not price_raw:
+            continue
+
+        price = parse_price(price_raw)
+        if price <= 0:
+            continue
+
+        size = norm_size(size_raw)
+        if not re.search(r'\d×\d', size):
+            continue
+
+        thickness = None
+        if thickness_raw:
+            parts = re.split(r'[/,]', thickness_raw)
+            candidates = []
+            for p in parts:
+                try:
+                    candidates.append(float(p.strip()))
+                except ValueError:
+                    pass
+            if candidates:
+                thickness = 10.0 if 10.0 in candidates else candidates[0]
+
+        results.append({
+            'series': current_series,
+            'product': current_product,
+            'size': size,
+            'thickness': thickness,
+            'params': params_raw,
+            'unit': re.sub(r'[.\s]', '', unit_raw) if unit_raw else 'шт',
+            'price': price,
+        })
+
+    return results
+
+
 def parse_slotex(csv_text: str) -> list:
     results = []
     lines = csv_text.splitlines()
@@ -447,6 +541,23 @@ def handler(event: dict, context) -> dict:
                                         'series_name': f'СКАТ ({category})',
                                         'category': category,
                                         'count': len(items), 'items': items})}
+
+        # ── Slotex ALL (K1+K2+K3+E1+E2+E3 за один запрос) ──
+        if series_key == 'slotex_all':
+            all_items = []
+            # K1, K2, K3 — из одного листа kapso
+            csv_kapso = fetch_csv(SLOTEX_SHEET_ID, SLOTEX_KAPSO_GID)
+            all_items.extend(parse_slotex_kapso(csv_kapso))
+            # E1, E2, E3 — из отдельных листов
+            for series_id, gid in SLOTEX_ELGA.items():
+                csv_elga = fetch_csv(SLOTEX_SHEET_ID, gid)
+                items_elga = parse_slotex(csv_elga)
+                for item in items_elga:
+                    item['series'] = series_id
+                all_items.extend(items_elga)
+            return {'statusCode': 200, 'headers': hdrs,
+                    'body': json.dumps({'ok': True, 'series': 'slotex_all',
+                                        'count': len(all_items), 'items': all_items})}
 
         # ── BOYARD ──
         if series_key == 'boyard':

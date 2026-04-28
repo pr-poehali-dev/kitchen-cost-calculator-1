@@ -52,6 +52,15 @@
       "expectedStatus": 200,
       "expectedBody": { "ok": true, "series": "boyard" },
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "POST slotex_all - parse all 6 series",
+      "method": "POST",
+      "path": "/",
+      "body": { "series": "slotex_all" },
+      "expectedStatus": 200,
+      "expectedBody": { "ok": true, "series": "slotex_all" },
+      "bodyMatcher": "partial"
     }
   ]
 }
