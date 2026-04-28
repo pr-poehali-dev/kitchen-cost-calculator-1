@@ -46,12 +46,13 @@ interface PreviewStepProps {
   fileName: string;
   collections: ParsedCollection[];
   selected: Set<string>;
+  sheetNames: string[];
   onToggle: (sheetName: string) => void;
   onImport: () => void;
   onClose: () => void;
 }
 
-export function TmfPreviewStep({ fileName, collections, selected, onToggle, onImport, onClose }: PreviewStepProps) {
+export function TmfPreviewStep({ fileName, collections, selected, sheetNames, onToggle, onImport, onClose }: PreviewStepProps) {
   const totalColors = collections
     .filter(c => selected.has(c.config.sheetName))
     .reduce((sum, c) => sum + c.colors.length, 0);
@@ -105,6 +106,18 @@ export function TmfPreviewStep({ fileName, collections, selected, onToggle, onIm
           );
         })}
       </div>
+
+      {/* Показываем реальные листы файла если есть не найденные */}
+      {collections.some(c => !c.found) && sheetNames.length > 0 && (
+        <div className="text-xs bg-amber-400/10 border border-amber-400/20 rounded px-3 py-2 space-y-1">
+          <div className="text-amber-400 font-medium flex items-center gap-1.5">
+            <Icon name="AlertTriangle" size={12} /> Листы в файле:
+          </div>
+          <div className="text-[hsl(var(--text-muted))] font-mono break-all">
+            {sheetNames.join(' · ')}
+          </div>
+        </div>
+      )}
 
       <div className="text-xs text-[hsl(var(--text-muted))] bg-[hsl(220,12%,14%)] rounded border border-border px-3 py-2">
         Будет создано: <span className="text-foreground font-medium">{totalColors}</span> материалов

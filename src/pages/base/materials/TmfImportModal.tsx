@@ -21,6 +21,7 @@ export default function TmfImportModal({ onClose }: Props) {
   const [collections, setCollections] = useState<ParsedCollection[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [result, setResult] = useState({ created: 0, updated: 0 });
+  const [sheetNames, setSheetNames] = useState<string[]>([]);
 
   const handleFile = (file: File) => {
     setLoading(true);
@@ -32,10 +33,24 @@ export default function TmfImportModal({ onClose }: Props) {
       try {
         const wb = XLSX.read(new Uint8Array(e.target!.result as ArrayBuffer), { type: 'array' });
         const results: ParsedCollection[] = [];
+        setSheetNames(wb.SheetNames);
+
+        // Нормализация: убираем все виды пробелов и Unicode-мусор, приводим к нижнему регистру
+        const normName = (s: string) =>
+          s.toLowerCase()
+            .replace(/[\s\u00a0\u200b\u2009\u202f\ufeff]/g, '') // все виды пробелов
+            .replace(/[её]/g, 'е') // е/ё унификация
+            .trim();
 
         for (const cfg of TMF_COLLECTIONS) {
-          const normName = (s: string) => s.toLowerCase().replace(/\s/g, '');
-          const wsName = wb.SheetNames.find(n => normName(n) === normName(cfg.sheetName));
+          // Точное совпадение после нормализации
+          let wsName = wb.SheetNames.find(n => normName(n) === normName(cfg.sheetName));
+
+          // Если не нашли — пробуем вхождение (лист содержит ключевое слово)
+          if (!wsName) {
+            const key = normName(cfg.sheetName);
+            wsName = wb.SheetNames.find(n => normName(n).includes(key) || key.includes(normName(n)));
+          }
 
           if (!wsName) {
             results.push({ config: cfg, found: false, prices: {}, colors: [] });
@@ -170,6 +185,7 @@ export default function TmfImportModal({ onClose }: Props) {
             fileName={fileName}
             collections={collections}
             selected={selected}
+            sheetNames={sheetNames}
             onToggle={handleToggle}
             onImport={handleImport}
             onClose={onClose}
