@@ -198,7 +198,7 @@ export default function CalcPage() {
         onCancelDeleteProject={() => setConfirmDeleteProject(null)}
       />
 
-      <div className="flex-1 overflow-auto scrollbar-thin p-6 space-y-4">
+      <div className="flex-1 overflow-auto scrollbar-thin p-3 md:p-6 space-y-3 md:space-y-4">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
           <SortableContext items={project.blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
             {project.blocks.map((block, idx) => (

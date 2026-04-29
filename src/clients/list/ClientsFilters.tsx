@@ -74,50 +74,53 @@ export function ClientsSearchBar({
   'sortField' | 'sortDir' | 'showSortMenu' | 'onToggleSortMenu' | 'onCloseSortMenu' | 'onSort'
 >) {
   return (
-    <div className="border-b border-border px-6 py-3 flex items-center gap-3 shrink-0 bg-[hsl(220,16%,7%)]">
-      <div className="relative flex-1 max-w-xs">
-        <Icon name="Search" size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))]" />
-        <input className="w-full bg-[hsl(220,12%,14%)] border border-border rounded pl-8 pr-3 py-1.5 text-sm outline-none focus:border-gold transition-colors"
-          placeholder="Поиск по имени, телефону..." value={search} onChange={e => onSearchChange(e.target.value)} />
-        {search && <button onClick={() => onSearchChange('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] hover:text-foreground"><Icon name="X" size={12} /></button>}
+    <div className="border-b border-border px-3 md:px-6 py-2 md:py-3 flex flex-col gap-2 shrink-0 bg-[hsl(220,16%,7%)]">
+      <div className="flex items-center gap-2">
+        <div className="relative flex-1">
+          <Icon name="Search" size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))]" />
+          <input className="w-full bg-[hsl(220,12%,14%)] border border-border rounded pl-8 pr-3 py-1.5 text-sm outline-none focus:border-gold transition-colors"
+            placeholder="Поиск по имени, телефону..." value={search} onChange={e => onSearchChange(e.target.value)} />
+          {search && <button onClick={() => onSearchChange('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] hover:text-foreground"><Icon name="X" size={12} /></button>}
+        </div>
+        {/* Кнопка расширенных фильтров */}
+        <button
+          onClick={onToggleFilters}
+          className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs border transition-colors shrink-0 ${(showFilters || hasAdvancedFilters) ? 'border-gold/50 text-gold' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+        >
+          <Icon name="SlidersHorizontal" size={13} />
+          <span className="hidden sm:inline">Фильтры</span>
+          {hasAdvancedFilters && <span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0" />}
+        </button>
+        {/* Сортировка */}
+        <div className="relative shrink-0">
+          <button onClick={onToggleSortMenu}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded text-xs border transition-colors ${showSortMenu ? 'border-gold/50 text-gold' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}>
+            <Icon name={sortDir === 'asc' ? 'ArrowUpAZ' : 'ArrowDownAZ'} size={13} /><span className="hidden sm:inline">{SORT_LABELS[sortField]}</span>
+          </button>
+          {showSortMenu && (<>
+            <div className="fixed inset-0 z-10" onClick={onCloseSortMenu} />
+            <div className="absolute right-0 top-full mt-1 z-20 bg-[hsl(220,14%,13%)] border border-border rounded-lg shadow-xl py-1 min-w-[160px]">
+              {(Object.keys(SORT_LABELS) as SortField[]).map(f => (
+                <button key={f} onClick={() => onSort(f)}
+                  className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-xs hover:bg-[hsl(220,12%,18%)] transition-colors ${sortField === f ? 'text-gold' : 'text-[hsl(var(--text-dim))]'}`}>
+                  {SORT_LABELS[f]}
+                  {sortField === f && <Icon name={sortDir === 'asc' ? 'ArrowUp' : 'ArrowDown'} size={11} />}
+                </button>
+              ))}
+            </div>
+          </>)}
+        </div>
       </div>
-      <div className="flex items-center gap-1.5 flex-wrap flex-1">
-        <button onClick={() => onFilterStatusChange('all')} className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${filterStatus === 'all' ? 'bg-gold/20 text-gold' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}>Все</button>
+      {/* Статусы — горизонтальный скролл на мобильном */}
+      <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin pb-0.5">
+        <button onClick={() => onFilterStatusChange('all')} className={`px-2.5 py-1 rounded text-xs font-medium transition-colors shrink-0 ${filterStatus === 'all' ? 'bg-gold/20 text-gold' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}>Все</button>
         {CLIENT_STATUSES.map(s => (
           <button key={s.id} onClick={() => onFilterStatusChange(filterStatus === s.id ? 'all' : s.id)}
-            className={`px-2.5 py-1 rounded text-xs font-medium transition-colors ${filterStatus === s.id ? 'text-white' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+            className={`px-2.5 py-1 rounded text-xs font-medium transition-colors shrink-0 ${filterStatus === s.id ? 'text-white' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
             style={filterStatus === s.id ? { background: s.color } : {}}>
             {s.label}
           </button>
         ))}
-      </div>
-      {/* Кнопка расширенных фильтров */}
-      <button
-        onClick={onToggleFilters}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border transition-colors shrink-0 ${(showFilters || hasAdvancedFilters) ? 'border-gold/50 text-gold' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
-      >
-        <Icon name="SlidersHorizontal" size={13} />
-        Фильтры
-        {hasAdvancedFilters && <span className="w-1.5 h-1.5 rounded-full bg-gold shrink-0" />}
-      </button>
-      {/* Сортировка */}
-      <div className="relative shrink-0">
-        <button onClick={onToggleSortMenu}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded text-xs border transition-colors ${showSortMenu ? 'border-gold/50 text-gold' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}>
-          <Icon name={sortDir === 'asc' ? 'ArrowUpAZ' : 'ArrowDownAZ'} size={13} />{SORT_LABELS[sortField]}
-        </button>
-        {showSortMenu && (<>
-          <div className="fixed inset-0 z-10" onClick={onCloseSortMenu} />
-          <div className="absolute right-0 top-full mt-1 z-20 bg-[hsl(220,14%,13%)] border border-border rounded-lg shadow-xl py-1 min-w-[160px]">
-            {(Object.keys(SORT_LABELS) as SortField[]).map(f => (
-              <button key={f} onClick={() => onSort(f)}
-                className={`w-full flex items-center justify-between gap-3 px-3 py-2 text-xs hover:bg-[hsl(220,12%,18%)] transition-colors ${sortField === f ? 'text-gold' : 'text-[hsl(var(--text-dim))]'}`}>
-                {SORT_LABELS[f]}
-                {sortField === f && <Icon name={sortDir === 'asc' ? 'ArrowUp' : 'ArrowDown'} size={11} />}
-              </button>
-            ))}
-          </div>
-        </>)}
       </div>
     </div>
   );
@@ -147,8 +150,8 @@ export function ClientsAdvancedFilters({
   'designers' | 'measurers' | 'hasAdvancedFilters' | 'onClearFilters'
 >) {
   return (
-    <div className="border-b border-border px-6 py-3 bg-[hsl(220,14%,10%)] shrink-0">
-      <div className="flex items-center gap-4 flex-wrap">
+    <div className="border-b border-border px-3 md:px-6 py-3 bg-[hsl(220,14%,10%)] shrink-0">
+      <div className="flex items-center gap-2 md:gap-4 flex-wrap">
         <div className="flex items-center gap-1.5">
           <span className="text-xs text-[hsl(var(--text-muted))]">Дизайнер:</span>
           <select value={filterDesigner} onChange={e => onFilterDesignerChange(e.target.value)} className={INP}>
@@ -200,7 +203,7 @@ export function ClientsCounter({
 }: CounterProps) {
   if (!showCounter) return null;
   return (
-    <div className="px-6 py-2 text-xs bg-[hsl(220,16%,7%)] border-b border-border shrink-0 flex items-center justify-between gap-3">
+    <div className="px-3 md:px-6 py-2 text-xs bg-[hsl(220,16%,7%)] border-b border-border shrink-0 flex items-center justify-between gap-3">
       <span className="text-[hsl(var(--text-muted))]">
         Найдено: <span className="text-foreground font-medium">{filteredCount}</span> из {totalCount}
       </span>

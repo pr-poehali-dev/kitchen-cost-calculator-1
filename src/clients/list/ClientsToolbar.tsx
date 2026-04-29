@@ -77,7 +77,7 @@ interface Props {
 
 export function ClientsToolbar({ clientsCount, loading, view, onViewChange, filteredClients, creating, onCreate }: Props) {
   return (
-    <div className="border-b border-border bg-[hsl(220,14%,11%)] px-6 py-4 flex items-center gap-4 shrink-0">
+    <div className="border-b border-border bg-[hsl(220,14%,11%)] px-4 md:px-6 py-3 md:py-4 flex items-center gap-2 md:gap-4 shrink-0">
       <div className="min-w-0 flex-1">
         <h1 className="text-base font-semibold text-foreground">Клиенты</h1>
         <p className="text-[hsl(var(--text-muted))] text-xs mt-0.5">
@@ -93,8 +93,8 @@ export function ClientsToolbar({ clientsCount, loading, view, onViewChange, filt
           <Icon name="Columns3" size={13} />
         </button>
       </div>
-      {/* Экспорт */}
-      <div className="flex items-center gap-1">
+      {/* Экспорт — только иконки на мобильном */}
+      <div className="hidden sm:flex items-center gap-1">
         <button
           onClick={() => exportExcel(filteredClients)}
           title="Экспорт в Excel (.xlsx)"
@@ -110,10 +110,21 @@ export function ClientsToolbar({ clientsCount, loading, view, onViewChange, filt
           <Icon name="FileDown" size={13} /> CSV
         </button>
       </div>
+      {/* Экспорт иконка на мобильном */}
+      <div className="flex sm:hidden items-center gap-1">
+        <button
+          onClick={() => exportExcel(filteredClients)}
+          title="Экспорт в Excel"
+          className="w-8 h-8 flex items-center justify-center border border-border rounded text-[hsl(var(--text-muted))] hover:text-emerald-400 hover:border-emerald-400/50 transition-colors"
+        >
+          <Icon name="FileSpreadsheet" size={14} />
+        </button>
+      </div>
       {/* Создать */}
       <button onClick={onCreate} disabled={creating}
-        className="flex items-center gap-2 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90 shrink-0 disabled:opacity-60">
-        <Icon name="Plus" size={14} /> Новый клиент
+        className="flex items-center gap-2 px-3 md:px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90 shrink-0 disabled:opacity-60">
+        <Icon name="Plus" size={14} />
+        <span className="hidden sm:inline">Новый клиент</span>
       </button>
     </div>
   );

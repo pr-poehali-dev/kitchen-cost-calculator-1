@@ -97,24 +97,27 @@ export default function HomePage({ onNav }: Props) {
 
   return (
     <div className="flex flex-col h-full animate-fade-in">
-      <div className="border-b border-border bg-[hsl(220,14%,11%)] px-6 py-4 shrink-0 flex items-center justify-between">
-        <div>
+      <div className="border-b border-border bg-[hsl(220,14%,11%)] px-4 md:px-6 py-3 md:py-4 shrink-0 flex items-center justify-between">
+        <div className="min-w-0">
           <h1 className="text-base font-semibold text-foreground">Главная</h1>
-          <p className="text-[hsl(var(--text-muted))] text-xs mt-0.5">
+          <p className="text-[hsl(var(--text-muted))] text-xs mt-0.5 hidden sm:block">
             {new Date().toLocaleDateString('ru', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          </p>
+          <p className="text-[hsl(var(--text-muted))] text-xs mt-0.5 sm:hidden">
+            {new Date().toLocaleDateString('ru', { day: 'numeric', month: 'short' })}
           </p>
         </div>
         <button
           onClick={() => onNav('clients')}
-          className="flex items-center gap-2 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90"
+          className="flex items-center gap-2 px-3 md:px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90 shrink-0"
         >
           <Icon name="UserPlus" size={14} />
-          Новый клиент
+          <span className="hidden sm:inline">Новый клиент</span>
         </button>
       </div>
 
       <div className="flex-1 overflow-auto scrollbar-thin">
-        <div className="p-6 max-w-5xl mx-auto space-y-6">
+        <div className="p-3 md:p-6 max-w-5xl mx-auto space-y-4 md:space-y-6">
 
           {/* Задачи на сегодня */}
           {todayTasks.length > 0 && (

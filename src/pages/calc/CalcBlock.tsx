@@ -260,11 +260,11 @@ export default function CalcBlock({
       </div>
 
       {!collapsed && (
-        <>
+        <div className="overflow-x-auto scrollbar-thin">
           {/* Column header */}
           <div
             className="text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider pl-8 pr-4 py-1.5 bg-[hsl(220,14%,10%)] border-b border-border select-none"
-            style={{ display: 'grid', gridTemplateColumns: gridCols, alignItems: 'center' }}
+            style={{ display: 'grid', gridTemplateColumns: gridCols, alignItems: 'center', minWidth: '480px' }}
           >
             {visibleCols.map(col => (
               <span
@@ -282,7 +282,7 @@ export default function CalcBlock({
           </div>
 
           {/* Rows with DnD */}
-          <div className="bg-[hsl(220,13%,12%)]">
+          <div className="bg-[hsl(220,13%,12%)]" style={{ minWidth: '480px' }}>
             <DndContext sensors={rowSensors} collisionDetection={closestCenter} onDragEnd={handleRowDragEnd}>
               <SortableContext items={block.rows.map(r => r.id)} strategy={verticalListSortingStrategy}>
                 {block.rows.map(row => (
@@ -312,7 +312,7 @@ export default function CalcBlock({
               </button>
             </div>
           </div>
-        </>
+        </div>
       )}
     </div>
   );

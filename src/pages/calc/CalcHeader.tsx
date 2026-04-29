@@ -46,9 +46,9 @@ export default function CalcHeader({
   const store = useStore();
 
   return (
-    <div className="border-b border-border bg-[hsl(220,14%,11%)] px-6 py-4">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
+    <div className="border-b border-border bg-[hsl(220,14%,11%)] px-3 md:px-6 py-3 md:py-4">
+      <div className="flex items-center justify-between mb-3 md:mb-4 gap-2">
+        <div className="flex items-center gap-2 md:gap-3 min-w-0">
           <div className="relative" onClick={onStopPropagation}>
             <button
               onClick={onToggleProjects}
@@ -126,7 +126,7 @@ export default function CalcHeader({
           </div>
 
           {/* Templates & PDF buttons */}
-          <div className="flex items-center gap-2 ml-2">
+          <div className="hidden sm:flex items-center gap-2 ml-2">
             <button
               onClick={onOpenTemplates}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[hsl(var(--text-dim))] hover:text-foreground border border-border rounded hover:border-[hsl(var(--text-dim))] transition-colors"
@@ -165,10 +165,19 @@ export default function CalcHeader({
               <span>PDF</span>
             </button>
           </div>
+          {/* Мобильные иконки */}
+          <div className="flex sm:hidden items-center gap-1 ml-1">
+            <button onClick={onOpenTemplates} title="Шаблоны" className="w-7 h-7 flex items-center justify-center text-[hsl(var(--text-dim))] hover:text-foreground border border-border rounded transition-colors">
+              <Icon name="LayoutTemplate" size={13} />
+            </button>
+            <button onClick={onExportPdf} title="PDF" className="w-7 h-7 flex items-center justify-center text-[hsl(var(--text-dim))] hover:text-foreground border border-border rounded transition-colors">
+              <Icon name="FileDown" size={13} />
+            </button>
+          </div>
         </div>
 
-        <div className="flex items-center gap-6">
-          <div className="flex items-center gap-4 text-sm flex-wrap justify-end">
+        <div className="flex items-center gap-3 md:gap-6 shrink-0">
+          <div className="hidden md:flex items-center gap-4 text-sm flex-wrap justify-end">
             <span className="text-[hsl(var(--text-muted))]">Материалы: <span className="font-mono text-foreground">{fmt(totalMaterials)}</span></span>
             <span className="text-[hsl(var(--border))]">·</span>
             <span className="text-[hsl(var(--text-muted))]">Услуги: <span className="font-mono text-foreground">{fmt(totalServices)}</span></span>
@@ -181,25 +190,25 @@ export default function CalcHeader({
           </div>
           <div className="text-right">
             {grandTotal !== total && (
-              <div className="text-[hsl(var(--text-muted))] text-xs font-mono mb-0.5">
+              <div className="text-[hsl(var(--text-muted))] text-xs font-mono mb-0.5 hidden sm:block">
                 до расходов: {fmt(total)} {store.settings.currency}
               </div>
             )}
-            <div className="text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider">Итого</div>
-            <div className="text-gold font-mono font-semibold text-lg">{fmt(grandTotal)} {store.settings.currency}</div>
+            <div className="text-[hsl(var(--text-muted))] text-[10px] md:text-xs uppercase tracking-wider">Итого</div>
+            <div className="text-gold font-mono font-semibold text-base md:text-lg">{fmt(grandTotal)} {store.settings.currency}</div>
           </div>
         </div>
       </div>
 
       {/* Project info fields */}
-      <div className="grid grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 md:grid-cols-6 gap-2 md:gap-3">
         {[
           { label: 'Клиент', key: 'client' as const, placeholder: 'ФИО клиента' },
           { label: 'Изделие', key: 'object' as const, placeholder: 'Название изделия', colSpan: 2 },
           { label: 'Телефон', key: 'phone' as const, placeholder: '+7 000 000-00-00' },
           { label: 'Адрес', key: 'address' as const, placeholder: 'Адрес объекта' },
         ].map(f => (
-          <div key={f.key} className={f.colSpan === 2 ? 'col-span-2' : ''}>
+          <div key={f.key} className={f.colSpan === 2 ? 'md:col-span-2' : ''}>
             <label className="text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider block mb-1">{f.label}</label>
             <InlineEdit
               value={project[f.key]}

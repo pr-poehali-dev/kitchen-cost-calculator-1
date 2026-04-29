@@ -23,9 +23,9 @@ export default function BasePage() {
 
   return (
     <div className="flex flex-col h-full animate-fade-in">
-      <div className="border-b border-border bg-[hsl(220,14%,11%)] px-6 py-4">
-        <h1 className="text-base font-semibold text-foreground mb-3">База данных</h1>
-        <div className="flex gap-1">
+      <div className="border-b border-border bg-[hsl(220,14%,11%)] px-4 md:px-6 py-3 md:py-4">
+        <h1 className="text-base font-semibold text-foreground mb-2 md:mb-3">База данных</h1>
+        <div className="flex gap-1 overflow-x-auto scrollbar-thin pb-0.5">
           {TABS.map(t => (
             <button
               key={t.id}
@@ -34,13 +34,14 @@ export default function BasePage() {
                 setSelectedManufacturer(null);
                 setSelectedVendor(null);
               }}
-              className={`px-4 py-1.5 text-sm rounded transition-colors flex items-center gap-2 ${
+              className={`px-3 md:px-4 py-1.5 text-sm rounded transition-colors flex items-center gap-1.5 shrink-0 ${
                 tab === t.id
                   ? 'bg-gold text-[hsl(220,16%,8%)] font-medium'
                   : 'text-[hsl(var(--text-dim))] hover:text-foreground hover:bg-[hsl(220,12%,16%)]'
               }`}
             >
-              {t.label}
+              <span className="hidden sm:inline">{t.label}</span>
+              <span className="sm:hidden text-xs font-medium">{t.label.slice(0, 4)}.</span>
               <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                 tab === t.id ? 'bg-[hsl(220,16%,8%)] text-gold' : 'bg-[hsl(220,12%,18%)] text-[hsl(var(--text-muted))]'
               }`}>{t.count}</span>
@@ -49,7 +50,7 @@ export default function BasePage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto scrollbar-thin p-6">
+      <div className="flex-1 overflow-auto scrollbar-thin p-3 md:p-6">
         {tab === 'manufacturers' && (
           <ManufacturersTab
             selectedId={selectedManufacturer}

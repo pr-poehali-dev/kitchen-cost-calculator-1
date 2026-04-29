@@ -27,18 +27,20 @@ const NAV_BASE = [
 
 const NAV_ADMIN = { id: 'users' as Section, label: 'Пользователи', icon: 'ShieldCheck' };
 
+// Нижняя мобильная навигация — только 5 основных
+const NAV_BOTTOM = ['home', 'clients', 'calc', 'base', 'settings'] as Section[];
+
 export default function Layout({ active, onNav, children, user, onLogout, onOpenSearch }: LayoutProps) {
   const nav = user?.role === 'admin' ? [...NAV_BASE, NAV_ADMIN] : NAV_BASE;
   const [saveStatus, setSaveStatus] = useState<SaveStatus>(getSaveStatus());
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  // Подписываемся на статус сохранения
   useEffect(() => {
     const handler = (s: SaveStatus) => setSaveStatus(s);
     saveStatusListeners.add(handler);
     return () => { saveStatusListeners.delete(handler); };
   }, []);
 
-  // Ctrl+K / Cmd+K
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
@@ -50,7 +52,6 @@ export default function Layout({ active, onNav, children, user, onLogout, onOpen
     return () => window.removeEventListener('keydown', handler);
   }, [onOpenSearch]);
 
-  // Предупреждение при закрытии вкладки с несохранёнными данными
   useEffect(() => {
     const handler = (e: BeforeUnloadEvent) => {
       if (saveStatus === 'pending' || saveStatus === 'error') {
@@ -62,100 +63,197 @@ export default function Layout({ active, onNav, children, user, onLogout, onOpen
     return () => window.removeEventListener('beforeunload', handler);
   }, [saveStatus]);
 
+  // Закрываем drawer при навигации
+  const handleNav = (s: Section) => {
+    onNav(s);
+    setDrawerOpen(false);
+  };
+
+  // Закрываем drawer при клике вне или Escape
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setDrawerOpen(false); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [drawerOpen]);
+
   const statusUI = {
     saved: { icon: 'Cloud', color: 'text-[hsl(var(--text-muted))]', label: 'Сохранено' },
     pending: { icon: 'CloudUpload', color: 'text-gold', label: 'Сохраняю...' },
     error: { icon: 'CloudOff', color: 'text-destructive', label: 'Ошибка сохранения' },
   }[saveStatus];
 
+  const bottomNav = nav.filter(n => NAV_BOTTOM.includes(n.id));
+
+  const SidebarContent = () => (
+    <>
+      <div className="px-5 py-5 border-b border-border">
+        <div className="text-gold font-semibold text-base tracking-wide">КухниПро</div>
+        <div className="text-[hsl(var(--text-muted))] text-xs mt-0.5 tracking-wider uppercase">Калькулятор мебели</div>
+      </div>
+
+      {/* Поиск */}
+      <button
+        onClick={() => { onOpenSearch?.(); setDrawerOpen(false); }}
+        className="mx-3 mt-3 mb-1 flex items-center gap-2 px-3 py-2 bg-[hsl(220,12%,12%)] border border-border rounded-lg text-xs text-[hsl(var(--text-muted))] hover:border-gold/40 hover:text-foreground transition-all group"
+      >
+        <Icon name="Search" size={13} />
+        <span className="flex-1 text-left">Поиск...</span>
+        <kbd className="hidden md:flex items-center gap-0.5 px-1 py-0.5 bg-[hsl(220,12%,18%)] rounded text-[10px] border border-border opacity-60 group-hover:opacity-100">
+          Ctrl K
+        </kbd>
+      </button>
+
+      <nav className="flex-1 py-2 overflow-y-auto scrollbar-thin">
+        {nav.map(item => (
+          <button
+            key={item.id}
+            onClick={() => handleNav(item.id)}
+            className={`w-full flex items-center gap-3 px-5 py-2.5 text-sm transition-all duration-150 ${
+              active === item.id
+                ? 'text-gold bg-[hsl(220,12%,14%)] border-r-2 border-gold'
+                : 'text-[hsl(var(--text-dim))] hover:text-foreground hover:bg-[hsl(220,12%,12%)]'
+            }`}
+          >
+            <Icon name={item.icon} size={15} />
+            <span className="font-medium">{item.label}</span>
+          </button>
+        ))}
+      </nav>
+
+      <div className="px-4 py-4 border-t border-border space-y-2">
+        {user && (
+          <div className="flex items-center gap-2 px-1 mb-1">
+            <div className="w-6 h-6 rounded-full bg-gold/20 flex items-center justify-center shrink-0">
+              <Icon name={user.role === 'admin' ? 'ShieldCheck' : 'User'} size={12} className="text-gold" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-foreground truncate">{user.login}</div>
+              <div className="text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider">{user.role} · {user.plan}</div>
+            </div>
+          </div>
+        )}
+
+        {user && (
+          <div className={`flex items-center gap-1.5 px-1 text-[10px] ${statusUI.color} transition-colors`}>
+            <Icon name={statusUI.icon} size={10} className="shrink-0" fallback="Cloud" />
+            <span>{statusUI.label}</span>
+            {saveStatus === 'error' && (
+              <button onClick={saveStateToDb} className="ml-auto underline hover:no-underline">
+                Повторить
+              </button>
+            )}
+          </div>
+        )}
+
+        {saveStatus === 'error' && (
+          <div className="mx-0 px-2 py-2 bg-destructive/10 border border-destructive/30 rounded text-[10px] text-destructive leading-relaxed">
+            Нет связи с сервером. Данные сохранены локально — не закрывайте вкладку.
+          </div>
+        )}
+
+        {onLogout && (
+          <button
+            onClick={onLogout}
+            className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[hsl(var(--text-muted))] hover:text-destructive hover:bg-destructive/5 rounded transition-colors"
+          >
+            <Icon name="LogOut" size={12} />
+            Выйти
+          </button>
+        )}
+        {!user && <div className="text-[hsl(var(--text-muted))] text-xs px-1">v1.0 · 2026</div>}
+      </div>
+    </>
+  );
+
   return (
     <div className="flex h-screen bg-background overflow-hidden">
-      <aside className="w-56 flex flex-col border-r border-border bg-[hsl(220,16%,6%)] shrink-0">
-        <div className="px-5 py-5 border-b border-border">
-          <div className="text-gold font-semibold text-base tracking-wide">КухниПро</div>
-          <div className="text-[hsl(var(--text-muted))] text-xs mt-0.5 tracking-wider uppercase">Калькулятор мебели</div>
+
+      {/* ── Десктоп сайдбар ─────────────────────────────────────── */}
+      <aside className="hidden md:flex w-56 flex-col border-r border-border bg-[hsl(220,16%,6%)] shrink-0">
+        <SidebarContent />
+      </aside>
+
+      {/* ── Мобильный drawer backdrop ───────────────────────────── */}
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 bg-black/60 z-40 md:hidden"
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+
+      {/* ── Мобильный drawer ────────────────────────────────────── */}
+      <aside className={`
+        fixed top-0 left-0 h-full w-64 flex flex-col
+        border-r border-border bg-[hsl(220,16%,6%)]
+        z-50 transition-transform duration-300 ease-in-out
+        md:hidden
+        ${drawerOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* Кнопка закрытия */}
+        <button
+          onClick={() => setDrawerOpen(false)}
+          className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-full bg-[hsl(220,12%,14%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors"
+        >
+          <Icon name="X" size={14} />
+        </button>
+        <SidebarContent />
+      </aside>
+
+      {/* ── Основной контент ────────────────────────────────────── */}
+      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+
+        {/* Мобильная шапка */}
+        <div className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-border bg-[hsl(220,16%,6%)] shrink-0">
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-[hsl(220,12%,14%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors"
+          >
+            <Icon name="Menu" size={16} />
+          </button>
+          <div className="text-gold font-semibold text-sm tracking-wide flex-1">КухниПро</div>
+          <button
+            onClick={onOpenSearch}
+            className="w-8 h-8 flex items-center justify-center rounded-lg bg-[hsl(220,12%,14%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors"
+          >
+            <Icon name="Search" size={15} />
+          </button>
+          {/* Индикатор сохранения */}
+          <div className={`${statusUI.color} transition-colors`}>
+            <Icon name={statusUI.icon} size={13} fallback="Cloud" />
+          </div>
         </div>
 
-        {/* Поиск */}
-        <button
-          onClick={onOpenSearch}
-          className="mx-3 mt-3 mb-1 flex items-center gap-2 px-3 py-2 bg-[hsl(220,12%,12%)] border border-border rounded-lg text-xs text-[hsl(var(--text-muted))] hover:border-gold/40 hover:text-foreground transition-all group"
-        >
-          <Icon name="Search" size={13} />
-          <span className="flex-1 text-left">Поиск...</span>
-          <kbd className="flex items-center gap-0.5 px-1 py-0.5 bg-[hsl(220,12%,18%)] rounded text-[10px] border border-border opacity-60 group-hover:opacity-100">
-            Ctrl K
-          </kbd>
-        </button>
+        <main className="flex-1 overflow-hidden flex flex-col min-w-0 pb-[56px] md:pb-0">
+          {children}
+        </main>
 
-        <nav className="flex-1 py-2 overflow-y-auto scrollbar-thin">
-          {nav.map(item => (
+        {/* ── Мобильная нижняя навигация ────────────────────────── */}
+        <nav className="md:hidden fixed bottom-0 left-0 right-0 h-14 flex items-stretch border-t border-border bg-[hsl(220,16%,6%)] z-30">
+          {bottomNav.map(item => (
             <button
               key={item.id}
-              onClick={() => onNav(item.id)}
-              className={`w-full flex items-center gap-3 px-5 py-2.5 text-sm transition-all duration-150 ${
+              onClick={() => handleNav(item.id)}
+              className={`flex-1 flex flex-col items-center justify-center gap-0.5 transition-colors ${
                 active === item.id
-                  ? 'text-gold bg-[hsl(220,12%,14%)] border-r-2 border-gold'
-                  : 'text-[hsl(var(--text-dim))] hover:text-foreground hover:bg-[hsl(220,12%,12%)]'
+                  ? 'text-gold'
+                  : 'text-[hsl(var(--text-dim))] hover:text-foreground'
               }`}
             >
-              <Icon name={item.icon} size={15} />
-              <span className="font-medium">{item.label}</span>
+              <Icon name={item.icon} size={18} />
+              <span className="text-[9px] font-medium leading-none">{item.label}</span>
             </button>
           ))}
+          {/* Кнопка "Ещё" открывает drawer */}
+          <button
+            onClick={() => setDrawerOpen(true)}
+            className="flex-1 flex flex-col items-center justify-center gap-0.5 text-[hsl(var(--text-dim))] hover:text-foreground transition-colors"
+          >
+            <Icon name="MoreHorizontal" size={18} />
+            <span className="text-[9px] font-medium leading-none">Ещё</span>
+          </button>
         </nav>
-
-        <div className="px-4 py-4 border-t border-border space-y-2">
-          {user && (
-            <div className="flex items-center gap-2 px-1 mb-1">
-              <div className="w-6 h-6 rounded-full bg-gold/20 flex items-center justify-center shrink-0">
-                <Icon name={user.role === 'admin' ? 'ShieldCheck' : 'User'} size={12} className="text-gold" />
-              </div>
-              <div className="min-w-0">
-                <div className="text-xs font-medium text-foreground truncate">{user.login}</div>
-                <div className="text-[10px] text-[hsl(var(--text-muted))] uppercase tracking-wider">{user.role} · {user.plan}</div>
-              </div>
-            </div>
-          )}
-
-          {/* Статус сохранения */}
-          {user && (
-            <div className={`flex items-center gap-1.5 px-1 text-[10px] ${statusUI.color} transition-colors`}>
-              <Icon name={statusUI.icon} size={10} className="shrink-0" fallback="Cloud" />
-              <span>{statusUI.label}</span>
-              {saveStatus === 'error' && (
-                <button
-                  onClick={saveStateToDb}
-                  className="ml-auto underline hover:no-underline"
-                >
-                  Повторить
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Баннер ошибки сохранения */}
-          {saveStatus === 'error' && (
-            <div className="mx-0 px-2 py-2 bg-destructive/10 border border-destructive/30 rounded text-[10px] text-destructive leading-relaxed">
-              Нет связи с сервером. Данные сохранены локально — не закрывайте вкладку.
-            </div>
-          )}
-
-          {onLogout && (
-            <button
-              onClick={onLogout}
-              className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-[hsl(var(--text-muted))] hover:text-destructive hover:bg-destructive/5 rounded transition-colors"
-            >
-              <Icon name="LogOut" size={12} />
-              Выйти
-            </button>
-          )}
-          {!user && <div className="text-[hsl(var(--text-muted))] text-xs px-1">v1.0 · 2026</div>}
-        </div>
-      </aside>
-      <main className="flex-1 overflow-hidden flex flex-col">
-        {children}
-      </main>
+      </div>
     </div>
   );
 }
