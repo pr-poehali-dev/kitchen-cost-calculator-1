@@ -493,22 +493,23 @@ export function useStore() {
     }));
   };
 
-  // Батчевый импорт СКАТ — все 141 материал с 5 вариантами цен в одном setState
+  // Батчевый импорт СКАТ/BOYARD — все материалы с вариантами в одном setState
   const importSkatBatch = (
     manufacturer: Omit<Manufacturer, 'id'> & { existingId?: string },
     categories: Array<Omit<MaterialCategory, 'id'> & { key: string }>,
     materials: Array<{
       name: string; typeId: string; vendorId?: string; thickness?: number; article: string;
       categoryKey?: string; unit: string;
-      variants: Array<{ variantId: string; size?: string; thickness?: number; params: string; basePrice: number }>;
+      groupKey?: string; // альтернативный ключ матчинга (напр. "BOYARD::Ручка рейлинг")
+      variants: Array<{ variantId: string; size?: string; thickness?: number; params: string; basePrice: number; article?: string }>;
     }>
   ): { created: number; updated: number; skipped: number } => {
     const ts = Date.now();
-    const existingArticles = new Set(state.materials.map(m => m.article).filter(Boolean));
-    void existingArticles;
     let created = 0; let updated = 0; let skipped = 0;
     materials.forEach(mat => {
-      const ex = state.materials.find(m => m.article === mat.article);
+      const ex = mat.groupKey
+        ? state.materials.find(m => m.article === mat.groupKey)
+        : state.materials.find(m => m.article === mat.article);
       if (ex) {
         if (ex.variants && ex.variants.length === mat.variants.length) skipped++;
         else updated++;
@@ -540,23 +541,26 @@ export function useStore() {
       next = { ...next, settings: { ...next.settings, materialCategories: newCats } };
 
       // 3. Материалы с вариантами
-      const arts = new Map(next.materials.map((m, i) => [m.article, i]));
+      // Ключ поиска: groupKey (для BOYARD) или article (для СКАТ)
+      const keyIndex = new Map(next.materials.map((m, i) => [m.article, i]));
       const newMaterials = [...next.materials];
       materials.forEach((mat, i) => {
+        const lookupKey = mat.groupKey ?? mat.article;
         const catId = mat.categoryKey ? catIdMap[mat.categoryKey] : undefined;
         const variants: MaterialVariant[] = mat.variants.map(v => ({
           id: v.variantId, size: v.size, thickness: v.thickness, params: v.params, basePrice: v.basePrice,
+          ...(v.article ? { article: v.article } : {}),
         }));
         const basePrice = mat.variants[0]?.basePrice ?? 0;
-        if (arts.has(mat.article)) {
+        if (keyIndex.has(lookupKey)) {
           // Обновляем варианты существующего
-          const idx = arts.get(mat.article)!;
+          const idx = keyIndex.get(lookupKey)!;
           newMaterials[idx] = { ...newMaterials[idx], variants, basePrice };
         } else {
           newMaterials.push({
             id: `m${ts}${i}`, manufacturerId: mfrId, categoryId: catId,
             name: mat.name, typeId: mat.typeId, vendorId: mat.vendorId,
-            thickness: mat.thickness, article: mat.article, unit: mat.unit, basePrice, variants,
+            thickness: mat.thickness, article: lookupKey, unit: mat.unit, basePrice, variants,
           });
         }
       });
@@ -582,18 +586,18 @@ export function useStore() {
     return count;
   };
 
-  // Батчевое обновление цен СКАТ (все варианты сразу) + опционально size/thickness
+  // Батчевое обновление цен СКАТ/BOYARD (все варианты сразу) + опционально size/thickness
   const updateSkatPrices = (
     updates: Array<{
       article: string;
+      materialId?: string; // опциональный матчинг по ID (приоритетнее article)
       variants: Array<{ variantId: string; basePrice: number; size?: string; thickness?: number }>;
     }>
   ): number => {
     let count = 0;
     setState(s => {
       const newMaterials = s.materials.map(m => {
-        if (!m.article) return m;
-        const upd = updates.find(u => u.article === m.article);
+        const upd = updates.find(u => u.materialId ? u.materialId === m.id : (m.article && u.article === m.article));
         if (!upd) return m;
         const newVariants = (m.variants || []).map(v => {
           const vu = upd.variants.find(x => x.variantId === v.id);

@@ -3,7 +3,7 @@ import { useStore } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
 import { Modal } from '../BaseShared';
 import func2url from '../../../../backend/func2url.json';
-import { boyardArticle } from './BoyardImportModal';
+import { boyardVariantId } from './BoyardImportModal';
 
 const PARSE_URL = (func2url as Record<string, string>)['parse-pricelist'];
 
@@ -16,10 +16,12 @@ interface BoyardItem {
   unit: string;
 }
 
-interface ChangedMaterial {
+// Одно изменение цены — на уровне варианта
+interface ChangedVariant {
   materialId: string;
   materialName: string;
-  article: string;
+  variantId: string;
+  article: string;        // оригинальный артикул
   category: string;
   oldPrice: number;
   newPrice: number;
@@ -31,7 +33,7 @@ export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [rate, setRate] = useState(0);
-  const [changed, setChanged] = useState<ChangedMaterial[] | null>(null);
+  const [changed, setChanged] = useState<ChangedVariant[] | null>(null);
   const [allItems, setAllItems] = useState<BoyardItem[]>([]);
   const [saved, setSaved] = useState(false);
 
@@ -53,36 +55,45 @@ export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
       setAllItems(items);
       setRate(data.rate || 0);
 
-      // Строим карту originalArticle → item (по оригинальному артикулу прайса)
+      // Карта артикул → цена из прайса
       const priceMap = new Map<string, BoyardItem>();
       for (const item of items) {
-        priceMap.set(item.article, item); // K100BN.12 → item
+        priceMap.set(item.article, item);
       }
 
-      // Идентифицируем материалы BOYARD по производителю
       const boyardMfr = store.manufacturers.find(m => m.name.toLowerCase() === 'boyard');
-      const result: ChangedMaterial[] = [];
+      const result: ChangedVariant[] = [];
+
       for (const mat of store.materials) {
-        if (!mat.article || mat.manufacturerId !== boyardMfr?.id) continue;
-        const item = priceMap.get(mat.article); // ищем по оригинальному артикулу
-        if (!item) continue;
+        if (mat.manufacturerId !== boyardMfr?.id) continue;
+        if (!mat.variants?.length) continue;
 
-        const variant = mat.variants?.find(v => v.params === 'розница');
-        const currentPrice = variant?.basePrice ?? mat.basePrice;
-        const newPrice = item.price_retail;
+        for (const variant of mat.variants) {
+          // Артикул варианта — либо в variant.article, либо в variant.size (legacy)
+          const articleKey = variant.article || variant.size || '';
+          if (!articleKey) continue;
 
-        if (Math.round(currentPrice) !== Math.round(newPrice)) {
-          result.push({
-            materialId: mat.id,
-            materialName: mat.name,
-            article: mat.article,
-            category: item.category,
-            oldPrice: currentPrice,
-            newPrice,
-            selected: true,
-          });
+          const item = priceMap.get(articleKey);
+          if (!item) continue;
+
+          const currentPrice = variant.basePrice;
+          const newPrice = item.price_retail;
+
+          if (Math.round(currentPrice) !== Math.round(newPrice)) {
+            result.push({
+              materialId: mat.id,
+              materialName: mat.name,
+              variantId: variant.id,
+              article: articleKey,
+              category: item.category,
+              oldPrice: currentPrice,
+              newPrice,
+              selected: true,
+            });
+          }
         }
       }
+
       setChanged(result);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -100,15 +111,22 @@ export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
   const handleSave = () => {
     if (!changed) return;
     const selected = changed.filter(m => m.selected);
-    const updates = selected.map(m => ({
-      article: m.article,
-      variants: [{
-        variantId: `${boyardArticle(m.article)}__retail`, // внутренний ID варианта
-        basePrice: m.newPrice,
-        params: 'розница',
-      }],
-    }));
-    store.updateSkatPrices(updates);
+
+    // Группируем обновления по materialId
+    const byMaterial = new Map<string, { article: string; materialId: string; variants: Array<{ variantId: string; basePrice: number }> }>();
+    for (const ch of selected) {
+      const mat = store.materials.find(m => m.id === ch.materialId);
+      if (!mat) continue;
+      if (!byMaterial.has(ch.materialId)) {
+        byMaterial.set(ch.materialId, { article: mat.article || '', materialId: ch.materialId, variants: [] });
+      }
+      byMaterial.get(ch.materialId)!.variants.push({
+        variantId: ch.variantId,
+        basePrice: ch.newPrice,
+      });
+    }
+
+    store.updateSkatPrices(Array.from(byMaterial.values()));
     setSaved(true);
     setTimeout(onClose, 1500);
   };
@@ -205,29 +223,49 @@ export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
                       <span>Выбрано: {selectedCount} из {changed.length}</span>
                       <div className="flex gap-3">
                         <button onClick={() => toggleAll(true)} className="hover:text-gold transition-colors">Все</button>
-                        <button onClick={() => toggleAll(false)} className="hover:text-gold transition-colors">Никакие</button>
+                        <button onClick={() => toggleAll(false)} className="hover:text-gold transition-colors">Снять</button>
                       </div>
                     </div>
+
                     <div className="max-h-64 overflow-auto scrollbar-thin space-y-1">
-                      {changed.map((m, idx) => (
-                        <div key={m.materialId}
-                          onClick={() => toggle(idx)}
-                          className={`flex items-center gap-3 px-3 py-2 rounded border cursor-pointer transition-colors ${m.selected ? 'bg-[hsl(220,12%,16%)] border-gold/30' : 'bg-[hsl(220,12%,12%)] border-border opacity-50'}`}>
-                          <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${m.selected ? 'bg-gold border-gold' : 'border-border'}`}>
+                      {changed.map((m, i) => (
+                        <div
+                          key={i}
+                          onClick={() => toggle(i)}
+                          className={`flex items-center gap-2 px-3 py-2 rounded border cursor-pointer transition-colors ${
+                            m.selected
+                              ? 'bg-[hsl(220,12%,16%)] border-gold/30'
+                              : 'bg-[hsl(220,12%,13%)] border-transparent opacity-50'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
+                            m.selected ? 'bg-gold border-gold' : 'border-border'
+                          }`}>
                             {m.selected && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <div className="text-xs font-medium text-foreground truncate">{m.materialName}</div>
-                            <div className="text-[10px] text-[hsl(var(--text-muted))] truncate">{m.category}</div>
+                            <div className="text-xs text-foreground truncate">{m.materialName}</div>
+                            <div className="text-[10px] text-[hsl(var(--text-muted))]">{m.article} · {m.category}</div>
                           </div>
                           <div className="text-right shrink-0">
                             <div className="text-xs text-[hsl(var(--text-muted))] line-through">{fmt(m.oldPrice)} ₽</div>
                             <div className={`text-xs font-medium ${m.newPrice > m.oldPrice ? 'text-red-400' : 'text-green-400'}`}>
-                              {m.newPrice > m.oldPrice ? '↑' : '↓'} {fmt(m.newPrice)} ₽
+                              {fmt(m.newPrice)} ₽
                             </div>
                           </div>
                         </div>
                       ))}
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleSave}
+                        disabled={selectedCount === 0}
+                        className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-semibold hover:opacity-90 disabled:opacity-40"
+                      >
+                        Обновить {selectedCount} цен
+                      </button>
+                      <button onClick={onClose} className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground">Отмена</button>
                     </div>
                   </>
                 )}
@@ -235,48 +273,41 @@ export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
             )}
 
             {activeTab === 'all' && (
-              <div className="max-h-64 overflow-auto scrollbar-thin space-y-1">
-                {Object.entries(grouped).map(([cat, catItems]) => (
-                  <div key={cat} className="bg-[hsl(220,12%,14%)] rounded border border-border">
-                    <div className="flex items-center justify-between px-3 py-1.5 border-b border-border">
-                      <span className="text-xs font-medium text-foreground">{cat}</span>
-                      <span className="text-[10px] text-gold">{catItems.length} шт.</span>
-                    </div>
-                    <div className="divide-y divide-[hsl(220,12%,18%)]">
-                      {catItems.slice(0, 5).map(item => (
-                        <div key={item.article} className="flex items-center justify-between px-3 py-1">
-                          <span className="text-[10px] text-[hsl(var(--text-muted))] truncate flex-1">{item.name}</span>
-                          <span className="text-[10px] text-foreground shrink-0 ml-2">{fmt(item.price_retail)} ₽</span>
+              <div className="max-h-64 overflow-auto scrollbar-thin space-y-2">
+                {Object.entries(grouped).sort(([a], [b]) => a.localeCompare(b, 'ru')).map(([cat, catItems]) => {
+                  const names = new Set(catItems.map(i => i.name));
+                  return (
+                    <div key={cat} className="bg-[hsl(220,12%,14%)] rounded border border-border">
+                      <div className="flex items-center justify-between px-3 py-2 border-b border-[hsl(220,12%,18%)]">
+                        <span className="text-xs font-medium text-foreground">{cat}</span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-[hsl(var(--text-muted))]">{names.size} назв.</span>
+                          <span className="text-[10px] text-gold">{catItems.length} арт.</span>
                         </div>
-                      ))}
-                      {catItems.length > 5 && (
-                        <div className="px-3 py-1 text-[10px] text-[hsl(var(--text-muted))]">...ещё {catItems.length - 5}</div>
-                      )}
+                      </div>
+                      <div className="px-3 py-1.5 space-y-0.5">
+                        {catItems.slice(0, 5).map((item, j) => (
+                          <div key={j} className="flex items-center justify-between">
+                            <span className="text-[11px] text-[hsl(var(--text-dim))] truncate flex-1 mr-2">{item.name}</span>
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[10px] text-[hsl(var(--text-muted))] font-mono">{item.article}</span>
+                              <span className="text-[11px] font-mono text-foreground">{fmt(item.price_retail)} ₽</span>
+                            </div>
+                          </div>
+                        ))}
+                        {catItems.length > 5 && (
+                          <div className="text-[10px] text-[hsl(var(--text-muted))] pt-0.5">
+                            + ещё {catItems.length - 5} артикулов
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-            )}
-
-            {changed.length > 0 && (
-              <div className="flex gap-2">
-                <button onClick={handleSave} disabled={selectedCount === 0}
-                  className="flex-1 py-2.5 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-semibold hover:opacity-90 disabled:opacity-40 flex items-center justify-center gap-2">
-                  <Icon name="Save" size={14} /> Обновить {selectedCount} цен
-                </button>
-                <button onClick={onClose} className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground">Отмена</button>
-              </div>
-            )}
-
-            {changed.length === 0 && (
-              <button onClick={onClose}
-                className="w-full py-2.5 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-semibold hover:opacity-90">
-                Закрыть
-              </button>
             )}
           </>
         )}
-
       </div>
     </Modal>
   );

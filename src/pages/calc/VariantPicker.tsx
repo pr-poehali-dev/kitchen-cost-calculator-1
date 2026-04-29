@@ -16,6 +16,8 @@ export default function VariantPicker({ material, onPick, onCancel }: Props) {
 
   // Определяем режим СКАТ: все варианты имеют params = "X кат"
   const isSkat = variants.length > 0 && /^\d\s*кат$/.test((variants[0].params || '').trim());
+  // Режим BOYARD: все варианты — розница, отличаются только артикулом
+  const isBoyard = !isSkat && variants.length > 0 && variants.every(v => v.params === 'розница');
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm" onClick={onCancel}>
@@ -24,7 +26,7 @@ export default function VariantPicker({ material, onPick, onCancel }: Props) {
           <div>
             <div className="font-semibold text-sm">{material.name}</div>
             <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5">
-              {isSkat ? 'Выберите категорию цены' : 'Выберите размер'}
+              {isSkat ? 'Выберите категорию цены' : isBoyard ? 'Выберите артикул' : 'Выберите размер'}
             </div>
           </div>
           <button onClick={onCancel} className="text-[hsl(var(--text-muted))] hover:text-foreground">
@@ -33,7 +35,32 @@ export default function VariantPicker({ material, onPick, onCancel }: Props) {
         </div>
 
         <div className="max-h-80 overflow-auto scrollbar-thin">
-          {isSkat ? (
+          {isBoyard ? (
+            // Режим BOYARD: Артикул | Цена
+            <>
+              <div className="grid text-[10px] uppercase tracking-wider text-[hsl(var(--text-muted))] px-4 py-2 border-b border-border"
+                style={{ gridTemplateColumns: '1fr 90px' }}>
+                <span>Артикул</span><span className="text-right">Закуп. / Розн.</span>
+              </div>
+              {variants.map(v => {
+                const retail = store.calcPriceWithMarkup(v.basePrice, 'materials');
+                return (
+                  <button
+                    key={v.id}
+                    onClick={() => onPick(v)}
+                    className="w-full grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,15%)] last:border-0 hover:bg-[hsl(220,12%,16%)] transition-colors text-left group"
+                    style={{ gridTemplateColumns: '1fr 90px' }}
+                  >
+                    <span className="text-sm font-medium group-hover:text-gold transition-colors font-mono">{v.article || v.size || '—'}</span>
+                    <div className="text-right">
+                      <div className="text-xs text-[hsl(var(--text-dim))] font-mono">{fmt(v.basePrice)}</div>
+                      <div className="text-xs text-gold font-mono font-semibold">→ {fmt(retail)}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </>
+          ) : isSkat ? (
             // Режим СКАТ: Описание | МДФ | Категория | Цена
             <>
               <div className="grid text-[10px] uppercase tracking-wider text-[hsl(var(--text-muted))] px-4 py-2 border-b border-border"

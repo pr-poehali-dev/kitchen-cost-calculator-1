@@ -7,8 +7,13 @@ import func2url from '../../../../backend/func2url.json';
 const PARSE_URL = (func2url as Record<string, string>)['parse-pricelist'];
 const BOYARD_VENDOR_ID = 'v2'; // Специалист
 
-// Артикул для матчинга и обновления цен
-export function boyardArticle(article: string): string {
+// Стабильный ключ группы: производитель + название (для матчинга материала в БД)
+export function boyardGroupKey(name: string): string {
+  return `boyard__group__${name.toLowerCase().replace(/[^а-яa-z0-9._-]+/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')}`;
+}
+
+// Ключ варианта по артикулу (для обновления цен)
+export function boyardVariantId(article: string): string {
   return `boyard__${article.toLowerCase().replace(/[^а-яa-z0-9._-]+/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')}`;
 }
 
@@ -23,7 +28,8 @@ interface BoyardItem {
 
 interface PreviewGroup {
   category: string;
-  count: number;
+  count: number;   // кол-во уникальных наименований (материалов)
+  variants: number; // кол-во всех позиций (вариантов)
   typeId: string;
 }
 
@@ -36,10 +42,6 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
   const [step, setStep] = useState<'idle' | 'preview' | 'done'>('idle');
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState({ created: 0, updated: 0, skipped: 0 });
-
-  const existingArticles = new Set(store.materials.map(m => m.article).filter(Boolean));
-  const toCreate = items.filter(i => !existingArticles.has(i.article)).length;
-  const toUpdate = items.length - toCreate;
 
   const handleFetch = async () => {
     setLoading(true);
@@ -67,7 +69,7 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
 
     const existingMfr = store.manufacturers.find(m => m.name.toLowerCase() === 'boyard');
 
-    // Уникальные категории → группы материалов
+    // Уникальные категории
     const categoryMap = new Map<string, string>(); // category → typeId
     items.forEach(i => categoryMap.set(i.category, i.type_id));
 
@@ -78,27 +80,37 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
       note: `BOYARD: ${cat}`,
     }));
 
-    // Каждый товар — один материал с одним вариантом (розница руб)
-    const materials = items
-      .filter(item => item.article && item.article.trim()) // только позиции с артикулом
-      .map(item => {
-        const article = item.article.trim();
-        const internalId = boyardArticle(article); // для variantId и матчинга
-        return {
-          name: item.name,
-          typeId: item.type_id,
-          vendorId: BOYARD_VENDOR_ID,
-          article, // оригинальный артикул из прайса (K100BN.12)
-          categoryKey: item.category,
-          unit: item.unit as 'шт',
-          variants: [{
-            variantId: `${internalId}__retail`,
-            size: article,
-            params: 'розница',
-            basePrice: item.price_retail,
-          }],
-        };
+    // Группируем позиции по названию — одно название = один материал
+    const grouped = new Map<string, BoyardItem[]>();
+    items
+      .filter(item => item.article && item.article.trim() && item.name && item.name.trim())
+      .forEach(item => {
+        const key = item.name.trim();
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key)!.push(item);
       });
+
+    // Каждая группа → один материал с несколькими вариантами по артикулу
+    const materials = Array.from(grouped.entries()).map(([name, group]) => {
+      const first = group[0];
+      const gKey = boyardGroupKey(name);
+      return {
+        name,
+        typeId: first.type_id,
+        vendorId: BOYARD_VENDOR_ID,
+        article: gKey,      // groupKey используется как article для матчинга
+        groupKey: gKey,
+        categoryKey: first.category,
+        unit: first.unit as 'шт',
+        variants: group.map(item => ({
+          variantId: boyardVariantId(item.article),
+          article: item.article,       // оригинальный артикул из прайса
+          size: item.article,          // отображается как "размер" в карточке
+          params: 'розница',
+          basePrice: item.price_retail,
+        })),
+      };
+    });
 
     const res = store.importSkatBatch(
       { name: 'BOYARD', note: 'Производитель фурнитуры', materialTypeIds: ['mt10', 'mt11', 'mt12'], existingId: existingMfr?.id },
@@ -115,11 +127,21 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
   const groups: PreviewGroup[] = [];
   for (const item of items) {
     let g = groups.find(x => x.category === item.category);
-    if (!g) { g = { category: item.category, count: 0, typeId: item.type_id }; groups.push(g); }
-    g.count++;
+    if (!g) { g = { category: item.category, count: 0, variants: 0, typeId: item.type_id }; groups.push(g); }
+    g.variants++;
+  }
+  // Считаем уникальные наименования по категории
+  for (const g of groups) {
+    const names = new Set(items.filter(i => i.category === g.category).map(i => i.name));
+    g.count = names.size;
   }
 
-  // Типы для отображения
+  // Общая статистика
+  const totalNames = new Set(items.map(i => i.name)).size;
+  const existingKeys = new Set(store.materials.map(m => m.article).filter(Boolean));
+  const toCreate = Array.from(new Set(items.map(i => i.name))).filter(name => !existingKeys.has(boyardGroupKey(name))).length;
+  const toUpdate = totalNames - toCreate;
+
   const typeNames: Record<string, string> = {
     mt10: 'Фурнитура', mt11: 'Профиль', mt12: 'Кромка', mt13: 'Другое',
   };
@@ -134,9 +156,9 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
               <p className="font-medium text-foreground">Что будет загружено:</p>
               <div className="text-xs text-[hsl(var(--text-muted))] space-y-1">
                 <p>• Производитель <span className="text-gold font-medium">BOYARD</span>, поставщик <span className="text-gold font-medium">Специалист</span></p>
-                <p>• Все позиции: крючки, петли, ручки, направляющие и др.</p>
+                <p>• Позиции группируются по названию: одно название — один материал</p>
+                <p>• Разные артикулы одного товара (размеры) — варианты внутри материала</p>
                 <p>• Цена: <span className="text-gold font-medium">розница в рублях</span> на дату прайса</p>
-                <p>• Тип материала определяется автоматически по категории</p>
               </div>
             </div>
             <p className="text-xs text-[hsl(var(--text-muted))]">
@@ -163,9 +185,9 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
           <>
             <div className="grid grid-cols-3 gap-2">
               {[
-                { label: 'позиций', value: items.length, color: 'text-foreground' },
-                { label: 'создаётся', value: toCreate, color: 'text-green-400' },
-                { label: 'обновляется', value: toUpdate, color: 'text-gold' },
+                { label: 'позиций в прайсе', value: items.length, color: 'text-foreground' },
+                { label: 'материалов создаётся', value: toCreate, color: 'text-green-400' },
+                { label: 'материалов обновляется', value: toUpdate, color: 'text-gold' },
               ].map(s => (
                 <div key={s.label} className="bg-[hsl(220,12%,14%)] rounded border border-border p-3 text-center">
                   <div className={`text-2xl font-bold ${s.color}`}>{s.value}</div>
@@ -190,7 +212,10 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
                       <span className="text-xs font-medium text-foreground truncate">{g.category || 'Без категории'}</span>
                       <span className="text-[10px] text-[hsl(var(--text-muted))] shrink-0">· {typeNames[g.typeId] || g.typeId}</span>
                     </div>
-                    <span className="text-xs text-gold font-medium shrink-0 ml-2">{g.count} шт.</span>
+                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                      <span className="text-[10px] text-[hsl(var(--text-muted))]">{g.count} назв.</span>
+                      <span className="text-xs text-gold font-medium">{g.variants} арт.</span>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -200,8 +225,8 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
               <button onClick={handleImport} disabled={importing}
                 className="flex-1 py-2.5 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-semibold hover:opacity-90 disabled:opacity-50 flex items-center justify-center gap-2">
                 {importing
-                  ? <><Icon name="Loader2" size={14} className="animate-spin" /> Импортирую...</>
-                  : <><Icon name="Database" size={14} /> Импортировать {items.length} позиций</>}
+                  ? <><Icon name="Loader2" size={14} className="animate-spin" /> Импорт...</>
+                  : <><Icon name="Download" size={14} /> Импортировать {totalNames} материалов</>}
               </button>
               <button onClick={onClose} className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground">Отмена</button>
             </div>
@@ -209,8 +234,8 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
         )}
 
         {step === 'done' && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-3 gap-3">
+          <>
+            <div className="grid grid-cols-3 gap-2">
               {[
                 { label: 'создано', value: result.created, color: 'text-green-400' },
                 { label: 'обновлено', value: result.updated, color: 'text-gold' },
@@ -222,16 +247,15 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
                 </div>
               ))}
             </div>
-            <div className="text-xs text-green-400 bg-green-400/10 border border-green-400/20 rounded px-3 py-2 flex items-center gap-2">
-              <Icon name="Check" size={13} /> Фурнитура BOYARD импортирована в базу материалов
+            <div className="text-xs text-[hsl(var(--text-muted))] bg-[hsl(220,12%,14%)] rounded border border-border px-3 py-2">
+              Материалы сгруппированы по названию. В карточке каждого материала доступен выбор артикула с ценой.
             </div>
             <button onClick={onClose}
               className="w-full py-2.5 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-semibold hover:opacity-90">
               Готово
             </button>
-          </div>
+          </>
         )}
-
       </div>
     </Modal>
   );
