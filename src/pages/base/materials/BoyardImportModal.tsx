@@ -43,10 +43,11 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState({ created: 0, updated: 0, skipped: 0 });
 
-  // Кол-во старых материалов boyard (без group__)
-  const legacyCount = store.materials.filter(
-    m => m.article?.startsWith('boyard__') && !m.article.startsWith('boyard__group__')
-  ).length;
+  // Кол-во старых материалов BOYARD — по производителю, article не начинается с "boyard__group__"
+  const boyardMfr = store.manufacturers.find(m => m.name.toLowerCase() === 'boyard');
+  const legacyCount = boyardMfr
+    ? store.materials.filter(m => m.manufacturerId === boyardMfr.id && !m.article?.startsWith('boyard__group__')).length
+    : 0;
 
   const handleFetch = async () => {
     setLoading(true);
