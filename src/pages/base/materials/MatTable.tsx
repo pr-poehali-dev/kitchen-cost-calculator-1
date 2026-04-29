@@ -58,10 +58,10 @@ export default function MatTable({
   const COLS = '20px 2fr 1fr 1fr 1fr 0.8fr 0.7fr 1fr 0.7fr 1fr 28px';
 
   return (
-    <div className="bg-[hsl(220,14%,11%)] rounded border border-border">
+    <div className="bg-[hsl(220,14%,11%)] rounded border border-border overflow-x-auto scrollbar-thin">
       {/* Заголовок */}
       <div className="grid text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider px-4 py-2.5 border-b border-border"
-        style={{ gridTemplateColumns: COLS }}>
+        style={{ gridTemplateColumns: COLS, minWidth: '900px' }}>
         <div className="flex items-center">
           <GoldCheckbox
             checked={isAllVisibleSelected}
@@ -98,7 +98,7 @@ export default function MatTable({
             className={`grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,14%)] group transition-colors text-sm cursor-pointer ${
               isSelected ? 'bg-gold/5' : 'hover:bg-[hsl(220,12%,12%)]'
             }`}
-            style={{ gridTemplateColumns: COLS }}
+            style={{ gridTemplateColumns: COLS, minWidth: '900px' }}
           >
             <div className="flex items-center" onClick={e => e.stopPropagation()}>
               <GoldCheckbox checked={isSelected} onChange={() => onToggleOne(m.id)} />

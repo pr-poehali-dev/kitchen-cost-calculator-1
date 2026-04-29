@@ -242,7 +242,7 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
       {/* Диалог подтверждения удаления */}
       {confirmDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg shadow-2xl p-6 w-full max-w-sm mx-4 animate-fade-in">
+          <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg shadow-2xl p-4 md:p-6 w-full max-w-sm mx-4 animate-fade-in">
             <div className="flex items-center gap-3 mb-4">
               <div className="w-10 h-10 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
                 <Icon name="Trash2" size={18} className="text-destructive" />

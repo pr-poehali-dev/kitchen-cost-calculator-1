@@ -78,13 +78,13 @@ export default function MatFilterBar({
 
       {/* Поиск + фильтр по категории */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
-        <div className="relative flex items-center">
+        <div className="relative flex items-center flex-1 min-w-0 sm:flex-none">
           <Icon name="Search" size={13} className="absolute left-2.5 text-[hsl(var(--text-muted))] pointer-events-none" />
           <input
             value={search}
             onChange={e => onSearchChange(e.target.value)}
             placeholder="Поиск по названию, артикулу, цвету..."
-            className="bg-[hsl(220,12%,14%)] border border-border rounded pl-8 pr-8 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors w-72"
+            className="bg-[hsl(220,12%,14%)] border border-border rounded pl-8 pr-8 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors w-full sm:w-72"
           />
           {search && (
             <button onClick={() => onSearchChange('')} className="absolute right-2 text-[hsl(var(--text-muted))] hover:text-foreground transition-colors">

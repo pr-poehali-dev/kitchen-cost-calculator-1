@@ -213,7 +213,7 @@ export default function ClientsPage() {
             ))}
           </div>
         ) : (
-          <div className="p-6 flex gap-4 overflow-x-auto">
+          <div className="p-3 md:p-6 flex gap-3 md:gap-4 overflow-x-auto">
             {CLIENT_STATUSES.map(s => (
               <KanbanColumn key={s.id} status={s} clients={filtered.filter(c => c.status === s.id)} onClient={c => setSelectedId(c.id)} />
             ))}

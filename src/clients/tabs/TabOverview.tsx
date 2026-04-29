@@ -88,7 +88,7 @@ export function TabOverview({ client, onChange, onStatusChange }: {
 
       {/* Ответственные */}
       <Section title="Ответственные" icon="Users">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Дизайнер">
             <input className={INPUT} value={client.designer} onChange={e => onChange('designer', e.target.value)} placeholder="Имя дизайнера" />
           </Field>
@@ -101,7 +101,7 @@ export function TabOverview({ client, onChange, onStatusChange }: {
       {/* Напоминание */}
       <Section title="Напоминание" icon="Bell">
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Дата следующего контакта">
               <input type="date" className={INPUT} value={client.reminder_date} onChange={e => onChange('reminder_date', e.target.value)} />
             </Field>

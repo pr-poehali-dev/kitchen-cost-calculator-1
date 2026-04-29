@@ -261,7 +261,7 @@ export default function ServicesPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto scrollbar-thin p-6 space-y-4">
+      <div className="flex-1 overflow-auto scrollbar-thin p-4 md:p-6 space-y-4">
         {project.serviceBlocks.map(block => (
           <ServiceBlockCard key={block.id} block={block} projectId={project.id} />
         ))}

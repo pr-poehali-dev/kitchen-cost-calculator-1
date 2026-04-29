@@ -9,7 +9,7 @@ export function TabData({ client, onChange }: { client: Client; onChange: (f: ke
       {/* ФИО */}
       <Section title="Личные данные" icon="User">
         <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="Фамилия">
               <input className={INPUT} value={client.last_name} onChange={e => onChange('last_name', e.target.value)} placeholder="Иванов" />
             </Field>
@@ -20,7 +20,7 @@ export function TabData({ client, onChange }: { client: Client; onChange: (f: ke
               <input className={INPUT} value={client.middle_name} onChange={e => onChange('middle_name', e.target.value)} placeholder="Иванович" />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Телефон (основной)">
               <PhoneInput value={client.phone} onChange={v => onChange('phone', v)} />
             </Field>
@@ -28,7 +28,7 @@ export function TabData({ client, onChange }: { client: Client; onChange: (f: ke
               <PhoneInput value={client.phone2} onChange={v => onChange('phone2', v)} />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Мессенджер">
               <select className={SELECT} value={client.messenger} onChange={e => onChange('messenger', e.target.value)}>
                 {['WhatsApp', 'Telegram', 'Viber', 'Звонок'].map(m => <option key={m}>{m}</option>)}
@@ -52,7 +52,7 @@ export function TabData({ client, onChange }: { client: Client; onChange: (f: ke
               <input className={INPUT} value={client.passport_number} onChange={e => onChange('passport_number', e.target.value)} placeholder="567890" maxLength={6} />
             </Field>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Field label="Дата выдачи">
               <input type="date" className={INPUT} value={client.passport_issued_date} onChange={e => onChange('passport_issued_date', e.target.value)} />
             </Field>
@@ -69,7 +69,7 @@ export function TabData({ client, onChange }: { client: Client; onChange: (f: ke
       {/* Адрес регистрации */}
       <Section title="Адрес регистрации (по паспорту)" icon="MapPin">
         <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="Город / нас. пункт">
               <input className={INPUT} value={client.reg_city} onChange={e => onChange('reg_city', e.target.value)} placeholder="Москва" />
             </Field>
@@ -80,7 +80,7 @@ export function TabData({ client, onChange }: { client: Client; onChange: (f: ke
               <input className={INPUT} value={client.reg_house} onChange={e => onChange('reg_house', e.target.value)} placeholder="12А" />
             </Field>
           </div>
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <Field label="Квартира">
               <input className={INPUT} value={client.reg_apt} onChange={e => onChange('reg_apt', e.target.value)} placeholder="45" />
             </Field>
@@ -105,7 +105,7 @@ export function TabData({ client, onChange }: { client: Client; onChange: (f: ke
         </button>
       }>
         <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Field label="Город">
               <input className={INPUT} value={client.delivery_city} onChange={e => onChange('delivery_city', e.target.value)} placeholder="Москва" />
             </Field>
@@ -116,7 +116,7 @@ export function TabData({ client, onChange }: { client: Client; onChange: (f: ke
               <input className={INPUT} value={client.delivery_house} onChange={e => onChange('delivery_house', e.target.value)} placeholder="12А" />
             </Field>
           </div>
-          <div className="grid grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             <Field label="Квартира">
               <input className={INPUT} value={client.delivery_apt} onChange={e => onChange('delivery_apt', e.target.value)} placeholder="45" />
             </Field>

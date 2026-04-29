@@ -326,7 +326,7 @@ export default function BlocksPage() {
             </div>
 
             {/* Контент */}
-            <div className="flex-1 overflow-auto scrollbar-thin p-6">
+            <div className="flex-1 overflow-auto scrollbar-thin p-4 md:p-6">
               <SavedBlockEditor
                 block={selected}
                 currency={currency}

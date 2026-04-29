@@ -45,7 +45,7 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-auto scrollbar-thin p-6 space-y-5 max-w-3xl">
+      <div className="flex-1 overflow-auto scrollbar-thin p-4 md:p-6 space-y-5 max-w-3xl">
         <SettingsCompanySection />
         <SettingsCatalogSection />
         <SettingsAppSection />

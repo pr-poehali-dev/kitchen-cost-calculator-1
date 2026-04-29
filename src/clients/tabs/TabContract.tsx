@@ -31,7 +31,7 @@ export function TabContract({ client, onChange }: { client: Client; onChange: (f
     <div className="space-y-4">
       {/* Договор */}
       <Section title="Договор" icon="FileText">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Номер договора">
             <div className="flex gap-1.5">
               <input className={INPUT + ' flex-1'} value={client.contract_number} onChange={e => onChange('contract_number', e.target.value)} placeholder="№ договора" />
@@ -110,7 +110,7 @@ export function TabContract({ client, onChange }: { client: Client; onChange: (f
       {/* Оплата */}
       <Section title="Оплата" icon="CreditCard">
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Field label="Сумма договора (₽)">
               <input type="number" min={0} className={INPUT} value={client.total_amount || ''} onChange={e => onChange('total_amount', parseFloat(e.target.value) || 0)} placeholder="0" />
             </Field>
@@ -121,7 +121,7 @@ export function TabContract({ client, onChange }: { client: Client; onChange: (f
             </Field>
           </div>
           {showBalance && (
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <Field label="Внесено (₽)">
                 <input type="number" min={0} className={INPUT} value={client.prepaid_amount || ''} onChange={e => onChange('prepaid_amount', parseFloat(e.target.value) || 0)} placeholder="0" />
               </Field>
@@ -140,7 +140,7 @@ export function TabContract({ client, onChange }: { client: Client; onChange: (f
 
       {/* Сроки */}
       <Section title="Сроки" icon="Calendar">
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Field label="Дата доставки">
             <input type="date" className={INPUT} value={client.delivery_date} onChange={e => onChange('delivery_date', e.target.value)} />
           </Field>
@@ -155,7 +155,7 @@ export function TabContract({ client, onChange }: { client: Client; onChange: (f
 
       {/* Стоимость услуг */}
       <Section title="Стоимость доставки и монтажа" icon="Truck">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Стоимость доставки (₽)">
             <input type="number" min={0} className={INPUT} value={client.delivery_cost || ''} onChange={e => onChange('delivery_cost', parseFloat(e.target.value) || 0)} placeholder="0" />
           </Field>

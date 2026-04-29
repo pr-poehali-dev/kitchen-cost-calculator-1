@@ -187,7 +187,7 @@ export default function ExpensesPage() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto scrollbar-thin p-6 space-y-4">
+      <div className="flex-1 overflow-auto scrollbar-thin p-4 md:p-6 space-y-4">
         {/* Уведомление об применённом шаблоне */}
         {appliedTemplate && (
           <div className="flex items-center gap-2 px-4 py-2.5 bg-emerald-500/10 border border-emerald-500/30 rounded text-sm text-emerald-400 animate-fade-in">

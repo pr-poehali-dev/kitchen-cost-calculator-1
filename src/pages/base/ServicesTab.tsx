@@ -43,9 +43,9 @@ export default function ServicesTab() {
             <Icon name="Plus" size={14} /> Добавить услугу
           </button>
         </div>
-        <div className="bg-[hsl(220,14%,11%)] rounded border border-border">
+        <div className="bg-[hsl(220,14%,11%)] rounded border border-border overflow-x-auto scrollbar-thin">
           <div className="grid text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider px-4 py-2.5 border-b border-border"
-            style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 28px' }}>
+            style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 28px', minWidth: '480px' }}>
             <span>Наименование</span><span>Категория</span><span>Ед. изм.</span><span className="text-right">Цена</span><span></span>
           </div>
           {filteredServices.length === 0 && (
@@ -55,7 +55,7 @@ export default function ServicesTab() {
           )}
           {filteredServices.map(sv => (
             <div key={sv.id} className="grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,14%)] hover:bg-[hsl(220,12%,12%)] group transition-colors text-sm"
-              style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 28px' }}>
+              style={{ gridTemplateColumns: '2fr 1fr 1fr 1fr 28px', minWidth: '480px' }}>
               <div>
                 <span className="text-foreground">{sv.name}</span>
                 {sv.note && <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5">{sv.note}</div>}
