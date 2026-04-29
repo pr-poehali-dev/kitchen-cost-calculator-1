@@ -43,11 +43,13 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState({ created: 0, updated: 0, skipped: 0 });
 
-  // Кол-во старых материалов BOYARD — по производителю, article не начинается с "boyard__group__"
-  const boyardMfr = store.manufacturers.find(m => m.name.toLowerCase() === 'boyard');
-  const legacyCount = boyardMfr
-    ? store.materials.filter(m => m.manufacturerId === boyardMfr.id && !m.article?.startsWith('boyard__group__')).length
-    : 0;
+  // Кол-во старых материалов BOYARD — все производители с именем boyard, article без "boyard__group__"
+  const boyardMfrIds = new Set(
+    store.manufacturers.filter(m => m.name.toLowerCase() === 'boyard').map(m => m.id)
+  );
+  const legacyCount = store.materials.filter(
+    m => boyardMfrIds.has(m.manufacturerId) && !m.article?.startsWith('boyard__group__')
+  ).length;
 
   const handleFetch = async () => {
     setLoading(true);
@@ -73,7 +75,11 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
   const handleImport = () => {
     setImporting(true);
 
-    const existingMfr = store.manufacturers.find(m => m.name.toLowerCase() === 'boyard');
+    // Берём производителя у которого уже есть новые материалы (boyard__group__), иначе первого попавшегося
+    const allBoyardMfrs = store.manufacturers.filter(m => m.name.toLowerCase() === 'boyard');
+    const existingMfr = allBoyardMfrs.find(mfr =>
+      store.materials.some(mat => mat.manufacturerId === mfr.id && mat.article?.startsWith('boyard__group__'))
+    ) ?? allBoyardMfrs[0];
 
     // Уникальные категории
     const categoryMap = new Map<string, string>(); // category → typeId

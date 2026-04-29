@@ -637,14 +637,18 @@ export function useStore() {
     setState(s => ({ ...s, materials: s.materials.filter(m => m.id !== id) }));
   };
 
-  // Удалить старые материалы BOYARD — у производителя BOYARD, где article НЕ начинается с "boyard__group__"
+  // Удалить старые материалы BOYARD — все материалы у производителей с именем BOYARD/Boyard,
+  // у которых article НЕ начинается с "boyard__group__" (старый формат — оригинальные артикулы)
   const deleteLegacyBoyardMaterials = (): number => {
     let count = 0;
     setState(s => {
-      const boyardMfr = s.manufacturers.find(m => m.name.toLowerCase() === 'boyard');
-      if (!boyardMfr) return s;
+      // Все производители с именем boyard (любой регистр)
+      const boyardMfrIds = new Set(
+        s.manufacturers.filter(m => m.name.toLowerCase() === 'boyard').map(m => m.id)
+      );
+      if (boyardMfrIds.size === 0) return s;
       const filtered = s.materials.filter(m => {
-        const isLegacy = m.manufacturerId === boyardMfr.id && !m.article?.startsWith('boyard__group__');
+        const isLegacy = boyardMfrIds.has(m.manufacturerId) && !m.article?.startsWith('boyard__group__');
         if (isLegacy) count++;
         return !isLegacy;
       });
