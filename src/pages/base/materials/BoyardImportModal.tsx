@@ -43,6 +43,11 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState({ created: 0, updated: 0, skipped: 0 });
 
+  // Кол-во старых материалов boyard (без group__)
+  const legacyCount = store.materials.filter(
+    m => m.article?.startsWith('boyard__') && !m.article.startsWith('boyard__group__')
+  ).length;
+
   const handleFetch = async () => {
     setLoading(true);
     setError('');
@@ -112,6 +117,9 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
       };
     });
 
+    // Сначала удаляем старые материалы (article = "boyard__xxx", не "boyard__group__xxx")
+    store.deleteLegacyBoyardMaterials();
+
     const res = store.importSkatBatch(
       { name: 'BOYARD', note: 'Производитель фурнитуры', materialTypeIds: ['mt10', 'mt11', 'mt12'], existingId: existingMfr?.id },
       categories,
@@ -164,6 +172,20 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
             <p className="text-xs text-[hsl(var(--text-muted))]">
               Обновление прайса меняет все цены за один клик через кнопку «Цены BOYARD».
             </p>
+            {legacyCount > 0 && (
+              <div className="flex items-center justify-between gap-3 bg-amber-400/10 border border-amber-400/30 rounded px-3 py-2">
+                <div className="flex items-center gap-2 text-xs text-amber-400">
+                  <Icon name="AlertTriangle" size={13} className="shrink-0" />
+                  Найдено {legacyCount} устаревших материалов BOYARD (старый формат)
+                </div>
+                <button
+                  onClick={() => store.deleteLegacyBoyardMaterials()}
+                  className="text-xs text-amber-400 hover:text-amber-300 underline shrink-0 transition-colors"
+                >
+                  Удалить
+                </button>
+              </div>
+            )}
             {error && (
               <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded px-3 py-2 flex items-start gap-2">
                 <Icon name="AlertCircle" size={13} className="shrink-0 mt-0.5" /> {error}

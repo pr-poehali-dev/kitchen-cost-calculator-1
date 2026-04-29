@@ -3,7 +3,7 @@ import { useStore } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
 import { Modal } from '../BaseShared';
 import func2url from '../../../../backend/func2url.json';
-import { boyardVariantId } from './BoyardImportModal';
+
 
 const PARSE_URL = (func2url as Record<string, string>)['parse-pricelist'];
 

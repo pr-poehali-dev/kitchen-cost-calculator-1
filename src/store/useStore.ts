@@ -637,6 +637,20 @@ export function useStore() {
     setState(s => ({ ...s, materials: s.materials.filter(m => m.id !== id) }));
   };
 
+  // Удалить старые материалы BOYARD (article начинается с "boyard__", но НЕ с "boyard__group__")
+  const deleteLegacyBoyardMaterials = (): number => {
+    let count = 0;
+    setState(s => {
+      const filtered = s.materials.filter(m => {
+        const isLegacy = m.article?.startsWith('boyard__') && !m.article.startsWith('boyard__group__');
+        if (isLegacy) count++;
+        return !isLegacy;
+      });
+      return { ...s, materials: filtered };
+    });
+    return count;
+  };
+
   const addService = (service: Omit<Service, 'id'>) => {
     const id = `sv${Date.now()}${Math.random().toString(36).slice(2)}`;
     setState(s => ({ ...s, services: [...s.services, { ...service, id }] }));
@@ -1031,7 +1045,7 @@ export function useStore() {
     duplicateBlock, reorderBlocks,
     addManufacturer, updateManufacturer, deleteManufacturer,
     addVendor, updateVendor, deleteVendor,
-    addMaterial, updateMaterial, deleteMaterial, duplicateMaterial, importSkatBatch, updateSkatPrices, patchSkatMaterials,
+    addMaterial, updateMaterial, deleteMaterial, duplicateMaterial, importSkatBatch, updateSkatPrices, patchSkatMaterials, deleteLegacyBoyardMaterials,
     addService, updateService, deleteService,
     addExpense, updateExpense, deleteExpense,
     addExpenseGroup, updateExpenseGroup, deleteExpenseGroup,
