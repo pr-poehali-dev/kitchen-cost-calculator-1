@@ -108,10 +108,88 @@ export default function CalcRowComponent({
 
   const gridCols = [...visibleColumns.map(c => COLUMN_WIDTHS[c]), '56px'].join(' ');
 
-  return (
+  // ── Мобильная карточка ─────────────────────────────────────────
+  const MaterialInput = (
+    <div className="relative flex items-center gap-1 flex-1 min-w-0">
+      <input
+        ref={inputRef}
+        value={nameFilter}
+        onChange={e => { setNameFilter(e.target.value); store.updateRow(projectId, blockId, row.id, { name: e.target.value, materialId: undefined, variantId: undefined }); setShowSuggest(true); }}
+        onFocus={() => { updatePos(); setShowSuggest(true); }}
+        onBlur={() => setTimeout(() => setShowSuggest(false), 160)}
+        placeholder="Выбрать материал..."
+        className="bg-transparent text-sm text-foreground w-full outline-none placeholder:text-[hsl(var(--text-muted))] border-b border-transparent focus:border-[hsl(var(--gold))]"
+      />
+      {row.materialId && row.variantId && (() => {
+        const mat = store.materials.find(m => m.id === row.materialId);
+        return mat ? (
+          <button onMouseDown={e => { e.preventDefault(); setVariantPickerMat(mat); }} className="shrink-0 text-[hsl(var(--text-muted))] hover:text-gold transition-colors" title="Сменить размер">
+            <Icon name="ChevronDown" size={11} />
+          </button>
+        ) : null;
+      })()}
+      {showSuggest && filteredMaterials.length > 0 && createPortal(
+        <MaterialDropdown materials={filteredMaterials} pos={dropdownPos} store={store} onPick={applyMaterial} />,
+        document.body
+      )}
+    </div>
+  );
+
+  const MobileCard = (
+    <div className="md:hidden border-b border-[hsl(220,12%,14%)] px-3 py-2.5 bg-[hsl(220,13%,12%)]">
+      <div className="flex items-start gap-2">
+        <div className="flex-1 min-w-0">
+          {MaterialInput}
+          {(row.color || row.thickness || row.unit) && (
+            <div className="flex items-center gap-2 mt-1 text-[11px] text-[hsl(var(--text-muted))]">
+              {row.color && <span>{row.color}</span>}
+              {row.thickness && <span>{row.thickness}мм</span>}
+              {row.unit && <span>{row.unit}</span>}
+            </div>
+          )}
+        </div>
+        <button onClick={onDelete} className="w-6 h-6 flex items-center justify-center text-[hsl(var(--text-muted))] hover:text-destructive transition-colors shrink-0">
+          <Icon name="X" size={13} />
+        </button>
+      </div>
+      <div className="flex items-center gap-3 mt-2">
+        {/* Кол-во */}
+        <div className="flex items-center gap-1 shrink-0">
+          <button tabIndex={-1} onClick={() => store.updateRow(projectId, blockId, row.id, { qty: Math.max(0, parseFloat(((row.qty || 0) - 1).toFixed(4))) })}
+            className="w-6 h-6 flex items-center justify-center rounded bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,22%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors text-xs">−</button>
+          <input type="number" step="0.01" min="0"
+            value={row.qty === 0 ? '0' : (row.qty || '')}
+            onChange={e => store.updateRow(projectId, blockId, row.id, { qty: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+            className="bg-transparent text-sm font-mono text-center outline-none border-b border-transparent focus:border-gold w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+          />
+          <button tabIndex={-1} onClick={() => store.updateRow(projectId, blockId, row.id, { qty: (row.qty || 0) + 1 })}
+            className="w-6 h-6 flex items-center justify-center rounded bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,22%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors text-xs">+</button>
+        </div>
+        {/* Цена */}
+        <div className="flex items-center gap-1 flex-1 min-w-0">
+          <span className="text-[11px] text-[hsl(var(--text-muted))] shrink-0">₽</span>
+          <input type="number" value={row.price || ''} onChange={e => store.updateRow(projectId, blockId, row.id, { price: parseFloat(e.target.value) || 0 })}
+            placeholder="0"
+            className="bg-transparent text-sm font-mono text-foreground w-full outline-none border-b border-transparent focus:border-gold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-[hsl(var(--text-muted))]"
+          />
+        </div>
+        {/* Итог */}
+        <div className={`text-sm font-mono font-semibold shrink-0 ${row.price > 0 && row.qty > 0 ? 'text-gold' : 'text-[hsl(var(--text-muted))]'}`}>
+          {row.price > 0 && row.qty > 0 ? fmt(rowTotal) : '—'}
+        </div>
+      </div>
+      {variantPickerMat && createPortal(
+        <VariantPicker material={variantPickerMat} onPick={v => applyMaterialWithVariant(variantPickerMat, v)} onCancel={() => setVariantPickerMat(null)} />,
+        document.body
+      )}
+    </div>
+  );
+
+  // ── Десктоп строка ─────────────────────────────────────────────
+  const DesktopRow = (
     <div
-      className="relative group border-b border-[hsl(220,12%,14%)] hover:bg-[hsl(220,12%,12%)] transition-colors"
-      style={{ display: 'grid', gridTemplateColumns: gridCols, alignItems: 'center', padding: '6px 16px' }}
+      className="relative group border-b border-[hsl(220,12%,14%)] hover:bg-[hsl(220,12%,12%)] transition-colors hidden md:grid"
+      style={{ gridTemplateColumns: gridCols, alignItems: 'center', padding: '6px 16px' }}
     >
       {visibleColumns.map(col => {
         switch (col) {
@@ -303,5 +381,12 @@ export default function CalcRowComponent({
         document.body
       )}
     </div>
+  );
+
+  return (
+    <>
+      {MobileCard}
+      {DesktopRow}
+    </>
   );
 }

@@ -260,29 +260,52 @@ export default function CalcBlock({
       </div>
 
       {!collapsed && (
-        <div className="overflow-x-auto scrollbar-thin">
-          {/* Column header */}
-          <div
-            className="text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider pl-8 pr-4 py-1.5 bg-[hsl(220,14%,10%)] border-b border-border select-none"
-            style={{ display: 'grid', gridTemplateColumns: gridCols, alignItems: 'center', minWidth: '480px' }}
-          >
-            {visibleCols.map(col => (
-              <span
-                key={col}
-                className={`truncate overflow-hidden ${
-                  COLUMN_ALIGN[col] === 'right'  ? 'text-right'  :
-                  COLUMN_ALIGN[col] === 'center' ? 'text-center' : ''
-                }`}
-                title={COLUMN_LABELS_SHORT[col]}
-              >
-                {COLUMN_LABELS_SHORT[col]}
-              </span>
-            ))}
-            <span />
+        <div>
+          {/* Десктоп: заголовок + таблица со скроллом */}
+          <div className="hidden md:block overflow-x-auto scrollbar-thin">
+            <div
+              className="text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider pl-8 pr-4 py-1.5 bg-[hsl(220,14%,10%)] border-b border-border select-none"
+              style={{ display: 'grid', gridTemplateColumns: gridCols, alignItems: 'center', minWidth: '480px' }}
+            >
+              {visibleCols.map(col => (
+                <span
+                  key={col}
+                  className={`truncate overflow-hidden ${
+                    COLUMN_ALIGN[col] === 'right'  ? 'text-right'  :
+                    COLUMN_ALIGN[col] === 'center' ? 'text-center' : ''
+                  }`}
+                  title={COLUMN_LABELS_SHORT[col]}
+                >
+                  {COLUMN_LABELS_SHORT[col]}
+                </span>
+              ))}
+              <span />
+            </div>
+            <div className="bg-[hsl(220,13%,12%)]" style={{ minWidth: '480px' }}>
+              <DndContext sensors={rowSensors} collisionDetection={closestCenter} onDragEnd={handleRowDragEnd}>
+                <SortableContext items={block.rows.map(r => r.id)} strategy={verticalListSortingStrategy}>
+                  {block.rows.map(row => (
+                    <SortableRow
+                      key={row.id}
+                      row={row}
+                      projectId={projectId}
+                      blockId={block.id}
+                      visibleColumns={visibleCols}
+                      currency={currency}
+                      allowedTypeIds={block.allowedTypeIds}
+                      otherBlocks={otherBlocks}
+                      onDelete={() => store.deleteRow(projectId, block.id, row.id)}
+                      onDuplicate={() => store.duplicateRow(projectId, block.id, row.id)}
+                      onCopyTo={(toBlockId) => store.copyRowToBlock(projectId, block.id, row.id, toBlockId)}
+                    />
+                  ))}
+                </SortableContext>
+              </DndContext>
+            </div>
           </div>
 
-          {/* Rows with DnD */}
-          <div className="bg-[hsl(220,13%,12%)]" style={{ minWidth: '480px' }}>
+          {/* Мобиль: карточки (рендерятся внутри CalcRowComponent) */}
+          <div className="md:hidden bg-[hsl(220,13%,12%)]">
             <DndContext sensors={rowSensors} collisionDetection={closestCenter} onDragEnd={handleRowDragEnd}>
               <SortableContext items={block.rows.map(r => r.id)} strategy={verticalListSortingStrategy}>
                 {block.rows.map(row => (
@@ -302,15 +325,16 @@ export default function CalcBlock({
                 ))}
               </SortableContext>
             </DndContext>
+          </div>
 
-            <div className="px-4 py-2 border-t border-[hsl(220,12%,14%)]">
-              <button
-                onClick={() => store.addRow(projectId, block.id)}
-                className="flex items-center gap-1.5 text-xs text-[hsl(var(--text-muted))] hover:text-gold transition-colors"
-              >
-                <Icon name="Plus" size={12} /> Добавить строку
-              </button>
-            </div>
+          {/* Кнопка добавить строку */}
+          <div className="px-4 py-2 border-t border-[hsl(220,12%,14%)] bg-[hsl(220,13%,12%)]">
+            <button
+              onClick={() => store.addRow(projectId, block.id)}
+              className="flex items-center gap-1.5 text-xs text-[hsl(var(--text-muted))] hover:text-gold transition-colors"
+            >
+              <Icon name="Plus" size={12} /> Добавить строку
+            </button>
           </div>
         </div>
       )}
