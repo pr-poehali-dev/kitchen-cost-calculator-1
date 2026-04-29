@@ -1,6 +1,7 @@
 import Icon from '@/components/ui/icon';
 import { CLIENT_STATUSES } from '../types';
 import type { Client, ClientStatus } from '../types';
+import SearchInput from '@/components/ui/search-input';
 
 type SortField = 'name' | 'created_at' | 'delivery_date' | 'total_amount';
 type SortDir = 'asc' | 'desc';
@@ -76,12 +77,13 @@ export function ClientsSearchBar({
   return (
     <div className="border-b border-border px-3 md:px-6 py-2 md:py-3 flex flex-col gap-2 shrink-0 bg-[hsl(220,16%,7%)]">
       <div className="flex items-center gap-2">
-        <div className="relative flex-1">
-          <Icon name="Search" size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))]" />
-          <input className="w-full bg-[hsl(220,12%,14%)] border border-border rounded pl-8 pr-3 py-1.5 text-sm outline-none focus:border-gold transition-colors"
-            placeholder="Поиск по имени, телефону..." value={search} onChange={e => onSearchChange(e.target.value)} />
-          {search && <button onClick={() => onSearchChange('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] hover:text-foreground"><Icon name="X" size={12} /></button>}
-        </div>
+        <SearchInput
+          value={search}
+          onChange={onSearchChange}
+          placeholder="Поиск по имени, телефону..."
+          size="md"
+          className="flex-1"
+        />
         {/* Кнопка расширенных фильтров */}
         <button
           onClick={onToggleFilters}

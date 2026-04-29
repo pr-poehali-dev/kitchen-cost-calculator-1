@@ -3,6 +3,7 @@ import { useStore } from '@/store/useStore';
 import type { Service } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { fmt, Field, Modal } from './BaseShared';
+import SearchInput from '@/components/ui/search-input';
 
 export default function ServicesTab() {
   const store = useStore();
@@ -21,20 +22,12 @@ export default function ServicesTab() {
     <>
       <div>
         <div className="flex items-center gap-3 mb-4">
-          <div className="relative flex items-center flex-1 max-w-sm">
-            <Icon name="Search" size={13} className="absolute left-2.5 text-[hsl(var(--text-muted))] pointer-events-none" />
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Поиск по названию или категории..."
-              className="w-full bg-[hsl(220,12%,14%)] border border-border rounded pl-8 pr-7 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors"
-            />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-2 text-[hsl(var(--text-muted))] hover:text-foreground">
-                <Icon name="X" size={12} />
-              </button>
-            )}
-          </div>
+          <SearchInput
+            value={search}
+            onChange={setSearch}
+            placeholder="Поиск по названию или категории..."
+            className="flex-1 max-w-sm"
+          />
           <span className="text-xs text-[hsl(var(--text-muted))]">{filteredServices.length} из {store.services.length}</span>
           <button
             onClick={() => setEditingService({ category: '', unit: 'шт', basePrice: 0 })}

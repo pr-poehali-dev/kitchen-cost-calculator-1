@@ -1,6 +1,7 @@
 import { useStore } from '@/store/useStore';
 import type { Vendor } from '@/store/types';
 import Icon from '@/components/ui/icon';
+import SearchInput from '@/components/ui/search-input';
 
 interface Props {
   visibleVendors: Vendor[];
@@ -29,20 +30,7 @@ export default function VendorSidebar({
         <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))]">Поставщики</div>
         <span className="text-xs text-[hsl(var(--text-muted))]">{store.vendors.length}</span>
       </div>
-      <div className="relative mb-2">
-        <Icon name="Search" size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] pointer-events-none" />
-        <input
-          value={sideSearch}
-          onChange={e => onSearchChange(e.target.value)}
-          placeholder="Поиск..."
-          className="w-full bg-[hsl(220,12%,14%)] border border-border rounded pl-7 pr-6 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors"
-        />
-        {sideSearch && (
-          <button onClick={() => onSearchChange('')} className="absolute right-2 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] hover:text-foreground">
-            <Icon name="X" size={11} />
-          </button>
-        )}
-      </div>
+      <SearchInput value={sideSearch} onChange={onSearchChange} className="mb-2" />
       {visibleVendors.map(v => {
         const matCount = vendorStats.countMap.get(v.id) || 0;
         const mfrCount = vendorStats.mfrMap.get(v.id)?.size || 0;
