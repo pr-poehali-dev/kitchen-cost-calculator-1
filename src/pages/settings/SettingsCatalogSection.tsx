@@ -40,16 +40,16 @@ export default function SettingsCatalogSection() {
         <div className="mb-3 text-xs text-[hsl(var(--text-muted))]">Используются для группировки материалов в Базе и фильтрации в блоках Расчёта</div>
         <div className="space-y-1.5 mb-4">
           {store.settings.materialTypes.map(t => (
-            <div key={t.id} className="flex items-center gap-3 px-3 py-2 bg-[hsl(220,12%,14%)] rounded group">
+            <div key={t.id} className="flex items-center gap-2 px-3 py-2 bg-[hsl(220,12%,14%)] rounded group">
               <span className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: t.color || '#888' }} />
-              <span className="flex-1 text-sm text-foreground">{t.name}</span>
-              <span className="text-xs text-[hsl(var(--text-muted))] font-mono">{store.materials.filter(m => m.typeId === t.id).length} матер.</span>
-              <span className="text-xs text-[hsl(var(--text-muted))]">
+              <span className="flex-1 text-sm text-foreground min-w-0 truncate">{t.name}</span>
+              <span className="text-xs text-[hsl(var(--text-muted))] font-mono shrink-0 hidden sm:inline">{store.materials.filter(m => m.typeId === t.id).length} матер.</span>
+              <span className="text-xs text-[hsl(var(--text-muted))] shrink-0 hidden sm:inline">
                 {categories.filter(c => getCatTypeIds(c).includes(t.id)).length > 0 && `${categories.filter(c => getCatTypeIds(c).includes(t.id)).length} катег.`}
               </span>
-              <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={() => setEditingType(t)} className="text-[hsl(var(--text-muted))] hover:text-foreground p-1 transition-colors"><Icon name="Pencil" size={12} /></button>
-                <button onClick={() => store.deleteMaterialType(t.id)} className="text-[hsl(var(--text-muted))] hover:text-destructive p-1 transition-colors"><Icon name="Trash2" size={12} /></button>
+              <div className="flex gap-1 shrink-0">
+                <button onClick={() => setEditingType(t)} className="text-[hsl(var(--text-muted))] hover:text-foreground p-1 transition-colors opacity-0 group-hover:opacity-100"><Icon name="Pencil" size={12} /></button>
+                <button onClick={() => store.deleteMaterialType(t.id)} className="text-[hsl(var(--text-muted))] hover:text-destructive p-1 transition-colors opacity-0 group-hover:opacity-100"><Icon name="Trash2" size={12} /></button>
               </div>
             </div>
           ))}
@@ -86,21 +86,20 @@ export default function SettingsCatalogSection() {
             const typeIds = getCatTypeIds(cat);
             const types = store.settings.materialTypes.filter(t => typeIds.includes(t.id));
             return (
-              <div key={cat.id} className="flex items-center gap-3 px-3 py-2 bg-[hsl(220,12%,14%)] rounded group">
+              <div key={cat.id} className="flex items-center gap-2 px-3 py-2 bg-[hsl(220,12%,14%)] rounded group">
                 {types.length > 0
                   ? <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: types[0].color || '#888' }} />
                   : <span className="w-3 h-3 rounded-full shrink-0 bg-[hsl(220,12%,30%)]" />}
-                <span className="flex-1 text-sm text-foreground font-medium">{cat.name}</span>
-                <div className="flex gap-1 flex-wrap">
+                <span className="flex-1 text-sm text-foreground font-medium min-w-0 truncate">{cat.name}</span>
+                <div className="hidden sm:flex gap-1 flex-wrap shrink-0">
                   {types.length > 0
                     ? types.map(t => <span key={t.id} className="text-xs px-2 py-0.5 rounded-full text-[hsl(220,16%,8%)] font-medium" style={{ backgroundColor: t.color || '#888' }}>{t.name}</span>)
                     : <span className="text-xs text-[hsl(var(--text-muted))]">Общая</span>}
                 </div>
-                {cat.note && <span className="text-xs text-[hsl(var(--text-muted))] truncate max-w-32">{cat.note}</span>}
-                <span className="text-xs text-[hsl(var(--text-muted))] font-mono">{store.materials.filter(m => m.categoryId === cat.id).length} матер.</span>
-                <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => setEditingCategory({ ...cat, typeIds: getCatTypeIds(cat) })} className="text-[hsl(var(--text-muted))] hover:text-foreground p-1 transition-colors"><Icon name="Pencil" size={12} /></button>
-                  <button onClick={() => store.deleteMaterialCategory(cat.id)} className="text-[hsl(var(--text-muted))] hover:text-destructive p-1 transition-colors"><Icon name="Trash2" size={12} /></button>
+                <span className="text-xs text-[hsl(var(--text-muted))] font-mono shrink-0 hidden sm:inline">{store.materials.filter(m => m.categoryId === cat.id).length}</span>
+                <div className="flex gap-1 shrink-0">
+                  <button onClick={() => setEditingCategory({ ...cat, typeIds: getCatTypeIds(cat) })} className="text-[hsl(var(--text-muted))] hover:text-foreground p-1 transition-colors opacity-0 group-hover:opacity-100"><Icon name="Pencil" size={12} /></button>
+                  <button onClick={() => store.deleteMaterialCategory(cat.id)} className="text-[hsl(var(--text-muted))] hover:text-destructive p-1 transition-colors opacity-0 group-hover:opacity-100"><Icon name="Trash2" size={12} /></button>
                 </div>
               </div>
             );

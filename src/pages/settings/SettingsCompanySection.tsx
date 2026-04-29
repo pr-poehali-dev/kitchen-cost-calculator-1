@@ -31,7 +31,7 @@ export default function SettingsCompanySection() {
     <>
       <Section title="О компании">
         <div className="space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Название компании</label>
               <input value={company.name || ''} onChange={e => upd('name', e.target.value)} placeholder="ООО «Моя Кухня»" className={inp} />
@@ -41,7 +41,7 @@ export default function SettingsCompanySection() {
               <input value={company.inn || ''} onChange={e => upd('inn', e.target.value)} placeholder="7712345678" className={inp} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Телефон</label>
               <input value={company.phone || ''} onChange={e => upd('phone', e.target.value)} placeholder="+7 (000) 000-00-00" className={inp} />
@@ -51,7 +51,7 @@ export default function SettingsCompanySection() {
               <input value={company.email || ''} onChange={e => upd('email', e.target.value)} placeholder="info@company.ru" className={inp} />
             </div>
           </div>
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Директор / ИП</label>
               <input value={company.director || ''} onChange={e => upd('director', e.target.value)} placeholder="Иванов Иван Иванович" className={inp} />
@@ -78,7 +78,7 @@ export default function SettingsCompanySection() {
       </Section>
 
       <Section title="Валюта">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">Символ валюты</label>
             <input value={store.settings.currency} onChange={e => store.updateSettings({ currency: e.target.value })}

@@ -77,20 +77,29 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
   return (
     <>
       <div className="flex gap-6 h-full min-h-0">
-        {/* Sidebar */}
-        <VendorSidebar
-          visibleVendors={visibleVendors}
-          selectedId={selectedId}
-          sideSearch={sideSearch}
-          vendorStats={vendorStats}
-          onSelect={onSelect}
-          onSearchChange={setSideSearch}
-          onAddVendor={() => setEditingVendor({ name: '', contact: '', phone: '', email: '', telegram: '', website: '', note: '', materialTypeIds: [], deliverySchedule: '' })}
-        />
+        {/* Sidebar — скрываем на мобильном когда выбран поставщик */}
+        <div className={`${vendor ? 'hidden md:flex' : 'flex'} w-full md:w-64 md:shrink-0`}>
+          <VendorSidebar
+            visibleVendors={visibleVendors}
+            selectedId={selectedId}
+            sideSearch={sideSearch}
+            vendorStats={vendorStats}
+            onSelect={onSelect}
+            onSearchChange={setSideSearch}
+            onAddVendor={() => setEditingVendor({ name: '', contact: '', phone: '', email: '', telegram: '', website: '', note: '', materialTypeIds: [], deliverySchedule: '' })}
+          />
+        </div>
 
-        {/* Detail */}
+        {/* Detail — на мобильном занимает весь экран */}
         {vendor ? (
-          <div className="flex-1 min-w-0 animate-fade-in space-y-4">
+          <div className="flex-1 min-w-0 animate-fade-in space-y-4 w-full">
+            {/* Кнопка назад на мобильном */}
+            <button
+              onClick={() => onSelect(null)}
+              className="md:hidden flex items-center gap-1.5 text-xs text-[hsl(var(--text-muted))] hover:text-gold transition-colors mb-2"
+            >
+              <Icon name="ChevronLeft" size={14} /> Поставщики
+            </button>
             <VendorHeroCard
               vendor={vendor}
               vendorMaterialsCount={vendorMaterials.length}
@@ -115,7 +124,7 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
             />
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="hidden md:flex flex-1 items-center justify-center">
             <div className="text-center">
               <Icon name="Truck" size={32} className="text-[hsl(var(--text-muted))] mx-auto mb-3" />
               <p className="text-[hsl(var(--text-muted))] text-sm">Выберите поставщика</p>

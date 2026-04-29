@@ -75,20 +75,29 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
   return (
     <>
       <div className="flex gap-6 h-full min-h-0">
-        {/* Sidebar */}
-        <MfrSidebar
-          visibleMfrs={visibleMfrs}
-          selectedId={selectedId}
-          sideSearch={sideSearch}
-          mfrMatCount={mfrMatCount}
-          onSelect={onSelect}
-          onSearchChange={setSideSearch}
-          onAddMfr={() => setEditingMfr({ name: '', contact: '', phone: '', materialTypeIds: [] })}
-        />
+        {/* Sidebar — скрываем на мобильном когда выбран производитель */}
+        <div className={`${manufacturer ? 'hidden md:flex' : 'flex'} w-full md:w-64 md:shrink-0`}>
+          <MfrSidebar
+            visibleMfrs={visibleMfrs}
+            selectedId={selectedId}
+            sideSearch={sideSearch}
+            mfrMatCount={mfrMatCount}
+            onSelect={onSelect}
+            onSearchChange={setSideSearch}
+            onAddMfr={() => setEditingMfr({ name: '', contact: '', phone: '', materialTypeIds: [] })}
+          />
+        </div>
 
-        {/* Detail */}
+        {/* Detail — на мобильном занимает весь экран */}
         {manufacturer ? (
-          <div className="flex-1 min-w-0 animate-fade-in space-y-4">
+          <div className="flex-1 min-w-0 animate-fade-in space-y-4 w-full">
+            {/* Кнопка назад на мобильном */}
+            <button
+              onClick={() => onSelect(null)}
+              className="md:hidden flex items-center gap-1.5 text-xs text-[hsl(var(--text-muted))] hover:text-gold transition-colors mb-2"
+            >
+              <Icon name="ChevronLeft" size={14} /> Производители
+            </button>
             <MfrHeroCard
               manufacturer={manufacturer}
               mfrMaterialsCount={mfrMaterials.length}
@@ -112,7 +121,7 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
             />
           </div>
         ) : (
-          <div className="flex-1 flex items-center justify-center">
+          <div className="hidden md:flex flex-1 items-center justify-center">
             <div className="text-center">
               <Icon name="Factory" size={32} className="text-[hsl(var(--text-muted))] mx-auto mb-3" fallback="Building2" />
               <p className="text-[hsl(var(--text-muted))] text-sm">Выберите производителя</p>

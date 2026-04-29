@@ -24,7 +24,7 @@ export default function VendorSidebar({
   const store = useStore();
 
   return (
-    <div className="w-64 shrink-0 flex flex-col gap-2">
+    <div className="w-full flex flex-col gap-2">
       <div className="flex items-center justify-between mb-2">
         <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))]">Поставщики</div>
         <span className="text-xs text-[hsl(var(--text-muted))]">{store.vendors.length}</span>

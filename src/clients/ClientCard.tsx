@@ -301,7 +301,7 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
 
       {/* Tab content */}
       <div className="flex-1 overflow-auto scrollbar-thin">
-        <div className="px-6 py-6 max-w-3xl mx-auto">
+        <div className="px-3 py-4 sm:px-6 sm:py-6 max-w-3xl mx-auto">
           {tab === 'overview'   && <TabOverview client={current} onChange={onChange} onStatusChange={handleStatusChange} />}
           {tab === 'data'       && <TabData client={current} onChange={onChange} />}
           {tab === 'contract'   && <TabContract client={current} onChange={onChange} />}

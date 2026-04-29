@@ -47,7 +47,7 @@ export default function SettingsAppSection() {
   return (
     <>
       <Section title="Статистика">
-        <div className="grid grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {[
             { label: 'Проектов',      value: store.projects.length,      icon: 'FolderOpen' },
             { label: 'Производителей', value: store.manufacturers.length, icon: 'Building2' },
