@@ -116,7 +116,11 @@ export default function MatTable({
             }
             <span className="text-xs text-[hsl(var(--text-dim))]">{m.thickness ? `${m.thickness}мм` : '—'}</span>
             <span className="text-xs text-[hsl(var(--text-dim))] truncate">{m.color || '—'}</span>
-            <span className="text-xs text-[hsl(var(--text-dim))]">{m.article || '—'}</span>
+            <span className="text-xs text-[hsl(var(--text-dim))] truncate">
+              {m.article?.startsWith('skat__') || m.article?.startsWith('boyard__')
+                ? '—'
+                : m.article || '—'}
+            </span>
             <span className="text-right font-mono text-sm">{fmt(m.basePrice)} <span className="text-[hsl(var(--text-muted))] text-xs">/{m.unit}</span></span>
             <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
               <button onClick={() => onEdit(m)} className="text-[hsl(var(--text-muted))] hover:text-foreground"><Icon name="Pencil" size={12} /></button>
