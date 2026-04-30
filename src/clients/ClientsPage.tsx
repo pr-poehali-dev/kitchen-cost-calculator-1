@@ -13,12 +13,12 @@ type View = 'list' | 'kanban';
 type SortField = 'name' | 'created_at' | 'delivery_date' | 'total_amount';
 type SortDir = 'asc' | 'desc';
 
-export default function ClientsPage() {
+export default function ClientsPage({ openClientId }: { openClientId?: string | null }) {
   const { clients, loading, loadAll: load, createClient, updateStatus } = useClients();
   const [view, setView] = useState<View>('list');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<ClientStatus | 'all'>('all');
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(openClientId ?? null);
   const [creating, setCreating] = useState(false);
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDir, setSortDir] = useState<SortDir>('desc');

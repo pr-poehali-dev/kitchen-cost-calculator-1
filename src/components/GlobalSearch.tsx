@@ -18,9 +18,10 @@ interface Props {
   clients: { id: string; last_name: string; first_name: string; middle_name: string; phone: string; status: string }[];
   onNav: (s: Section) => void;
   onClose: () => void;
+  onOpenClient?: (clientId: string) => void;
 }
 
-export default function GlobalSearch({ clients, onNav, onClose }: Props) {
+export default function GlobalSearch({ clients, onNav, onClose, onOpenClient }: Props) {
   const store = useStore();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
@@ -168,9 +169,14 @@ export default function GlobalSearch({ clients, onNav, onClose }: Props) {
 
   const pick = (r: Result) => {
     if (r.type === 'project') {
-      // Активируем проект
       const projectId = r.id.replace('project-', '');
       store.setState(s => ({ ...s, activeProjectId: projectId }));
+    }
+    if (r.type === 'client' && onOpenClient) {
+      const clientId = r.id.replace('client-', '');
+      onOpenClient(clientId);
+      onClose();
+      return;
     }
     onNav(r.section);
     onClose();
@@ -270,9 +276,12 @@ export default function GlobalSearch({ clients, onNav, onClose }: Props) {
                           {r.sub && <div className="text-xs text-[hsl(var(--text-muted))] truncate">{r.sub}</div>}
                         </div>
                         {isSelected && (
-                          <kbd className="flex items-center gap-1 px-1.5 py-0.5 bg-[hsl(220,12%,22%)] rounded text-[10px] text-[hsl(var(--text-muted))] border border-border shrink-0">
-                            ↵
-                          </kbd>
+                          <span className="flex items-center gap-1 text-[10px] text-[hsl(var(--text-muted))] shrink-0">
+                            {r.type === 'client' && onOpenClient
+                              ? <><Icon name="ExternalLink" size={11} /> открыть</>
+                              : '↵'
+                            }
+                          </span>
                         )}
                       </button>
                     );

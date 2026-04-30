@@ -29,6 +29,7 @@ export default function App() {
   const [section, setSection] = useState<Section>('home');
   const [stateLoading, setStateLoading] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
+  const [openClientId, setOpenClientId] = useState<string | null>(null);
   const [searchClients, setSearchClients] = useState<{
     id: string; last_name: string; first_name: string; middle_name: string;
     phone: string; status: string; reminder_date: string; reminder_note: string;
@@ -91,13 +92,13 @@ export default function App() {
     <>
       <Layout
         active={section}
-        onNav={setSection}
+        onNav={s => { setSection(s); if (s !== 'clients') setOpenClientId(null); }}
         user={user}
         onLogout={logout}
         onOpenSearch={() => setShowSearch(true)}
       >
         {section === 'home'     && <HomePage onNav={setSection} />}
-        {section === 'clients'  && <ClientsPage />}
+        {section === 'clients'  && <ClientsPage openClientId={openClientId} key={openClientId ?? 'clients'} />}
         {section === 'calc'     && <CalcPage />}
         {section === 'blocks'   && <BlocksPage />}
         {section === 'services' && <ServicesPage />}
@@ -113,6 +114,10 @@ export default function App() {
           clients={searchClients}
           onNav={s => setSection(s as Section)}
           onClose={() => setShowSearch(false)}
+          onOpenClient={clientId => {
+            setOpenClientId(clientId);
+            setSection('clients');
+          }}
         />
       )}
     </>
