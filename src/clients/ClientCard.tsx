@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from 'react';
 import Icon from '@/components/ui/icon';
+import { toast } from 'sonner';
 import { useClient, useClients } from './useClients';
 import { CLIENT_STATUSES, clientFullName, emptyClient } from './types';
 import type { Client, ClientStatus } from './types';
@@ -88,6 +89,8 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
 
   const handleDuplicate = async () => {
     if (!current) return;
+    const confirmed = window.confirm(`Создать копию клиента «${clientFullName(current)}»?`);
+    if (!confirmed) return;
     setDuplicating(true);
     const base = emptyClient();
     const copy = {
@@ -111,8 +114,11 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
       measurer: current.measurer,
       comment: `Копия клиента: ${clientFullName(current)}`,
     };
-    await createClient(copy);
+    const newId = await createClient(copy);
     setDuplicating(false);
+    if (newId) {
+      toast.success('Клиент продублирован', { description: `Создана копия: ${clientFullName(current)}` });
+    }
     onBack();
   };
 

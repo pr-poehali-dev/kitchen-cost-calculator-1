@@ -4,6 +4,22 @@ import { toast } from 'sonner';
 import type { DocDef } from './docTypes';
 import { apiUrl } from './docTypes';
 
+function DocPreviewModal({ url, title, onClose }: { url: string; title: string; onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 z-50 flex flex-col bg-black/80 animate-fade-in" onClick={onClose}>
+      <div className="flex items-center justify-between px-4 py-2 bg-[hsl(220,14%,11%)] border-b border-border shrink-0" onClick={e => e.stopPropagation()}>
+        <span className="text-sm font-medium text-foreground truncate">{title}</span>
+        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded hover:bg-white/10 transition-colors text-[hsl(var(--text-muted))] hover:text-foreground">
+          <Icon name="X" size={16} />
+        </button>
+      </div>
+      <div className="flex-1 overflow-hidden" onClick={e => e.stopPropagation()}>
+        <iframe src={url} className="w-full h-full border-0" title={title} />
+      </div>
+    </div>
+  );
+}
+
 interface Props {
   doc: DocDef;
   clientId: string;
@@ -15,6 +31,7 @@ interface Props {
 
 export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterShare }: Props) {
   const [loading, setLoading] = useState<string | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   async function ensureSaved() {
     if (hasDraft && onSave) {
@@ -26,8 +43,7 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
     setLoading('preview');
     try {
       await ensureSaved();
-      const url = apiUrl('doc_html', clientId, doc.id);
-      window.open(url, '_blank');
+      setPreviewUrl(apiUrl('doc_html', clientId, doc.id));
     } finally {
       setLoading(null);
     }
@@ -209,6 +225,10 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
   };
 
   return (
+    <>
+    {previewUrl && (
+      <DocPreviewModal url={previewUrl} title={doc.title} onClose={() => setPreviewUrl(null)} />
+    )}
     <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg p-4">
       <div className="flex items-start gap-3 mb-4">
         <div className="w-9 h-9 rounded-lg bg-gold/10 border border-gold/20 flex items-center justify-center flex-shrink-0">
@@ -249,5 +269,6 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
         </p>
       </div>
     </div>
+    </>
   );
 }

@@ -6,7 +6,7 @@ type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'e
 
 interface Result {
   id: string;
-  type: 'client' | 'project' | 'material' | 'section';
+  type: 'client' | 'project' | 'material' | 'section' | 'service' | 'block';
   label: string;
   sub?: string;
   icon: string;
@@ -108,9 +108,44 @@ export default function GlobalSearch({ clients, onNav, onClose }: Props) {
       }
     });
 
-    return out.slice(0, 12);
+    // Услуги из базы
+    store.services.forEach(s => {
+      if (
+        s.name.toLowerCase().includes(q) ||
+        (s.category || '').toLowerCase().includes(q) ||
+        (s.note || '').toLowerCase().includes(q)
+      ) {
+        out.push({
+          id: `svc-${s.id}`,
+          type: 'service',
+          label: s.name,
+          sub: [s.category, s.basePrice ? `${s.basePrice} ₽/${s.unit}` : ''].filter(Boolean).join(' · '),
+          icon: 'Wrench',
+          section: 'services',
+        });
+      }
+    });
+
+    // Блоки из базы (savedBlocks)
+    store.savedBlocks.forEach(b => {
+      if (
+        b.name.toLowerCase().includes(q) ||
+        (b.note || '').toLowerCase().includes(q)
+      ) {
+        out.push({
+          id: `blk-${b.id}`,
+          type: 'block',
+          label: b.name,
+          sub: b.note || (b.rows.length ? `${b.rows.length} позиций` : ''),
+          icon: 'LayoutTemplate',
+          section: 'blocks',
+        });
+      }
+    });
+
+    return out.slice(0, 16);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, clients, store.projects, store.materials]);
+  }, [query, clients, store.projects, store.materials, store.services, store.savedBlocks]);
 
   useEffect(() => {
     setSelected(0);
@@ -152,6 +187,8 @@ export default function GlobalSearch({ clients, onNav, onClose }: Props) {
     project: 'Проект',
     material: 'Материал',
     section: 'Раздел',
+    service: 'Услуга',
+    block: 'Блок',
   };
 
   const groupedResults = useMemo(() => {
