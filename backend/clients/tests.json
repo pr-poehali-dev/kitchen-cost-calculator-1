@@ -15,6 +15,14 @@
       "expectedStatus": 401,
       "expectedBody": {"error": "Не авторизован"},
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "List with designer filter returns 401",
+      "method": "GET",
+      "path": "/?action=list&designer=test&page=1&per_page=50",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "Не авторизован"},
+      "bodyMatcher": "partial"
     }
   ]
 }

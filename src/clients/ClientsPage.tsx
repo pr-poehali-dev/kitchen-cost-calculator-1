@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import Icon from '@/components/ui/icon';
-import { useClients } from './useClients';
+import { useClients, PER_PAGE } from './useClients';
+import type { ClientsFilter } from './useClients';
 import { CLIENT_STATUSES, clientFullName, emptyClient } from './types';
 import type { Client, ClientStatus } from './types';
 import ClientCard from './ClientCard';
@@ -8,13 +9,14 @@ import { ClientsListSkeleton } from '@/components/Skeleton';
 import { ClientRow, KanbanColumn } from './list/ClientListItems';
 import { ClientsToolbar } from './list/ClientsToolbar';
 import { ClientsSearchBar, ClientsAdvancedFilters, ClientsCounter } from './list/ClientsFilters';
+import ClientsPagination from './list/ClientsPagination';
 
 type View = 'list' | 'kanban';
 type SortField = 'name' | 'created_at' | 'delivery_date' | 'total_amount';
 type SortDir = 'asc' | 'desc';
 
 export default function ClientsPage({ openClientId }: { openClientId?: string | null }) {
-  const { clients, loading, loadAll: load, createClient, updateStatus } = useClients();
+  const { clients, total, pages, page, loading, fetchClients, loadAll, createClient, updateStatus } = useClients();
   const [view, setView] = useState<View>('list');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<ClientStatus | 'all'>('all');
@@ -40,10 +42,57 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
   const [filterAmountMin, setFilterAmountMin] = useState('');
   const [filterAmountMax, setFilterAmountMax] = useState('');
 
-  const designers = useMemo(() => [...new Set(clients.map(c => c.designer).filter(Boolean))], [clients]);
-  const measurers = useMemo(() => [...new Set(clients.map(c => c.measurer).filter(Boolean))], [clients]);
+  // Списки дизайнеров/замерщиков из всех загруженных клиентов
+  const [allDesigners, setAllDesigners] = useState<string[]>([]);
+  const [allMeasurers, setAllMeasurers] = useState<string[]>([]);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const hasAdvancedFilters = !!(filterDesigner || filterMeasurer || filterDateFrom || filterDateTo || filterDeliveryFrom || filterDeliveryTo || filterAmountMin || filterAmountMax);
+
+  const buildFilter = useCallback((): ClientsFilter => {
+    const sortMap: Record<SortField, string> = {
+      name: 'last_name',
+      created_at: 'created_at',
+      delivery_date: 'delivery_date',
+      total_amount: 'total_amount',
+    };
+    return {
+      q: search || undefined,
+      status: filterStatus !== 'all' ? filterStatus : undefined,
+      designer: filterDesigner || undefined,
+      measurer: filterMeasurer || undefined,
+      date_from: filterDateFrom || undefined,
+      date_to: filterDateTo || undefined,
+      delivery_from: filterDeliveryFrom || undefined,
+      delivery_to: filterDeliveryTo || undefined,
+      amount_min: filterAmountMin || undefined,
+      amount_max: filterAmountMax || undefined,
+      sort: sortMap[sortField],
+      sort_dir: sortDir,
+    };
+  }, [search, filterStatus, filterDesigner, filterMeasurer, filterDateFrom, filterDateTo, filterDeliveryFrom, filterDeliveryTo, filterAmountMin, filterAmountMax, sortField, sortDir]);
+
+  // Дебаунс загрузки при изменении фильтров
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      if (view === 'kanban') {
+        loadAll(buildFilter());
+      } else {
+        fetchClients(buildFilter(), 1);
+      }
+      setSelectedIds(new Set());
+    }, 300);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [buildFilter, view]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Обновляем списки дизайнеров и замерщиков из текущей загрузки
+  useEffect(() => {
+    const designers = [...new Set(clients.map(c => c.designer).filter(Boolean))];
+    const measurers = [...new Set(clients.map(c => c.measurer).filter(Boolean))];
+    if (designers.length > 0) setAllDesigners(prev => [...new Set([...prev, ...designers])]);
+    if (measurers.length > 0) setAllMeasurers(prev => [...new Set([...prev, ...measurers])]);
+  }, [clients]);
 
   const handleSort = (field: SortField) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -51,48 +100,18 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
     setShowSortMenu(false);
   };
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    const amountMin = filterAmountMin ? parseFloat(filterAmountMin) : null;
-    const amountMax = filterAmountMax ? parseFloat(filterAmountMax) : null;
-    let list = clients.filter(c => {
-      const name = clientFullName(c).toLowerCase();
-      // Поиск по имени, телефону (основной + доп.), номеру договора
-      if (q && !name.includes(q) && !c.phone?.includes(q) && !c.phone2?.includes(q) && !c.contract_number?.toLowerCase().includes(q)) return false;
-      if (filterStatus !== 'all' && c.status !== filterStatus) return false;
-      if (filterDesigner && c.designer !== filterDesigner) return false;
-      if (filterMeasurer && c.measurer !== filterMeasurer) return false;
-      // Дата создания: сравниваем ISO-строки (YYYY-MM-DD prefix всегда первый)
-      if (filterDateFrom && (c.created_at?.slice(0, 10) || '') < filterDateFrom) return false;
-      if (filterDateTo && (c.created_at?.slice(0, 10) || '') > filterDateTo) return false;
-      // Дата доставки: включаем обе граничные даты
-      if (filterDeliveryFrom && c.delivery_date && c.delivery_date < filterDeliveryFrom) return false;
-      if (filterDeliveryTo && c.delivery_date && c.delivery_date > filterDeliveryTo) return false;
-      // Сумма: только если числа валидны
-      if (amountMin !== null && !isNaN(amountMin) && c.total_amount < amountMin) return false;
-      if (amountMax !== null && !isNaN(amountMax) && c.total_amount > amountMax) return false;
-      return true;
-    });
-    list = [...list].sort((a, b) => {
-      let va: string | number = '', vb: string | number = '';
-      if (sortField === 'name') { va = clientFullName(a); vb = clientFullName(b); }
-      else if (sortField === 'created_at') { va = a.created_at || ''; vb = b.created_at || ''; }
-      else if (sortField === 'delivery_date') { va = a.delivery_date || '9999'; vb = b.delivery_date || '9999'; }
-      else if (sortField === 'total_amount') { va = a.total_amount; vb = b.total_amount; }
-      if (va < vb) return sortDir === 'asc' ? -1 : 1;
-      if (va > vb) return sortDir === 'asc' ? 1 : -1;
-      return 0;
-    });
-    return list;
-  }, [clients, search, filterStatus, filterDesigner, filterMeasurer, filterDateFrom, filterDateTo, filterDeliveryFrom, filterDeliveryTo, filterAmountMin, filterAmountMax, sortField, sortDir]);
+  const handlePage = (p: number) => {
+    fetchClients(buildFilter(), p);
+    setSelectedIds(new Set());
+  };
 
   const toggleSelect = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
     setSelectedIds(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; });
   };
   const toggleSelectAll = () => {
-    if (selectedIds.size === filtered.length) setSelectedIds(new Set());
-    else setSelectedIds(new Set(filtered.map(c => c.id)));
+    if (selectedIds.size === clients.length && clients.length > 0) setSelectedIds(new Set());
+    else setSelectedIds(new Set(clients.map(c => c.id)));
   };
 
   const handleBulkStatus = async (status: ClientStatus) => {
@@ -101,7 +120,7 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
     setSelectedIds(new Set());
     setShowBulkMenu(false);
     setBulkLoading(false);
-    load();
+    fetchClients(buildFilter(), page);
   };
 
   const clearFilters = () => {
@@ -118,10 +137,16 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
     if (id) setSelectedId(id);
   };
 
+  // Для канбана клиенты уже загружены через loadAll без пагинации
+  const kanbanClients = clients;
+
+  // Для экспорта нужен весь список — передаём текущие клиенты
+  const filteredForExport = useMemo(() => clients, [clients]);
+
   if (loading && clients.length === 0) return <ClientsListSkeleton />;
 
   if (selectedId) {
-    return <ClientCard clientId={selectedId} onBack={() => { setSelectedId(null); load(); }} />;
+    return <ClientCard clientId={selectedId} onBack={() => { setSelectedId(null); fetchClients(buildFilter(), page); }} />;
   }
 
   const showCounter = !!(search || filterStatus !== 'all' || hasAdvancedFilters || selectedIds.size > 0) && !loading;
@@ -129,11 +154,11 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
   return (
     <div className="flex flex-col h-full animate-fade-in">
       <ClientsToolbar
-        clientsCount={clients.length}
+        clientsCount={total}
         loading={loading}
         view={view}
-        onViewChange={setView}
-        filteredClients={filtered}
+        onViewChange={(v) => { setView(v); }}
+        filteredClients={filteredForExport}
         creating={creating}
         onCreate={handleCreate}
       />
@@ -164,15 +189,15 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
           filterDeliveryTo={filterDeliveryTo} onFilterDeliveryToChange={setFilterDeliveryTo}
           filterAmountMin={filterAmountMin} onFilterAmountMinChange={setFilterAmountMin}
           filterAmountMax={filterAmountMax} onFilterAmountMaxChange={setFilterAmountMax}
-          designers={designers} measurers={measurers}
+          designers={allDesigners} measurers={allMeasurers}
           hasAdvancedFilters={hasAdvancedFilters}
           onClearFilters={clearFilters}
         />
       )}
 
       <ClientsCounter
-        totalCount={clients.length}
-        filteredCount={filtered.length}
+        totalCount={total}
+        filteredCount={clients.length}
         showCounter={showCounter}
         selectedIds={selectedIds}
         showBulkMenu={showBulkMenu}
@@ -185,7 +210,7 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
 
       {/* Content */}
       <div className="flex-1 overflow-auto scrollbar-thin">
-        {filtered.length === 0 ? (
+        {clients.length === 0 && !loading ? (
           <div className="flex flex-col items-center justify-center h-full gap-4">
             <Icon name="Users" size={32} className="text-[hsl(var(--text-muted))]" />
             <p className="text-[hsl(var(--text-muted))] text-sm">{search || filterStatus !== 'all' || hasAdvancedFilters ? 'Нет клиентов по фильтру' : 'Нет клиентов. Создайте первого!'}</p>
@@ -197,15 +222,14 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
           </div>
         ) : view === 'list' ? (
           <div>
-            {/* Select all */}
             <div className="flex items-center gap-3 px-5 py-2 border-b border-border bg-[hsl(220,14%,10%)]">
-              <div onClick={toggleSelectAll} className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${selectedIds.size === filtered.length && filtered.length > 0 ? 'bg-gold border-gold' : 'border-border hover:border-gold/50'}`}>
-                {selectedIds.size === filtered.length && filtered.length > 0 && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
-                {selectedIds.size > 0 && selectedIds.size < filtered.length && <Icon name="Minus" size={10} className="text-gold" />}
+              <div onClick={toggleSelectAll} className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${selectedIds.size === clients.length && clients.length > 0 ? 'bg-gold border-gold' : 'border-border hover:border-gold/50'}`}>
+                {selectedIds.size === clients.length && clients.length > 0 && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
+                {selectedIds.size > 0 && selectedIds.size < clients.length && <Icon name="Minus" size={10} className="text-gold" />}
               </div>
-              <span className="text-xs text-[hsl(var(--text-muted))]">Выбрать все ({filtered.length})</span>
+              <span className="text-xs text-[hsl(var(--text-muted))]">Выбрать все ({clients.length})</span>
             </div>
-            {filtered.map(c => (
+            {clients.map(c => (
               <ClientRow key={c.id} client={c}
                 selected={selectedIds.has(c.id)}
                 onSelect={e => toggleSelect(e, c.id)}
@@ -215,11 +239,22 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
         ) : (
           <div className="p-3 md:p-6 flex gap-3 md:gap-4 overflow-x-auto">
             {CLIENT_STATUSES.map(s => (
-              <KanbanColumn key={s.id} status={s} clients={filtered.filter(c => c.status === s.id)} onClient={c => setSelectedId(c.id)} />
+              <KanbanColumn key={s.id} status={s} clients={kanbanClients.filter(c => c.status === s.id)} onClient={c => setSelectedId(c.id)} />
             ))}
           </div>
         )}
       </div>
+
+      {view === 'list' && (
+        <ClientsPagination
+          page={page}
+          pages={pages}
+          total={total}
+          perPage={PER_PAGE}
+          loading={loading}
+          onPage={handlePage}
+        />
+      )}
     </div>
   );
 }

@@ -25,6 +25,23 @@ export interface ClientsPage {
   pages: number;
 }
 
+export interface ClientsFilter {
+  q?: string;
+  status?: string;
+  designer?: string;
+  measurer?: string;
+  date_from?: string;
+  date_to?: string;
+  delivery_from?: string;
+  delivery_to?: string;
+  amount_min?: string;
+  amount_max?: string;
+  sort?: string;
+  sort_dir?: string;
+}
+
+export const PER_PAGE = 50;
+
 // ── Список клиентов ────────────────────────────────────────────
 export function useClients() {
   const [clients, setClients] = useState<Client[]>([]);
@@ -33,12 +50,30 @@ export function useClients() {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  const PER_PAGE = 100;
+  const buildQuery = (filter: ClientsFilter = {}, p = 1, perPage = PER_PAGE) => {
+    const params = new URLSearchParams();
+    params.set('page', String(p));
+    params.set('per_page', String(perPage));
+    if (filter.q) params.set('q', filter.q);
+    if (filter.status && filter.status !== 'all') params.set('status', filter.status);
+    if (filter.designer) params.set('designer', filter.designer);
+    if (filter.measurer) params.set('measurer', filter.measurer);
+    if (filter.date_from) params.set('date_from', filter.date_from);
+    if (filter.date_to) params.set('date_to', filter.date_to);
+    if (filter.delivery_from) params.set('delivery_from', filter.delivery_from);
+    if (filter.delivery_to) params.set('delivery_to', filter.delivery_to);
+    if (filter.amount_min) params.set('amount_min', filter.amount_min);
+    if (filter.amount_max) params.set('amount_max', filter.amount_max);
+    if (filter.sort) params.set('sort', filter.sort);
+    if (filter.sort_dir) params.set('sort_dir', filter.sort_dir);
+    return params.toString();
+  };
 
-  const load = useCallback(async (p = 1) => {
+  const fetchClients = useCallback(async (filter: ClientsFilter = {}, p = 1) => {
     setLoading(true);
     try {
-      const res = await fetch(url('list', `&page=${p}&per_page=${PER_PAGE}`), { headers: authHeaders() });
+      const qs = buildQuery(filter, p);
+      const res = await fetch(`${API}/?action=list&${qs}`, { headers: authHeaders() });
       if (!res.ok) {
         toast.error('Не удалось загрузить клиентов', { description: `Ошибка ${res.status}` });
         return;
@@ -55,11 +90,12 @@ export function useClients() {
     }
   }, []);
 
-  // Загрузить все страницы (для фильтрации/поиска на фронтенде — до 500 клиентов)
-  const loadAll = useCallback(async () => {
+  // Загрузить все (для канбана и экспорта) — без фильтров, до 500
+  const loadAll = useCallback(async (filter: ClientsFilter = {}) => {
     setLoading(true);
     try {
-      const res = await fetch(url('list', `&page=1&per_page=500`), { headers: authHeaders() });
+      const qs = buildQuery(filter, 1, 500);
+      const res = await fetch(`${API}/?action=list&${qs}`, { headers: authHeaders() });
       if (!res.ok) {
         toast.error('Не удалось загрузить клиентов', { description: `Ошибка ${res.status}` });
         return;
@@ -67,7 +103,7 @@ export function useClients() {
       const data = await res.json();
       setClients(data.clients || []);
       setTotal(data.total ?? 0);
-      setPages(data.pages ?? 1);
+      setPages(1);
       setPage(1);
     } catch {
       toast.error('Ошибка сети', { description: 'Проверьте подключение к интернету' });
@@ -76,7 +112,7 @@ export function useClients() {
     }
   }, []);
 
-  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => { fetchClients(); }, [fetchClients]);
 
   const createClient = async (client: Omit<Client, 'id' | 'created_at' | 'updated_at'>): Promise<string | null> => {
     try {
@@ -115,7 +151,7 @@ export function useClients() {
     }
   };
 
-  return { clients, total, pages, page, loading, load, loadAll, createClient, updateStatus };
+  return { clients, total, pages, page, loading, fetchClients, loadAll, createClient, updateStatus };
 }
 
 // ── Один клиент ────────────────────────────────────────────────

@@ -111,9 +111,22 @@ def handler(event: dict, context) -> dict:
     # ── LIST ──────────────────────────────────────────────────────
     if action == 'list':
         page = max(1, int(qs.get('page', 1)))
-        per_page = min(200, max(1, int(qs.get('per_page', 50))))
+        per_page = min(500, max(1, int(qs.get('per_page', 50))))
         search_q = (qs.get('q') or '').strip()
         status_f = (qs.get('status') or '').strip()
+        designer_f = (qs.get('designer') or '').strip()
+        measurer_f = (qs.get('measurer') or '').strip()
+        date_from = (qs.get('date_from') or '').strip()
+        date_to = (qs.get('date_to') or '').strip()
+        delivery_from = (qs.get('delivery_from') or '').strip()
+        delivery_to = (qs.get('delivery_to') or '').strip()
+        amount_min = qs.get('amount_min')
+        amount_max = qs.get('amount_max')
+        sort_field = qs.get('sort', 'created_at')
+        sort_dir = 'ASC' if qs.get('sort_dir', 'desc').lower() == 'asc' else 'DESC'
+        allowed_sorts = {'created_at', 'delivery_date', 'total_amount', 'last_name'}
+        if sort_field not in allowed_sorts:
+            sort_field = 'created_at'
         offset = (page - 1) * per_page
 
         conditions = []
@@ -131,7 +144,46 @@ def handler(event: dict, context) -> dict:
             conditions.append('status = %s')
             params.append(status_f)
 
+        if designer_f:
+            conditions.append('designer = %s')
+            params.append(designer_f)
+
+        if measurer_f:
+            conditions.append('measurer = %s')
+            params.append(measurer_f)
+
+        if date_from:
+            conditions.append('created_at::date >= %s')
+            params.append(date_from)
+
+        if date_to:
+            conditions.append('created_at::date <= %s')
+            params.append(date_to)
+
+        if delivery_from:
+            conditions.append('delivery_date >= %s')
+            params.append(delivery_from)
+
+        if delivery_to:
+            conditions.append('delivery_date <= %s')
+            params.append(delivery_to)
+
+        if amount_min is not None:
+            try:
+                conditions.append('total_amount >= %s')
+                params.append(float(amount_min))
+            except ValueError:
+                pass
+
+        if amount_max is not None:
+            try:
+                conditions.append('total_amount <= %s')
+                params.append(float(amount_max))
+            except ValueError:
+                pass
+
         where = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
+        null_last = 'NULLS LAST' if sort_dir == 'ASC' else 'NULLS LAST'
 
         with get_db() as conn:
             cur = conn.cursor()
@@ -143,7 +195,7 @@ def handler(event: dict, context) -> dict:
                        delivery_date, designer, measurer, reminder_date, reminder_note,
                        comment, created_at, updated_at, project_ids
                 FROM clients {where}
-                ORDER BY created_at DESC
+                ORDER BY {sort_field} {sort_dir} {null_last}
                 LIMIT %s OFFSET %s
             ''', params + [per_page, offset])
             rows = cur.fetchall()
