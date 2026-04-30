@@ -3,7 +3,7 @@ import Icon from '@/components/ui/icon';
 import type { Client } from './types';
 import { clientFullName } from './types';
 import { toast } from 'sonner';
-import { DOCS, DOC_GROUPS, apiUrl } from './documents/docTypes';
+import { DOCS, DOC_GROUPS, apiFetch } from './documents/docTypes';
 import { DocCardWithStatus, getSentStatus, setSentStatus } from './documents/DocCardWithStatus';
 
 export default function TabDocuments({ client, hasDraft, onSave, saving }: {
@@ -30,7 +30,7 @@ export default function TabDocuments({ client, hasDraft, onSave, saving }: {
     try {
       if (hasDraft && onSave) await onSave();
       for (const doc of DOCS) {
-        const res = await fetch(apiUrl('doc_docx', client.id, doc.id));
+        const res = await apiFetch('doc_docx', client.id, doc.id);
         const data = await res.json();
         if (data.data) {
           const binary = atob(data.data);

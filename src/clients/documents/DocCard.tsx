@@ -2,7 +2,7 @@ import { useState } from 'react';
 import Icon from '@/components/ui/icon';
 import { toast } from 'sonner';
 import type { DocDef } from './docTypes';
-import { apiUrl } from './docTypes';
+import { apiFetch } from './docTypes';
 
 function DocPreviewModal({ url, title, onClose }: { url: string; title: string; onClose: () => void }) {
   return (
@@ -33,6 +33,11 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
   const [loading, setLoading] = useState<string | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
+  function closePreview() {
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setPreviewUrl(null);
+  }
+
   async function ensureSaved() {
     if (hasDraft && onSave) {
       await onSave();
@@ -43,7 +48,14 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
     setLoading('preview');
     try {
       await ensureSaved();
-      setPreviewUrl(apiUrl('doc_html', clientId, doc.id));
+      const res = await apiFetch('doc_html', clientId, doc.id);
+      if (!res.ok) { toast.error('Ошибка загрузки документа'); return; }
+      const html = await res.text();
+      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(blob);
+      setPreviewUrl(blobUrl);
+    } catch {
+      toast.error('Ошибка загрузки документа');
     } finally {
       setLoading(null);
     }
@@ -53,7 +65,7 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
     setLoading('docx');
     try {
       await ensureSaved();
-      const res = await fetch(apiUrl('doc_docx', clientId, doc.id));
+      const res = await apiFetch('doc_docx', clientId, doc.id);
       const data = await res.json();
       if (data.data) {
         // base64 → Blob → скачивание без CORS
@@ -85,7 +97,8 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
     try {
       await ensureSaved();
       // Получаем HTML через наш API (без CORS-проблем)
-      const res = await fetch(apiUrl('doc_html', clientId, doc.id));
+      const res = await apiFetch('doc_html', clientId, doc.id);
+      if (!res.ok) { toast.error('Ошибка загрузки документа'); return; }
       const html = await res.text();
       // Вставляем скрипт автопечати и открываем в новом окне
       const htmlWithPrint = html.replace('</body>', `<script>
@@ -112,7 +125,7 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
     setLoading('link');
     try {
       await ensureSaved();
-      const res = await fetch(apiUrl('doc_link', clientId, doc.id));
+      const res = await apiFetch('doc_link', clientId, doc.id);
       const data = await res.json();
       if (data.url) {
         await navigator.clipboard.writeText(data.url);
@@ -132,7 +145,7 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
     setLoading('tg');
     try {
       await ensureSaved();
-      const res = await fetch(apiUrl('doc_link', clientId, doc.id));
+      const res = await apiFetch('doc_link', clientId, doc.id);
       const data = await res.json();
       if (data.url) {
         const text = encodeURIComponent(`${doc.title}`);
@@ -153,7 +166,7 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
     setLoading('vk');
     try {
       await ensureSaved();
-      const res = await fetch(apiUrl('doc_link', clientId, doc.id));
+      const res = await apiFetch('doc_link', clientId, doc.id);
       const data = await res.json();
       if (data.url) {
         const url = encodeURIComponent(data.url);
@@ -174,7 +187,7 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
     setLoading('max');
     try {
       await ensureSaved();
-      const res = await fetch(apiUrl('doc_link', clientId, doc.id));
+      const res = await apiFetch('doc_link', clientId, doc.id);
       const data = await res.json();
       if (data.url) {
         const text = encodeURIComponent(`${doc.title}: ${data.url}`);
@@ -227,7 +240,7 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
   return (
     <>
     {previewUrl && (
-      <DocPreviewModal url={previewUrl} title={doc.title} onClose={() => setPreviewUrl(null)} />
+      <DocPreviewModal url={previewUrl} title={doc.title} onClose={closePreview} />
     )}
     <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg p-4">
       <div className="flex items-start gap-3 mb-4">

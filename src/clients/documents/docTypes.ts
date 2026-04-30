@@ -5,8 +5,16 @@ export function getToken() {
   return localStorage.getItem('kuhni_pro_token') || '';
 }
 
+export function authHeaders(): HeadersInit {
+  return { Authorization: `Bearer ${getToken()}` };
+}
+
 export function apiUrl(action: string, clientId: string, doc: string) {
-  return `${API}/?action=${action}&client_id=${clientId}&doc=${doc}&token=${encodeURIComponent(getToken())}`;
+  return `${API}/?action=${action}&client_id=${clientId}&doc=${doc}`;
+}
+
+export async function apiFetch(action: string, clientId: string, doc: string): Promise<Response> {
+  return fetch(apiUrl(action, clientId, doc), { headers: authHeaders() });
 }
 
 export type DocType =
