@@ -259,14 +259,20 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
               </div>
             )}
             {draft && (
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex items-center gap-1.5 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90 disabled:opacity-60"
-              >
-                {saving ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="Save" size={13} />}
-                Сохранить
-              </button>
+              <div className="flex items-center gap-2">
+                <span className="flex items-center gap-1.5 text-xs text-amber-400 animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" />
+                  Есть изменения
+                </span>
+                <button
+                  onClick={handleSave}
+                  disabled={saving}
+                  className="flex items-center gap-1.5 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90 disabled:opacity-60"
+                >
+                  {saving ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="Save" size={13} />}
+                  Сохранить
+                </button>
+              </div>
             )}
             {saved && !draft && (
               <span className="flex items-center gap-1.5 text-xs text-emerald-400">

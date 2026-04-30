@@ -1,9 +1,17 @@
 {
   "tests": [
     {
-      "name": "List without token",
+      "name": "List without token returns 401",
       "method": "GET",
       "path": "/?action=list",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "Не авторизован"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "List with pagination returns meta fields",
+      "method": "GET",
+      "path": "/?action=list&page=1&per_page=10",
       "expectedStatus": 401,
       "expectedBody": {"error": "Не авторизован"},
       "bodyMatcher": "partial"

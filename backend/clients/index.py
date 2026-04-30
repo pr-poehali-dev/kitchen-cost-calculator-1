@@ -96,20 +96,55 @@ def handler(event: dict, context) -> dict:
 
     # ── LIST ──────────────────────────────────────────────────────
     if action == 'list':
+        page = max(1, int(qs.get('page', 1)))
+        per_page = min(200, max(1, int(qs.get('per_page', 50))))
+        search_q = (qs.get('q') or '').strip()
+        status_f = (qs.get('status') or '').strip()
+        offset = (page - 1) * per_page
+
+        conditions = []
+        params = []
+
+        if search_q:
+            conditions.append(
+                "(last_name ILIKE %s OR first_name ILIKE %s OR middle_name ILIKE %s "
+                "OR phone ILIKE %s OR phone2 ILIKE %s OR contract_number ILIKE %s)"
+            )
+            like = f'%{search_q}%'
+            params.extend([like, like, like, like, like, like])
+
+        if status_f and status_f != 'all':
+            conditions.append('status = %s')
+            params.append(status_f)
+
+        where = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
+
         conn = get_db()
         cur = conn.cursor()
-        cur.execute('''
-            SELECT id, status, last_name, first_name, middle_name, phone, messenger,
+
+        cur.execute(f'SELECT COUNT(*) FROM clients {where}', params)
+        total = cur.fetchone()[0]
+
+        cur.execute(f'''
+            SELECT id, status, last_name, first_name, middle_name, phone, phone2, messenger,
                    contract_number, contract_date, total_amount, payment_type,
                    delivery_date, designer, measurer, reminder_date, reminder_note,
                    comment, created_at, updated_at, project_ids
-            FROM clients ORDER BY created_at DESC
-        ''')
+            FROM clients {where}
+            ORDER BY created_at DESC
+            LIMIT %s OFFSET %s
+        ''', params + [per_page, offset])
         rows = cur.fetchall()
         cols = [d[0] for d in cur.description]
         clients = [dict(zip(cols, r)) for r in rows]
         conn.close()
-        return ok({'clients': clients})
+        return ok({
+            'clients': clients,
+            'total': total,
+            'page': page,
+            'per_page': per_page,
+            'pages': (total + per_page - 1) // per_page,
+        })
 
     # ── GET ONE ───────────────────────────────────────────────────
     if action == 'get':

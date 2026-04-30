@@ -14,7 +14,7 @@ type SortField = 'name' | 'created_at' | 'delivery_date' | 'total_amount';
 type SortDir = 'asc' | 'desc';
 
 export default function ClientsPage() {
-  const { clients, loading, load, createClient, updateStatus } = useClients();
+  const { clients, loading, loadAll: load, createClient, updateStatus } = useClients();
   const [view, setView] = useState<View>('list');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<ClientStatus | 'all'>('all');
