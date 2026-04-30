@@ -11,7 +11,7 @@ from io import BytesIO
 CORS = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Authorization',
 }
 JWT_SECRET = os.environ['JWT_SECRET']
 S3_KEY = os.environ.get('AWS_ACCESS_KEY_ID', '')
