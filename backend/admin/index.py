@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import logging
 import jwt
 import bcrypt
@@ -104,6 +105,8 @@ def handler(event: dict, context) -> dict:
             return err('Логин минимум 3 символа')
         if len(password) < 8:
             return err('Пароль минимум 8 символов')
+        if not re.search(r'\d', password):
+            return err('Пароль должен содержать хотя бы одну цифру')
         if role not in ('user', 'admin'):
             return err('Недопустимая роль')
 
@@ -133,6 +136,8 @@ def handler(event: dict, context) -> dict:
             new_pass = (body.get('password') or '').strip()
             if len(new_pass) < 8:
                 return err('Пароль минимум 8 символов')
+            if not re.search(r'\d', new_pass):
+                return err('Пароль должен содержать хотя бы одну цифру')
             pw_hash = bcrypt.hashpw(new_pass.encode(), bcrypt.gensalt()).decode()
             with get_db() as conn:
                 cur = conn.cursor()

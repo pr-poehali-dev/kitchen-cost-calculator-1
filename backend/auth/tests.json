@@ -10,6 +10,15 @@
       "bodyMatcher": "partial"
     },
     {
+      "name": "Password without digit rejected",
+      "method": "POST",
+      "path": "/?action=register",
+      "body": {"login": "newtest99", "password": "passwordonly"},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "Пароль должен содержать хотя бы одну цифру"},
+      "bodyMatcher": "partial"
+    },
+    {
       "name": "Login with correct credentials",
       "method": "POST",
       "path": "/?action=login",
