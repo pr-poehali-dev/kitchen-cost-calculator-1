@@ -23,6 +23,30 @@
       "expectedStatus": 401,
       "expectedBody": {"error": "Не авторизован"},
       "bodyMatcher": "partial"
+    },
+    {
+      "name": "doc_html without token returns 401",
+      "method": "GET",
+      "path": "/?action=doc_html&client_id=test&doc=contract",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "Не авторизован"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "doc_docx without token returns 401",
+      "method": "GET",
+      "path": "/?action=doc_docx&client_id=test&doc=contract",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "Не авторизован"},
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "doc_link without token returns 401",
+      "method": "GET",
+      "path": "/?action=doc_link&client_id=test&doc=contract",
+      "expectedStatus": 401,
+      "expectedBody": {"error": "Не авторизован"},
+      "bodyMatcher": "partial"
     }
   ]
 }

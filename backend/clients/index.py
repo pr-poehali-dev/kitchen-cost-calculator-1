@@ -453,7 +453,7 @@ def handler(event: dict, context) -> dict:
             cols = [d[0] for d in cur.description]
             client = dict(zip(cols, row))
         html = _build_contract_html(client, doc_type)
-        return {'statusCode': 200, 'headers': {**CORS, 'Content-Type': 'text/html; charset=utf-8'}, 'body': html}
+        return {'statusCode': 200, 'headers': {**cors, 'Content-Type': 'text/html; charset=utf-8'}, 'body': html}
 
     # ── DOCUMENT: save HTML to S3, return link ────────────────────
     if action == 'doc_link':
@@ -494,7 +494,7 @@ def handler(event: dict, context) -> dict:
         b64 = base64.b64encode(docx_bytes).decode('utf-8')
         return {
             'statusCode': 200,
-            'headers': {**CORS, 'Content-Type': 'application/json'},
+            'headers': {**cors, 'Content-Type': 'application/json'},
             'body': json.dumps({'data': b64}),
         }
 
