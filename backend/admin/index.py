@@ -1,8 +1,12 @@
 import json
 import os
+import logging
 import jwt
 import bcrypt
 import psycopg2
+from contextlib import contextmanager
+
+logger = logging.getLogger(__name__)
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -13,8 +17,17 @@ CORS = {
 JWT_SECRET = os.environ['JWT_SECRET']
 
 
+@contextmanager
 def get_db():
-    return psycopg2.connect(os.environ['DATABASE_URL'])
+    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def extract_token(event: dict) -> str:
@@ -29,16 +42,15 @@ def extract_token(event: dict) -> str:
 def verify_admin(event: dict) -> dict | None:
     token = extract_token(event)
     if not token:
-        print('[auth] no token in Authorization header')
+        logger.warning('[auth] no token in Authorization header')
         return None
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
-        print(f'[auth] role={payload.get("role")} sub={payload.get("sub")}')
         if payload.get('role') != 'admin':
             return None
         return payload
     except Exception as e:
-        print(f'[auth] jwt error: {e}')
+        logger.error(f'[auth] jwt error: {e}')
         return None
 
 
@@ -65,11 +77,10 @@ def handler(event: dict, context) -> dict:
 
     # GET — список всех пользователей
     if method == 'GET':
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('SELECT id, login, role, status, plan, created_at, last_login FROM users ORDER BY created_at DESC')
-        rows = cur.fetchall()
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT id, login, role, status, plan, created_at, last_login FROM users ORDER BY created_at DESC')
+            rows = cur.fetchall()
         users = [
             {'id': r[0], 'login': r[1], 'role': r[2], 'status': r[3],
              'plan': r[4], 'created_at': str(r[5]), 'last_login': str(r[6]) if r[6] else None}
@@ -92,22 +103,19 @@ def handler(event: dict, context) -> dict:
             return err('Недопустимая роль')
 
         pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
-        conn = get_db()
-        cur = conn.cursor()
         try:
-            cur.execute(
-                'INSERT INTO users (login, password_hash, role, plan) VALUES (%s, %s, %s, %s) RETURNING id',
-                (login, pw_hash, role, plan)
-            )
-            user_id = cur.fetchone()[0]
-            conn.commit()
+            with get_db() as conn:
+                cur = conn.cursor()
+                cur.execute(
+                    'INSERT INTO users (login, password_hash, role, plan) VALUES (%s, %s, %s, %s) RETURNING id',
+                    (login, pw_hash, role, plan)
+                )
+                user_id = cur.fetchone()[0]
         except Exception as e:
-            conn.rollback()
-            conn.close()
             if 'unique' in str(e).lower() or 'duplicate' in str(e).lower():
                 return err('Такой логин уже занят')
+            logger.error(f'Create user error: {e}')
             raise
-        conn.close()
         return ok({'ok': True, 'id': user_id}, 201)
 
     # PUT — обновить пользователя (статус, план, роль, пароль)
@@ -121,11 +129,9 @@ def handler(event: dict, context) -> dict:
             if len(new_pass) < 8:
                 return err('Пароль минимум 8 символов')
             pw_hash = bcrypt.hashpw(new_pass.encode(), bcrypt.gensalt()).decode()
-            conn = get_db()
-            cur = conn.cursor()
-            cur.execute('UPDATE users SET password_hash = %s WHERE id = %s', (pw_hash, user_id))
-            conn.commit()
-            conn.close()
+            with get_db() as conn:
+                cur = conn.cursor()
+                cur.execute('UPDATE users SET password_hash = %s WHERE id = %s', (pw_hash, user_id))
             return ok({'ok': True})
 
         fields = []
@@ -139,11 +145,9 @@ def handler(event: dict, context) -> dict:
             return err('Нет полей для обновления')
 
         values.append(user_id)
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute(f'UPDATE users SET {", ".join(fields)} WHERE id = %s', values)
-        conn.commit()
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(f'UPDATE users SET {", ".join(fields)} WHERE id = %s', values)
         return ok({'ok': True})
 
     # DELETE — удалить пользователя
@@ -153,11 +157,9 @@ def handler(event: dict, context) -> dict:
             return err('Не указан id')
         if str(user_id) == str(admin.get('sub')):
             return err('Нельзя удалить себя')
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('DELETE FROM users WHERE id = %s', (user_id,))
-        conn.commit()
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('DELETE FROM users WHERE id = %s', (user_id,))
         return ok({'ok': True})
 
     return err('Not found', 404)

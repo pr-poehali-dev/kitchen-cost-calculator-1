@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import type { AuthUser } from './useAuth';
+import { API_URLS } from '@/config/api';
 
-const ADMIN_URL = 'https://functions.poehali.dev/e48c5260-c45a-48c2-be96-d451e6422c7b';
+const ADMIN_URL = API_URLS.admin;
 
 interface UserRow {
   id: number;

@@ -2,11 +2,15 @@ import json
 import os
 import base64
 import uuid
+import logging
 import jwt
 import psycopg2
 import boto3
+from contextlib import contextmanager
 from datetime import datetime
 from io import BytesIO
+
+logger = logging.getLogger(__name__)
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -18,8 +22,17 @@ S3_KEY = os.environ.get('AWS_ACCESS_KEY_ID', '')
 S3_SECRET = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
 
 
+@contextmanager
 def get_db():
-    return psycopg2.connect(os.environ['DATABASE_URL'])
+    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def verify_token(event: dict):
@@ -120,25 +133,22 @@ def handler(event: dict, context) -> dict:
 
         where = ('WHERE ' + ' AND '.join(conditions)) if conditions else ''
 
-        conn = get_db()
-        cur = conn.cursor()
-
-        cur.execute(f'SELECT COUNT(*) FROM clients {where}', params)
-        total = cur.fetchone()[0]
-
-        cur.execute(f'''
-            SELECT id, status, last_name, first_name, middle_name, phone, phone2, messenger,
-                   contract_number, contract_date, total_amount, payment_type,
-                   delivery_date, designer, measurer, reminder_date, reminder_note,
-                   comment, created_at, updated_at, project_ids
-            FROM clients {where}
-            ORDER BY created_at DESC
-            LIMIT %s OFFSET %s
-        ''', params + [per_page, offset])
-        rows = cur.fetchall()
-        cols = [d[0] for d in cur.description]
-        clients = [dict(zip(cols, r)) for r in rows]
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(f'SELECT COUNT(*) FROM clients {where}', params)
+            total = cur.fetchone()[0]
+            cur.execute(f'''
+                SELECT id, status, last_name, first_name, middle_name, phone, phone2, messenger,
+                       contract_number, contract_date, total_amount, payment_type,
+                       delivery_date, designer, measurer, reminder_date, reminder_note,
+                       comment, created_at, updated_at, project_ids
+                FROM clients {where}
+                ORDER BY created_at DESC
+                LIMIT %s OFFSET %s
+            ''', params + [per_page, offset])
+            rows = cur.fetchall()
+            cols = [d[0] for d in cur.description]
+            clients = [dict(zip(cols, r)) for r in rows]
         return ok({
             'clients': clients,
             'total': total,
@@ -152,35 +162,30 @@ def handler(event: dict, context) -> dict:
         cid = qs.get('id')
         if not cid:
             return err('Нет id')
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('SELECT * FROM clients WHERE id = %s', (cid,))
-        row = cur.fetchone()
-        if not row:
-            conn.close()
-            return err('Клиент не найден', 404)
-        client = row_to_client(row, cur)
-
-        cur.execute('SELECT * FROM client_photos WHERE client_id = %s ORDER BY uploaded_at', (cid,))
-        photos_rows = cur.fetchall()
-        pcols = [d[0] for d in cur.description]
-        photos = [dict(zip(pcols, r)) for r in photos_rows]
-
-        cur.execute('SELECT * FROM client_history WHERE client_id = %s ORDER BY created_at DESC LIMIT 50', (cid,))
-        hist_rows = cur.fetchall()
-        hcols = [d[0] for d in cur.description]
-        history = [dict(zip(hcols, r)) for r in hist_rows]
-
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT * FROM clients WHERE id = %s', (cid,))
+            row = cur.fetchone()
+            if not row:
+                return err('Клиент не найден', 404)
+            client = row_to_client(row, cur)
+            cur.execute('SELECT * FROM client_photos WHERE client_id = %s ORDER BY uploaded_at', (cid,))
+            photos_rows = cur.fetchall()
+            pcols = [d[0] for d in cur.description]
+            photos = [dict(zip(pcols, r)) for r in photos_rows]
+            cur.execute('SELECT * FROM client_history WHERE client_id = %s ORDER BY created_at DESC LIMIT 50', (cid,))
+            hist_rows = cur.fetchall()
+            hcols = [d[0] for d in cur.description]
+            history = [dict(zip(hcols, r)) for r in hist_rows]
         return ok({'client': client, 'photos': photos, 'history': history})
 
     # ── CREATE ────────────────────────────────────────────────────
     if action == 'create' and method == 'POST':
         body = json.loads(event.get('body') or '{}')
         c = body.get('client', {})
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('''
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('''
             INSERT INTO clients (
                 status, last_name, first_name, middle_name, phone, phone2, messenger, email,
                 passport_series, passport_number, passport_issued_by, passport_issued_date, passport_dept_code,
@@ -227,10 +232,8 @@ def handler(event: dict, context) -> dict:
             c.get('reminder_date', ''), c.get('reminder_note', ''), c.get('comment', ''),
             payload.get('sub'), payload.get('sub'),
         ))
-        new_id = cur.fetchone()[0]
-        log_history(conn, str(new_id), payload, 'created', 'Клиент создан')
-        conn.commit()
-        conn.close()
+            new_id = cur.fetchone()[0]
+            log_history(conn, str(new_id), payload, 'created', 'Клиент создан')
         return ok({'id': str(new_id)}, 201)
 
     # ── UPDATE ────────────────────────────────────────────────────
@@ -240,56 +243,51 @@ def handler(event: dict, context) -> dict:
             return err('Нет id')
         body = json.loads(event.get('body') or '{}')
         c = body.get('client', {})
-        conn = get_db()
-        cur = conn.cursor()
-
-        cur.execute('SELECT last_name, first_name, status FROM clients WHERE id = %s', (cid,))
-        old = cur.fetchone()
-        if not old:
-            conn.close()
-            return err('Клиент не найден', 404)
-
-        cur.execute('''
-            UPDATE clients SET
-                status=%s, last_name=%s, first_name=%s, middle_name=%s,
-                phone=%s, phone2=%s, messenger=%s, email=%s,
-                passport_series=%s, passport_number=%s, passport_issued_by=%s,
-                passport_issued_date=%s, passport_dept_code=%s,
-                reg_city=%s, reg_street=%s, reg_house=%s, reg_apt=%s,
-                delivery_city=%s, delivery_street=%s, delivery_house=%s, delivery_apt=%s,
-                delivery_entrance=%s, delivery_floor=%s, delivery_elevator=%s, delivery_note=%s,
-                contract_number=%s, contract_date=%s, products=%s,
-                total_amount=%s, payment_type=%s, prepaid_amount=%s, balance_due=%s,
-                custom_payment_scheme=%s, delivery_date=%s, production_days=%s, assembly_days=%s,
-                delivery_cost=%s, assembly_cost=%s,
-                designer=%s, measurer=%s, manager_name=%s, project_ids=%s,
-                reminder_date=%s, reminder_note=%s, comment=%s,
-                updated_at=NOW(), updated_by=%s
-            WHERE id=%s
-        ''', (
-            c.get('status', 'new'),
-            c.get('last_name', ''), c.get('first_name', ''), c.get('middle_name', ''),
-            c.get('phone', ''), c.get('phone2', ''), c.get('messenger', 'WhatsApp'), c.get('email', ''),
-            c.get('passport_series', ''), c.get('passport_number', ''), c.get('passport_issued_by', ''),
-            c.get('passport_issued_date', ''), c.get('passport_dept_code', ''),
-            c.get('reg_city', ''), c.get('reg_street', ''), c.get('reg_house', ''), c.get('reg_apt', ''),
-            c.get('delivery_city', ''), c.get('delivery_street', ''), c.get('delivery_house', ''),
-            c.get('delivery_apt', ''), c.get('delivery_entrance', ''), c.get('delivery_floor', ''),
-            c.get('delivery_elevator', 'нет'), c.get('delivery_note', ''),
-            c.get('contract_number', ''), c.get('contract_date', ''),
-            json.dumps(c.get('products', [])),
-            c.get('total_amount', 0), c.get('payment_type', '100% предоплата'),
-            c.get('prepaid_amount', 0), c.get('balance_due', 0), c.get('custom_payment_scheme', ''),
-            c.get('delivery_date', ''), c.get('production_days', 0), c.get('assembly_days', 0),
-            c.get('delivery_cost', 0), c.get('assembly_cost', 0),
-            c.get('designer', ''), c.get('measurer', ''), c.get('manager_name', ''),
-            json.dumps(c.get('project_ids', [])),
-            c.get('reminder_date', ''), c.get('reminder_note', ''), c.get('comment', ''),
-            payload.get('sub'), cid,
-        ))
-        log_history(conn, cid, payload, 'updated', 'Данные клиента обновлены')
-        conn.commit()
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT last_name, first_name, status FROM clients WHERE id = %s', (cid,))
+            old = cur.fetchone()
+            if not old:
+                return err('Клиент не найден', 404)
+            cur.execute('''
+                UPDATE clients SET
+                    status=%s, last_name=%s, first_name=%s, middle_name=%s,
+                    phone=%s, phone2=%s, messenger=%s, email=%s,
+                    passport_series=%s, passport_number=%s, passport_issued_by=%s,
+                    passport_issued_date=%s, passport_dept_code=%s,
+                    reg_city=%s, reg_street=%s, reg_house=%s, reg_apt=%s,
+                    delivery_city=%s, delivery_street=%s, delivery_house=%s, delivery_apt=%s,
+                    delivery_entrance=%s, delivery_floor=%s, delivery_elevator=%s, delivery_note=%s,
+                    contract_number=%s, contract_date=%s, products=%s,
+                    total_amount=%s, payment_type=%s, prepaid_amount=%s, balance_due=%s,
+                    custom_payment_scheme=%s, delivery_date=%s, production_days=%s, assembly_days=%s,
+                    delivery_cost=%s, assembly_cost=%s,
+                    designer=%s, measurer=%s, manager_name=%s, project_ids=%s,
+                    reminder_date=%s, reminder_note=%s, comment=%s,
+                    updated_at=NOW(), updated_by=%s
+                WHERE id=%s
+            ''', (
+                c.get('status', 'new'),
+                c.get('last_name', ''), c.get('first_name', ''), c.get('middle_name', ''),
+                c.get('phone', ''), c.get('phone2', ''), c.get('messenger', 'WhatsApp'), c.get('email', ''),
+                c.get('passport_series', ''), c.get('passport_number', ''), c.get('passport_issued_by', ''),
+                c.get('passport_issued_date', ''), c.get('passport_dept_code', ''),
+                c.get('reg_city', ''), c.get('reg_street', ''), c.get('reg_house', ''), c.get('reg_apt', ''),
+                c.get('delivery_city', ''), c.get('delivery_street', ''), c.get('delivery_house', ''),
+                c.get('delivery_apt', ''), c.get('delivery_entrance', ''), c.get('delivery_floor', ''),
+                c.get('delivery_elevator', 'нет'), c.get('delivery_note', ''),
+                c.get('contract_number', ''), c.get('contract_date', ''),
+                json.dumps(c.get('products', [])),
+                c.get('total_amount', 0), c.get('payment_type', '100% предоплата'),
+                c.get('prepaid_amount', 0), c.get('balance_due', 0), c.get('custom_payment_scheme', ''),
+                c.get('delivery_date', ''), c.get('production_days', 0), c.get('assembly_days', 0),
+                c.get('delivery_cost', 0), c.get('assembly_cost', 0),
+                c.get('designer', ''), c.get('measurer', ''), c.get('manager_name', ''),
+                json.dumps(c.get('project_ids', [])),
+                c.get('reminder_date', ''), c.get('reminder_note', ''), c.get('comment', ''),
+                payload.get('sub'), cid,
+            ))
+            log_history(conn, cid, payload, 'updated', 'Данные клиента обновлены')
         return ok({'ok': True})
 
     # ── STATUS ────────────────────────────────────────────────────
@@ -301,19 +299,16 @@ def handler(event: dict, context) -> dict:
         new_status = body.get('status')
         if not new_status:
             return err('Нет status')
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('SELECT status FROM clients WHERE id = %s', (cid,))
-        row = cur.fetchone()
-        if not row:
-            conn.close()
-            return err('Клиент не найден', 404)
-        old_status = row[0]
-        cur.execute('UPDATE clients SET status=%s, updated_at=NOW() WHERE id=%s', (new_status, cid))
-        log_history(conn, cid, payload, 'status_changed', f'Статус: {old_status} → {new_status}',
-                    {'status': old_status}, {'status': new_status})
-        conn.commit()
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT status FROM clients WHERE id = %s', (cid,))
+            row = cur.fetchone()
+            if not row:
+                return err('Клиент не найден', 404)
+            old_status = row[0]
+            cur.execute('UPDATE clients SET status=%s, updated_at=NOW() WHERE id=%s', (new_status, cid))
+            log_history(conn, cid, payload, 'status_changed', f'Статус: {old_status} → {new_status}',
+                        {'status': old_status}, {'status': new_status})
         return ok({'ok': True})
 
     # ── UPLOAD PHOTO ──────────────────────────────────────────────
@@ -347,15 +342,13 @@ def handler(event: dict, context) -> dict:
         s3.put_object(Bucket='files', Key=key, Body=img_data, ContentType=content_type)
         cdn_url = f'https://cdn.poehali.dev/projects/{S3_KEY}/bucket/{key}'
 
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute(
-            'INSERT INTO client_photos (id, client_id, category, url, name, uploaded_by) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id',
-            (photo_id, cid, category, cdn_url, name, payload.get('sub'))
-        )
-        log_history(conn, cid, payload, 'photo_added', f'Добавлено фото: {name} ({category})')
-        conn.commit()
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                'INSERT INTO client_photos (id, client_id, category, url, name, uploaded_by) VALUES (%s,%s,%s,%s,%s,%s) RETURNING id',
+                (photo_id, cid, category, cdn_url, name, payload.get('sub'))
+            )
+            log_history(conn, cid, payload, 'photo_added', f'Добавлено фото: {name} ({category})')
         return ok({'id': photo_id, 'url': cdn_url}, 201)
 
     # ── DELETE PHOTO ──────────────────────────────────────────────
@@ -363,18 +356,21 @@ def handler(event: dict, context) -> dict:
         photo_id = qs.get('photo_id')
         if not photo_id:
             return err('Нет photo_id')
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('SELECT client_id, url, name FROM client_photos WHERE id = %s', (photo_id,))
-        row = cur.fetchone()
-        if not row:
-            conn.close()
-            return err('Фото не найдено', 404)
-        cid, url, name = row
-        cur.execute('UPDATE client_photos SET url = %s WHERE id = %s', ('', photo_id))
-        log_history(conn, str(cid), payload, 'photo_deleted', f'Удалено фото: {name}')
-        conn.commit()
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT client_id, url, name FROM client_photos WHERE id = %s', (photo_id,))
+            row = cur.fetchone()
+            if not row:
+                return err('Фото не найдено', 404)
+            cid, url, name = row
+            s3_key = url.split('/bucket/', 1)[-1] if '/bucket/' in url else None
+            if s3_key:
+                try:
+                    s3_client().delete_object(Bucket='files', Key=s3_key)
+                except Exception as e:
+                    logger.error(f'S3 delete failed for {s3_key}: {e}')
+            cur.execute('DELETE FROM client_photos WHERE id = %s', (photo_id,))
+            log_history(conn, str(cid), payload, 'photo_deleted', f'Удалено фото: {name}')
         return ok({'ok': True})
 
     # ── DOCUMENT: HTML preview ────────────────────────────────────
@@ -383,16 +379,14 @@ def handler(event: dict, context) -> dict:
         doc_type = qs.get('doc', 'contract')
         if not cid:
             return err('Нет client_id')
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('SELECT * FROM clients WHERE id = %s', (cid,))
-        row = cur.fetchone()
-        if not row:
-            conn.close()
-            return err('Клиент не найден', 404)
-        cols = [d[0] for d in cur.description]
-        client = dict(zip(cols, row))
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT * FROM clients WHERE id = %s', (cid,))
+            row = cur.fetchone()
+            if not row:
+                return err('Клиент не найден', 404)
+            cols = [d[0] for d in cur.description]
+            client = dict(zip(cols, row))
         html = _build_contract_html(client, doc_type)
         return {'statusCode': 200, 'headers': {**CORS, 'Content-Type': 'text/html; charset=utf-8'}, 'body': html}
 
@@ -402,21 +396,18 @@ def handler(event: dict, context) -> dict:
         doc_type = qs.get('doc', 'contract')
         if not cid:
             return err('Нет client_id')
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('SELECT * FROM clients WHERE id = %s', (cid,))
-        row = cur.fetchone()
-        if not row:
-            conn.close()
-            return err('Клиент не найден', 404)
-        cols = [d[0] for d in cur.description]
-        client = dict(zip(cols, row))
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT * FROM clients WHERE id = %s', (cid,))
+            row = cur.fetchone()
+            if not row:
+                return err('Клиент не найден', 404)
+            cols = [d[0] for d in cur.description]
+            client = dict(zip(cols, row))
         html = _build_contract_html(client, doc_type)
         doc_id = str(uuid.uuid4())
         key = f'documents/{doc_id}.html'
-        s3c = s3_client()
-        s3c.put_object(Bucket='files', Key=key, Body=html.encode('utf-8'), ContentType='text/html; charset=utf-8')
+        s3_client().put_object(Bucket='files', Key=key, Body=html.encode('utf-8'), ContentType='text/html; charset=utf-8')
         cdn_url = f'https://cdn.poehali.dev/projects/{S3_KEY}/bucket/{key}'
         return ok({'url': cdn_url})
 
@@ -426,18 +417,15 @@ def handler(event: dict, context) -> dict:
         doc_type = qs.get('doc', 'contract')
         if not cid:
             return err('Нет client_id')
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('SELECT * FROM clients WHERE id = %s', (cid,))
-        row = cur.fetchone()
-        if not row:
-            conn.close()
-            return err('Клиент не найден', 404)
-        cols = [d[0] for d in cur.description]
-        client = dict(zip(cols, row))
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT * FROM clients WHERE id = %s', (cid,))
+            row = cur.fetchone()
+            if not row:
+                return err('Клиент не найден', 404)
+            cols = [d[0] for d in cur.description]
+            client = dict(zip(cols, row))
         docx_bytes = _build_docx(client, doc_type)
-        import base64
         b64 = base64.b64encode(docx_bytes).decode('utf-8')
         return {
             'statusCode': 200,

@@ -1,7 +1,11 @@
 import json
 import os
+import logging
 import jwt
 import psycopg2
+from contextlib import contextmanager
+
+logger = logging.getLogger(__name__)
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -12,8 +16,17 @@ CORS = {
 JWT_SECRET = os.environ['JWT_SECRET']
 
 
+@contextmanager
 def get_db():
-    return psycopg2.connect(os.environ['DATABASE_URL'])
+    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 
 def verify_token(event: dict) -> dict | None:
@@ -67,15 +80,13 @@ def handler(event: dict, context) -> dict:
 
     # GET — вернуть state пользователя, при отсутствии — общий fallback (id=1, user_id IS NULL)
     if method == 'GET':
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('SELECT state FROM app_state WHERE user_id = %s', (user_id,))
-        row = cur.fetchone()
-        if not row:
-            # Fallback на старую общую запись (миграция данных)
-            cur.execute('SELECT state FROM app_state WHERE id = 1 AND user_id IS NULL')
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT state FROM app_state WHERE user_id = %s', (user_id,))
             row = cur.fetchone()
-        conn.close()
+            if not row:
+                cur.execute('SELECT state FROM app_state WHERE id = 1 AND user_id IS NULL')
+                row = cur.fetchone()
         if not row:
             return ok({'state': None})
         return ok({'state': row[0]})
@@ -92,16 +103,14 @@ def handler(event: dict, context) -> dict:
         if state is None:
             return err('Нет поля state')
 
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('''
-            INSERT INTO app_state (user_id, state, updated_at)
-            VALUES (%s, %s, NOW())
-            ON CONFLICT (user_id) DO UPDATE
-              SET state = EXCLUDED.state, updated_at = NOW()
-        ''', (user_id, json.dumps(state)))
-        conn.commit()
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('''
+                INSERT INTO app_state (user_id, state, updated_at)
+                VALUES (%s, %s, NOW())
+                ON CONFLICT (user_id) DO UPDATE
+                  SET state = EXCLUDED.state, updated_at = NOW()
+            ''', (user_id, json.dumps(state)))
         return ok({'ok': True})
 
     return err('Not found', 404)

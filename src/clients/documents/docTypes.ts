@@ -1,4 +1,5 @@
-export const API = 'https://functions.poehali.dev/48534318-9b07-4f30-9a75-98efb43248e7';
+import { API_URLS } from '@/config/api';
+export const API = API_URLS.clients;
 
 export function getToken() {
   return localStorage.getItem('kuhni_pro_token') || '';

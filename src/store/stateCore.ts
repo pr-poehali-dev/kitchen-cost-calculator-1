@@ -5,6 +5,7 @@ import {
   DEFAULT_MATERIAL_TYPES,
   DEFAULT_MATERIAL_CATEGORIES,
 } from './initialState';
+import { API_URLS } from '@/config/api';
 
 const STORAGE_KEY = 'kuhni-pro-state-v4';
 const STORAGE_KEY_PREV = 'kuhni-pro-state-v3';
@@ -82,7 +83,7 @@ function parseAndMerge(raw: string): AppState {
   };
 }
 
-const STATE_URL = 'https://functions.poehali.dev/a257bd1a-a3a1-40e0-95b5-bbd561a371e4';
+const STATE_URL = API_URLS.appState;
 
 // ── Статус сохранения ─────────────────────────────────────────────────────────
 export type SaveStatus = 'saved' | 'pending' | 'error';

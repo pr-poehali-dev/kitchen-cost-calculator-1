@@ -1,11 +1,13 @@
 import json
 import os
+import logging
 import bcrypt
 import jwt
 import psycopg2
-import psycopg2.errors
-# redeploy
+from contextlib import contextmanager
 from datetime import datetime, timezone, timedelta
+
+logger = logging.getLogger(__name__)
 
 CORS = {
     'Access-Control-Allow-Origin': '*',
@@ -13,8 +15,17 @@ CORS = {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Authorization',
 }
 
+@contextmanager
 def get_db():
-    return psycopg2.connect(os.environ['DATABASE_URL'])
+    conn = psycopg2.connect(os.environ['DATABASE_URL'])
+    try:
+        yield conn
+        conn.commit()
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
 
 JWT_SECRET = os.environ['JWT_SECRET']
 
@@ -66,26 +77,22 @@ def handler(event: dict, context) -> dict:
 
         pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('SELECT COUNT(*) FROM users')
-        total = cur.fetchone()[0]
-        role = 'admin' if total == 0 else 'user'
-
         try:
-            cur.execute(
-                'INSERT INTO users (login, password_hash, role) VALUES (%s, %s, %s) RETURNING id',
-                (login, pw_hash, role)
-            )
-            user_id = cur.fetchone()[0]
-            conn.commit()
+            with get_db() as conn:
+                cur = conn.cursor()
+                cur.execute('SELECT COUNT(*) FROM users')
+                total = cur.fetchone()[0]
+                role = 'admin' if total == 0 else 'user'
+                cur.execute(
+                    'INSERT INTO users (login, password_hash, role) VALUES (%s, %s, %s) RETURNING id',
+                    (login, pw_hash, role)
+                )
+                user_id = cur.fetchone()[0]
         except Exception as e:
-            conn.rollback()
-            conn.close()
             if 'unique' in str(e).lower() or 'duplicate' in str(e).lower():
                 return err('Такой логин уже занят')
+            logger.error(f'Register error: {e}')
             raise
-        conn.close()
 
         token = make_token(user_id, role)
         return ok({'token': token, 'id': user_id, 'login': login, 'role': role, 'plan': 'free'}, 201)
@@ -96,31 +103,18 @@ def handler(event: dict, context) -> dict:
         login = (body.get('login') or '').strip().lower()
         password = (body.get('password') or '').strip()
 
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute(
-            'SELECT id, password_hash, role, status, plan FROM users WHERE login = %s',
-            (login,)
-        )
-        row = cur.fetchone()
-
-        if not row:
-            conn.close()
-            return err('Неверный логин или пароль', 401)
-
-        user_id, pw_hash, role, status, plan = row
-
-        if status == 'banned':
-            conn.close()
-            return err('Доступ заблокирован', 403)
-
-        if not bcrypt.checkpw(password.encode(), pw_hash.encode()):
-            conn.close()
-            return err('Неверный логин или пароль', 401)
-
-        cur.execute('UPDATE users SET last_login = NOW() WHERE id = %s', (user_id,))
-        conn.commit()
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT id, password_hash, role, status, plan FROM users WHERE login = %s', (login,))
+            row = cur.fetchone()
+            if not row:
+                return err('Неверный логин или пароль', 401)
+            user_id, pw_hash, role, status, plan = row
+            if status == 'banned':
+                return err('Доступ заблокирован', 403)
+            if not bcrypt.checkpw(password.encode(), pw_hash.encode()):
+                return err('Неверный логин или пароль', 401)
+            cur.execute('UPDATE users SET last_login = NOW() WHERE id = %s', (user_id,))
 
         token = make_token(user_id, role)
         return ok({'token': token, 'id': user_id, 'login': login, 'role': role, 'plan': plan})
@@ -138,19 +132,16 @@ def handler(event: dict, context) -> dict:
         except Exception:
             return err('Недействительный токен', 401)
 
-        conn = get_db()
-        cur = conn.cursor()
-        cur.execute('SELECT id, login, role, status, plan FROM users WHERE id = %s', (payload['sub'],))
-        row = cur.fetchone()
-        conn.close()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT id, login, role, status, plan FROM users WHERE id = %s', (payload['sub'],))
+            row = cur.fetchone()
 
         if not row:
             return err('Пользователь не найден', 404)
-
         uid, login, role, status, plan = row
         if status == 'banned':
             return err('Доступ заблокирован', 403)
-
         return ok({'id': uid, 'login': login, 'role': role, 'plan': plan})
 
     return err('Not found', 404)

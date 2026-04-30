@@ -1,8 +1,9 @@
 import { useState, useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
 import type { Client, ClientPhoto, ClientHistoryItem } from './types';
+import { API_URLS } from '@/config/api';
 
-const API = 'https://functions.poehali.dev/48534318-9b07-4f30-9a75-98efb43248e7';
+const API = API_URLS.clients;
 
 function getToken(): string {
   return localStorage.getItem('kuhni_pro_token') || '';

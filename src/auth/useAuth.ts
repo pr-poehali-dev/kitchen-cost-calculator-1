@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
+import { API_URLS } from '@/config/api';
 
-const AUTH_URL = 'https://functions.poehali.dev/b1d7d64b-25fc-4b8e-96d8-087b2255d942';
+const AUTH_URL = API_URLS.auth;
 const TOKEN_KEY = 'kuhni_pro_token';
 const TOKEN_EXPIRY_KEY = 'kuhni_pro_token_expiry';
 const SESSION_DAYS = 2;

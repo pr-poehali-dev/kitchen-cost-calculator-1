@@ -16,6 +16,7 @@ import LoginPage from '@/auth/LoginPage';
 import AdminPanel from '@/auth/AdminPanel';
 import { useAuth } from '@/auth/useAuth';
 import Icon from '@/components/ui/icon';
+import { API_URLS } from '@/config/api';
 
 type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings' | 'users';
 
@@ -47,7 +48,7 @@ export default function App() {
     if (state.status !== 'authenticated') return;
     const token = getToken();
     if (!token) return;
-    fetch(`https://functions.poehali.dev/48534318-9b07-4f30-9a75-98efb43248e7/?action=list&token=${encodeURIComponent(token)}`)
+    fetch(`${API_URLS.clients}/?action=list`, { headers: { Authorization: `Bearer ${token}` } })
       .then(r => r.json())
       .then(d => setSearchClients(d.clients || []))
       .catch(() => {});
