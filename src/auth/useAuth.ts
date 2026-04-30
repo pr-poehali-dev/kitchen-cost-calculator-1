@@ -4,7 +4,7 @@ import { API_URLS } from '@/config/api';
 const AUTH_URL = API_URLS.auth;
 const TOKEN_KEY = 'kuhni_pro_token';
 const TOKEN_EXPIRY_KEY = 'kuhni_pro_token_expiry';
-const SESSION_DAYS = 2;
+const SESSION_DAYS = 7;
 
 export interface AuthUser {
   id: number;

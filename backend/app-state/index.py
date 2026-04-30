@@ -7,11 +7,17 @@ from contextlib import contextmanager
 
 logger = logging.getLogger(__name__)
 
-CORS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Authorization',
-}
+ALLOWED_ORIGINS = [o.strip() for o in os.environ.get('ALLOWED_ORIGINS', '').split(',') if o.strip()]
+
+def get_cors(event: dict) -> dict:
+    origin = (event.get('headers') or {}).get('origin') or (event.get('headers') or {}).get('Origin') or ''
+    allowed = origin if (origin and (any(origin == o for o in ALLOWED_ORIGINS) or not ALLOWED_ORIGINS)) else (ALLOWED_ORIGINS[0] if ALLOWED_ORIGINS else '*')
+    return {
+        'Access-Control-Allow-Origin': allowed,
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Authorization',
+        'Access-Control-Allow-Credentials': 'true',
+    }
 
 JWT_SECRET = os.environ['JWT_SECRET']
 
@@ -42,30 +48,22 @@ def verify_token(event: dict) -> dict | None:
         return None
 
 
-def ok(data, status=200):
-    return {
-        'statusCode': status,
-        'headers': {**CORS, 'Content-Type': 'application/json'},
-        'body': json.dumps(data),
-    }
-
-
-def err(msg, status=400):
-    return {
-        'statusCode': status,
-        'headers': {**CORS, 'Content-Type': 'application/json'},
-        'body': json.dumps({'error': msg}),
-    }
-
-
 def handler(event: dict, context) -> dict:
     """
     State приложения — отдельный для каждого пользователя по user_id из JWT.
-    GET  ?token=...             — загрузить state
-    POST ?token=...  body=state — сохранить state
+    GET  — загрузить state
+    POST — сохранить state
     """
+    cors = get_cors(event)
+
+    def ok(data, status=200):
+        return {'statusCode': status, 'headers': {**cors, 'Content-Type': 'application/json'}, 'body': json.dumps(data)}
+
+    def err(msg, status=400):
+        return {'statusCode': status, 'headers': {**cors, 'Content-Type': 'application/json'}, 'body': json.dumps({'error': msg})}
+
     if event.get('httpMethod') == 'OPTIONS':
-        return {'statusCode': 200, 'headers': CORS, 'body': ''}
+        return {'statusCode': 200, 'headers': cors, 'body': ''}
 
     payload = verify_token(event)
     if not payload:
@@ -97,7 +95,8 @@ def handler(event: dict, context) -> dict:
         try:
             body = json.loads(body_raw)
             state = body.get('state')
-        except Exception:
+        except Exception as e:
+            logger.error(f'Invalid JSON in app-state POST: {e}')
             return err('Невалидный JSON')
 
         if state is None:

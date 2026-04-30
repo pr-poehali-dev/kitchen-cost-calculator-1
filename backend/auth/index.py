@@ -9,11 +9,17 @@ from datetime import datetime, timezone, timedelta
 
 logger = logging.getLogger(__name__)
 
-CORS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Authorization',
-}
+ALLOWED_ORIGINS = [o.strip() for o in os.environ.get('ALLOWED_ORIGINS', '').split(',') if o.strip()]
+
+def get_cors(event: dict) -> dict:
+    origin = (event.get('headers') or {}).get('origin') or (event.get('headers') or {}).get('Origin') or ''
+    allowed = origin if (origin and (any(origin == o for o in ALLOWED_ORIGINS) or not ALLOWED_ORIGINS)) else (ALLOWED_ORIGINS[0] if ALLOWED_ORIGINS else '*')
+    return {
+        'Access-Control-Allow-Origin': allowed,
+        'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Authorization',
+        'Access-Control-Allow-Credentials': 'true',
+    }
 
 @contextmanager
 def get_db():
@@ -41,17 +47,18 @@ def make_token(user_id: int, role: str) -> str:
 def verify_token(token: str) -> dict:
     return jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
 
-def ok(data: dict, status: int = 200) -> dict:
-    return {'statusCode': status, 'headers': {**CORS, 'Content-Type': 'application/json'}, 'body': json.dumps(data)}
-
-def err(msg: str, status: int = 400) -> dict:
-    return {'statusCode': status, 'headers': {**CORS, 'Content-Type': 'application/json'}, 'body': json.dumps({'error': msg})}
-
 def handler(event: dict, context) -> dict:
     """Авторизация: POST /register, POST /login, GET /me"""
+    cors = get_cors(event)
+
+    def ok(data: dict, status: int = 200) -> dict:
+        return {'statusCode': status, 'headers': {**cors, 'Content-Type': 'application/json'}, 'body': json.dumps(data)}
+
+    def err(msg: str, status: int = 400) -> dict:
+        return {'statusCode': status, 'headers': {**cors, 'Content-Type': 'application/json'}, 'body': json.dumps({'error': msg})}
 
     if event.get('httpMethod') == 'OPTIONS':
-        return {'statusCode': 200, 'headers': CORS, 'body': ''}
+        return {'statusCode': 200, 'headers': cors, 'body': ''}
 
     method = event.get('httpMethod', 'GET')
     path = event.get('path', '/')

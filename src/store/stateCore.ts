@@ -201,9 +201,10 @@ export function undoProjects(): boolean {
 let globalState: AppState = loadLocalCache();
 export const listeners: Set<() => void> = new Set();
 
-export function setState(updater: (s: AppState) => AppState) {
-  // Сохраняем снимок проектов перед изменением (для undo)
-  pushUndo(globalState);
+export function setState(updater: (s: AppState) => AppState, options: { pushUndo?: boolean } = {}) {
+  if (options.pushUndo !== false) {
+    pushUndo(globalState);
+  }
   globalState = updater(globalState);
   globalState = { ...globalState, savedAt: Date.now() };
   saveLocalState(globalState);

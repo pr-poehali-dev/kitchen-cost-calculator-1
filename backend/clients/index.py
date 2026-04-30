@@ -12,11 +12,17 @@ from io import BytesIO
 
 logger = logging.getLogger(__name__)
 
-CORS = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, OPTIONS',
-    'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Authorization',
-}
+ALLOWED_ORIGINS = [o.strip() for o in os.environ.get('ALLOWED_ORIGINS', '').split(',') if o.strip()]
+
+def get_cors(event: dict) -> dict:
+    origin = (event.get('headers') or {}).get('origin') or (event.get('headers') or {}).get('Origin') or ''
+    allowed = origin if (origin and (any(origin == o for o in ALLOWED_ORIGINS) or not ALLOWED_ORIGINS)) else (ALLOWED_ORIGINS[0] if ALLOWED_ORIGINS else '*')
+    return {
+        'Access-Control-Allow-Origin': allowed,
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, OPTIONS',
+        'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Authorization',
+        'Access-Control-Allow-Credentials': 'true',
+    }
 JWT_SECRET = os.environ['JWT_SECRET']
 S3_KEY = os.environ.get('AWS_ACCESS_KEY_ID', '')
 S3_SECRET = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
@@ -47,12 +53,15 @@ def verify_token(event: dict):
         return None
 
 
-def ok(data, status=200):
-    return {'statusCode': status, 'headers': {**CORS, 'Content-Type': 'application/json'}, 'body': json.dumps(data, default=str)}
+def _make_ok(cors):
+    def ok(data, status=200):
+        return {'statusCode': status, 'headers': {**cors, 'Content-Type': 'application/json'}, 'body': json.dumps(data, default=str)}
+    return ok
 
-
-def err(msg, status=400):
-    return {'statusCode': status, 'headers': {**CORS, 'Content-Type': 'application/json'}, 'body': json.dumps({'error': msg})}
+def _make_err(cors):
+    def err(msg, status=400):
+        return {'statusCode': status, 'headers': {**cors, 'Content-Type': 'application/json'}, 'body': json.dumps({'error': msg})}
+    return err
 
 
 def s3_client():
@@ -97,8 +106,12 @@ def handler(event: dict, context) -> dict:
     POST   ?action=upload_photo&id=UUID — загрузить фото (base64)
     POST   ?action=delete_photo&photo_id=UUID — удалить фото
     """
+    cors = get_cors(event)
+    ok = _make_ok(cors)
+    err = _make_err(cors)
+
     if event.get('httpMethod') == 'OPTIONS':
-        return {'statusCode': 200, 'headers': CORS, 'body': ''}
+        return {'statusCode': 200, 'headers': cors, 'body': ''}
 
     payload = verify_token(event)
     if not payload:

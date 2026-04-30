@@ -4,6 +4,15 @@ import { getClientView } from './ClientViewPanel';
 const fmt = (n: number) =>
   n.toLocaleString('ru-RU', { minimumFractionDigits: 0, maximumFractionDigits: 0 });
 
+function esc(s: string | null | undefined): string {
+  return (s ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 interface TotalsData {
   rawMaterials: number;
   rawServices: number;
@@ -58,12 +67,12 @@ export function exportProjectPdf(ctx: ExportCtx) {
         const cells = cols.map(c => {
           switch (c.key) {
             case 'num':   return `<td class="num">${i + 1}</td>`;
-            case 'name':  return `<td class="name">${r.name || '—'}</td>`;
-            case 'mfr':   return `<td>${getManufacturerName(r.manufacturerId) || '—'}</td>`;
-            case 'vnd':   return `<td>${getVendorName(r.vendorId) || '—'}</td>`;
-            case 'color': return `<td>${r.color || '—'}</td>`;
-            case 'thick': return `<td class="center">${r.thickness ? `${r.thickness} мм` : '—'}</td>`;
-            case 'unit':  return `<td class="center">${r.unit || '—'}</td>`;
+            case 'name':  return `<td class="name">${esc(r.name) || '—'}</td>`;
+            case 'mfr':   return `<td>${esc(getManufacturerName(r.manufacturerId)) || '—'}</td>`;
+            case 'vnd':   return `<td>${esc(getVendorName(r.vendorId)) || '—'}</td>`;
+            case 'color': return `<td>${esc(r.color) || '—'}</td>`;
+            case 'thick': return `<td class="center">${r.thickness ? `${esc(String(r.thickness))} мм` : '—'}</td>`;
+            case 'unit':  return `<td class="center">${esc(r.unit) || '—'}</td>`;
             case 'qty':   return `<td class="right">${r.qty}</td>`;
             case 'price': return `<td class="right">${fmt(r.price)} ${currency}</td>`;
             case 'sum':   return `<td class="right sum">${fmt(r.qty * r.price)} ${currency}</td>`;
@@ -80,7 +89,7 @@ export function exportProjectPdf(ctx: ExportCtx) {
       return `
         <div class="block">
           <div class="block-header">
-            <span class="block-name">${block.name}</span>
+            <span class="block-name">${esc(block.name)}</span>
             ${blockTotalHtml}
           </div>
           <table>
@@ -98,8 +107,8 @@ export function exportProjectPdf(ctx: ExportCtx) {
       const rows = sb.rows.map((r, i) => `
         <tr>
           <td class="num">${i + 1}</td>
-          <td class="name">${r.name || '—'}</td>
-          <td class="center">${r.unit || '—'}</td>
+          <td class="name">${esc(r.name) || '—'}</td>
+          <td class="center">${esc(r.unit) || '—'}</td>
           <td class="right">${r.qty}</td>
           ${cv.showPrices ? `<td class="right">${fmt(r.price)} ${currency}</td>` : ''}
           <td class="right sum">${fmt(r.qty * r.price)} ${currency}</td>
@@ -113,7 +122,7 @@ export function exportProjectPdf(ctx: ExportCtx) {
       return `
         <div class="block service-block">
           <div class="block-header">
-            <span class="block-name">${sb.name}</span>
+            <span class="block-name">${esc(sb.name)}</span>
             ${blockTotalHtml}
           </div>
           <table>
@@ -134,9 +143,9 @@ export function exportProjectPdf(ctx: ExportCtx) {
     }).join('');
 
   const clientInfo = [
-    project.client && `<span><strong>Клиент:</strong> ${project.client}</span>`,
-    project.phone && `<span><strong>Тел:</strong> ${project.phone}</span>`,
-    project.address && `<span><strong>Адрес:</strong> ${project.address}</span>`,
+    project.client && `<span><strong>Клиент:</strong> ${esc(project.client)}</span>`,
+    project.phone && `<span><strong>Тел:</strong> ${esc(project.phone)}</span>`,
+    project.address && `<span><strong>Адрес:</strong> ${esc(project.address)}</span>`,
   ].filter(Boolean).join('<span class="dot">·</span>');
 
   // Итоговая сводка

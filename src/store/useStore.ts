@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useSyncExternalStore } from 'react';
 import type {
   AppState, Manufacturer, Vendor, Material, MaterialVariant, Service, ExpenseItem, ExpenseGroup,
   CalcBlock, CalcRow, ServiceBlock, ServiceRow, Project, Settings,
@@ -20,21 +20,13 @@ import {
 
 export { setStoreToken, loadStateFromDb, forceSetGlobalState, saveStateToDb, undoProjects, canUndo, undoListeners };
 
+const subscribe = (cb: () => void) => {
+  listeners.add(cb);
+  return () => listeners.delete(cb);
+};
+
 export function useStore() {
-  const [, forceUpdate] = useState(0);
-
-  const subscribe = useCallback(() => {
-    const fn = () => forceUpdate(n => n + 1);
-    listeners.add(fn);
-    return () => listeners.delete(fn);
-  }, []);
-
-  useState(() => {
-    const unsub = subscribe();
-    return unsub;
-  });
-
-  const state = getGlobalState();
+  const state = useSyncExternalStore(subscribe, getGlobalState, getGlobalState);
 
   // Суммирует все активные наценки нужного типа.
   // Если наценок нет вообще или все выключены — возвращает basePrice без изменений.
@@ -131,11 +123,11 @@ export function useStore() {
   const getActiveProject = () =>
     state.projects.find(p => p.id === state.activeProjectId) || null;
 
-  const updateProject = (projectId: string, updater: (p: Project) => Project) => {
+  const updateProject = (projectId: string, updater: (p: Project) => Project, opts: { pushUndo?: boolean } = {}) => {
     setState(s => ({
       ...s,
       projects: s.projects.map(p => p.id === projectId ? updater(p) : p)
-    }));
+    }), opts);
   };
 
   const addBlock = (projectId: string) => {
@@ -183,7 +175,7 @@ export function useStore() {
           ? { ...b, rows: b.rows.map(r => r.id === rowId ? { ...r, ...data } : r) }
           : b
       )
-    }));
+    }), { pushUndo: false });
   };
 
   const deleteRow = (projectId: string, blockId: string, rowId: string) => {
@@ -234,7 +226,7 @@ export function useStore() {
         const rows = orderedIds.map(id => map.get(id)).filter((r): r is CalcRow => !!r);
         return { ...b, rows };
       })
-    }));
+    }), { pushUndo: false });
   };
 
   // Обновляет розничные цены всех строк проекта по текущим наценкам из расходов.
@@ -334,7 +326,7 @@ export function useStore() {
           ? { ...b, rows: b.rows.map(r => r.id === rowId ? { ...r, ...data } : r) }
           : b
       )
-    }));
+    }), { pushUndo: false });
   };
 
   const deleteServiceRow = (projectId: string, blockId: string, rowId: string) => {
@@ -355,7 +347,7 @@ export function useStore() {
         const rows = orderedIds.map(id => map.get(id)).filter((r): r is ServiceRow => !!r);
         return { ...b, rows };
       })
-    }));
+    }), { pushUndo: false });
   };
 
   const duplicateServiceBlock = (projectId: string, blockId: string) => {
@@ -449,7 +441,7 @@ export function useStore() {
       const map = new Map(p.blocks.map(b => [b.id, b]));
       const blocks = orderedIds.map(id => map.get(id)!).filter(Boolean);
       return { ...p, blocks };
-    });
+    }, { pushUndo: false });
   };
 
   // ===== MANUFACTURERS =====
