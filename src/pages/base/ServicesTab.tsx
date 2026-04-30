@@ -5,10 +5,10 @@ import Icon from '@/components/ui/icon';
 import { fmt, Field, Modal } from './BaseShared';
 import SearchInput from '@/components/ui/search-input';
 
-export default function ServicesTab() {
+export default function ServicesTab({ initialSearch = '' }: { initialSearch?: string }) {
   const store = useStore();
   const [editingService, setEditingService] = useState<Partial<Service> | null>(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch);
 
   const q = search.trim().toLowerCase();
   const filteredServices = q

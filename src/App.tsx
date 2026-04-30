@@ -30,6 +30,7 @@ export default function App() {
   const [stateLoading, setStateLoading] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [openClientId, setOpenClientId] = useState<string | null>(null);
+  const [baseSearch, setBaseSearch] = useState<{ tab: 'materials' | 'services'; search: string } | null>(null);
   const [searchClients, setSearchClients] = useState<{
     id: string; last_name: string; first_name: string; middle_name: string;
     phone: string; status: string; reminder_date: string; reminder_note: string;
@@ -92,7 +93,7 @@ export default function App() {
     <>
       <Layout
         active={section}
-        onNav={s => { setSection(s); if (s !== 'clients') setOpenClientId(null); }}
+        onNav={s => { setSection(s); if (s !== 'clients') setOpenClientId(null); if (s !== 'base') setBaseSearch(null); }}
         user={user}
         onLogout={logout}
         onOpenSearch={() => setShowSearch(true)}
@@ -102,7 +103,7 @@ export default function App() {
         {section === 'calc'     && <CalcPage />}
         {section === 'blocks'   && <BlocksPage />}
         {section === 'services' && <ServicesPage />}
-        {section === 'base'     && <BasePage />}
+        {section === 'base'     && <BasePage initialSearch={baseSearch?.search} initialTab={baseSearch?.tab} key={baseSearch ? `${baseSearch.tab}-${baseSearch.search}` : 'base'} />}
         {section === 'expenses' && <ExpensesPage />}
         {section === 'settings' && <SettingsPage />}
         {section === 'users'    && user.role === 'admin' && <AdminPanel currentUser={user} token={token} inline />}
@@ -117,6 +118,10 @@ export default function App() {
           onOpenClient={clientId => {
             setOpenClientId(clientId);
             setSection('clients');
+          }}
+          onOpenBase={(tab, search) => {
+            setBaseSearch({ tab, search });
+            setSection('base');
           }}
         />
       )}

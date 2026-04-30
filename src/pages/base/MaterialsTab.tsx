@@ -20,11 +20,12 @@ import MatTable from './materials/MatTable';
 interface Props {
   matTypeFilter: string;
   onFilterChange: (v: string) => void;
+  initialSearch?: string;
 }
 
 const PAGE = 100;
 
-export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
+export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSearch = '' }: Props) {
   const store = useStore();
 
   // Состояние модалок
@@ -46,7 +47,7 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange }: Props) {
 
   // Состояние фильтров
   const [catFilter, setCatFilter] = useState<string>('all');
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState(initialSearch);
   const [showArchived, setShowArchived] = useState(false);
 
   // Массовое выделение

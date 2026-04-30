@@ -7,9 +7,9 @@ import ServicesTab from './base/ServicesTab';
 
 type Tab = 'manufacturers' | 'vendors' | 'materials' | 'services';
 
-export default function BasePage() {
+export default function BasePage({ initialSearch, initialTab }: { initialSearch?: string; initialTab?: Tab }) {
   const store = useStore();
-  const [tab, setTab] = useState<Tab>('manufacturers');
+  const [tab, setTab] = useState<Tab>(initialTab ?? 'manufacturers');
   const [selectedManufacturer, setSelectedManufacturer] = useState<string | null>(null);
   const [selectedVendor, setSelectedVendor] = useState<string | null>(null);
   const [matTypeFilter, setMatTypeFilter] = useState<string>('all');
@@ -67,10 +67,11 @@ export default function BasePage() {
           <MaterialsTab
             matTypeFilter={matTypeFilter}
             onFilterChange={setMatTypeFilter}
+            initialSearch={initialSearch}
           />
         )}
         {tab === 'services' && (
-          <ServicesTab />
+          <ServicesTab initialSearch={initialSearch} />
         )}
       </div>
     </div>

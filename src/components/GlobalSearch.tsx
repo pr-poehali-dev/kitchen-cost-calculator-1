@@ -19,9 +19,10 @@ interface Props {
   onNav: (s: Section) => void;
   onClose: () => void;
   onOpenClient?: (clientId: string) => void;
+  onOpenBase?: (tab: 'materials' | 'services', search: string) => void;
 }
 
-export default function GlobalSearch({ clients, onNav, onClose, onOpenClient }: Props) {
+export default function GlobalSearch({ clients, onNav, onClose, onOpenClient, onOpenBase }: Props) {
   const store = useStore();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
@@ -178,6 +179,16 @@ export default function GlobalSearch({ clients, onNav, onClose, onOpenClient }: 
       onClose();
       return;
     }
+    if (r.type === 'material' && onOpenBase) {
+      onOpenBase('materials', r.label);
+      onClose();
+      return;
+    }
+    if (r.type === 'service' && onOpenBase) {
+      onOpenBase('services', r.label);
+      onClose();
+      return;
+    }
     onNav(r.section);
     onClose();
   };
@@ -277,7 +288,7 @@ export default function GlobalSearch({ clients, onNav, onClose, onOpenClient }: 
                         </div>
                         {isSelected && (
                           <span className="flex items-center gap-1 text-[10px] text-[hsl(var(--text-muted))] shrink-0">
-                            {r.type === 'client' && onOpenClient
+                            {(r.type === 'client' && onOpenClient) || ((r.type === 'material' || r.type === 'service') && onOpenBase)
                               ? <><Icon name="ExternalLink" size={11} /> открыть</>
                               : '↵'
                             }
