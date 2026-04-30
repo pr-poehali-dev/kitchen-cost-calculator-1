@@ -23,8 +23,6 @@ interface Props {
   initialSearch?: string;
 }
 
-const PAGE = 100;
-
 export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSearch = '' }: Props) {
   const store = useStore();
 
@@ -53,9 +51,6 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
   // Массовое выделение
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
-
-  // Пагинация
-  const [visibleCount, setVisibleCount] = useState(PAGE);
 
   const allTypes = store.settings.materialTypes;
   const allCategories = useMemo(
@@ -90,10 +85,9 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
     );
   }, [catFiltered, search, showArchived]);
 
-  // Сбрасываем выделение и пагинацию при смене фильтра
+  // Сбрасываем выделение при смене фильтра
   useEffect(() => {
     setSelected(new Set());
-    setVisibleCount(PAGE);
   }, [filteredMaterials]);
 
   const staleCount = useMemo(() => {
@@ -136,13 +130,10 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
     [allCategories]
   );
 
-  const visibleMaterials = filteredMaterials.slice(0, visibleCount);
-
   // Логика выделения
-  const allVisibleIds = visibleMaterials.map(m => m.id);
   const allFilteredIds = filteredMaterials.map(m => m.id);
-  const isAllVisibleSelected = allVisibleIds.length > 0 && allVisibleIds.every(id => selected.has(id));
-  const isIndeterminate = !isAllVisibleSelected && allVisibleIds.some(id => selected.has(id));
+  const isAllVisibleSelected = allFilteredIds.length > 0 && allFilteredIds.every(id => selected.has(id));
+  const isIndeterminate = !isAllVisibleSelected && allFilteredIds.some(id => selected.has(id));
 
   const toggleOne = (id: string) => {
     setSelected(prev => {
@@ -154,13 +145,9 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
 
   const toggleAllVisible = () => {
     if (isAllVisibleSelected) {
-      setSelected(prev => {
-        const next = new Set(prev);
-        allVisibleIds.forEach(id => next.delete(id));
-        return next;
-      });
+      setSelected(new Set());
     } else {
-      setSelected(prev => new Set([...prev, ...allVisibleIds]));
+      setSelected(new Set(allFilteredIds));
     }
   };
 
@@ -221,10 +208,7 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
         />
 
         <MatTable
-          visibleMaterials={visibleMaterials}
-          filteredCount={filteredMaterials.length}
-          visibleCount={visibleCount}
-          onLoadMore={() => setVisibleCount(c => c + PAGE)}
+          filteredMaterials={filteredMaterials}
           mfrMap={mfrMap}
           vendorMap={vendorMap}
           typeMap={typeMap}
@@ -236,7 +220,6 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
           onToggleAllVisible={toggleAllVisible}
           onEdit={m => setEditingMaterial(m)}
           onDelete={id => store.deleteMaterial(id)}
-          PAGE={PAGE}
         />
       </div>
 
