@@ -9,7 +9,11 @@ function getToken(): string {
 }
 
 function url(action: string, extra = '') {
-  return `${API}/?action=${action}&token=${encodeURIComponent(getToken())}${extra}`;
+  return `${API}/?action=${action}${extra}`;
+}
+
+function authHeaders(extra: Record<string, string> = {}): Record<string, string> {
+  return { Authorization: `Bearer ${getToken()}`, ...extra };
 }
 
 export interface ClientsPage {
@@ -33,7 +37,7 @@ export function useClients() {
   const load = useCallback(async (p = 1) => {
     setLoading(true);
     try {
-      const res = await fetch(url('list', `&page=${p}&per_page=${PER_PAGE}`));
+      const res = await fetch(url('list', `&page=${p}&per_page=${PER_PAGE}`), { headers: authHeaders() });
       if (!res.ok) {
         toast.error('Не удалось загрузить клиентов', { description: `Ошибка ${res.status}` });
         return;
@@ -54,7 +58,7 @@ export function useClients() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await fetch(url('list', `&page=1&per_page=500`));
+      const res = await fetch(url('list', `&page=1&per_page=500`), { headers: authHeaders() });
       if (!res.ok) {
         toast.error('Не удалось загрузить клиентов', { description: `Ошибка ${res.status}` });
         return;
@@ -77,7 +81,7 @@ export function useClients() {
     try {
       const res = await fetch(url('create'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ client }),
       });
       const data = await res.json();
@@ -97,7 +101,7 @@ export function useClients() {
     try {
       const res = await fetch(url('status', `&id=${id}`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ status }),
       });
       if (!res.ok) {
@@ -125,7 +129,7 @@ export function useClient(id: string | null) {
     if (!id) return;
     setLoading(true);
     try {
-      const res = await fetch(url('get', `&id=${id}`));
+      const res = await fetch(url('get', `&id=${id}`), { headers: authHeaders() });
       if (!res.ok) {
         toast.error('Не удалось загрузить карточку клиента', { description: `Ошибка ${res.status}` });
         return;
@@ -150,7 +154,7 @@ export function useClient(id: string | null) {
     try {
       const res = await fetch(url('update', `&id=${updated.id}`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ client: updated }),
       });
       if (res.ok) {
@@ -174,7 +178,7 @@ export function useClient(id: string | null) {
     try {
       const res = await fetch(url('status', `&id=${id}`), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: authHeaders({ 'Content-Type': 'application/json' }),
         body: JSON.stringify({ status }),
       });
       if (!res.ok) {
@@ -196,7 +200,7 @@ export function useClient(id: string | null) {
         try {
           const res = await fetch(url('upload_photo', `&id=${id}`), {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: authHeaders({ 'Content-Type': 'application/json' }),
             body: JSON.stringify({ data: b64, category, name: file.name, content_type: file.type }),
           });
           if (res.ok) {
@@ -216,7 +220,7 @@ export function useClient(id: string | null) {
 
   const deletePhoto = async (photoId: string) => {
     try {
-      const res = await fetch(url('delete_photo', `&photo_id=${photoId}`), { method: 'POST' });
+      const res = await fetch(url('delete_photo', `&photo_id=${photoId}`), { method: 'POST', headers: authHeaders() });
       if (res.ok) {
         setPhotos(prev => prev.filter(p => p.id !== photoId));
       } else {

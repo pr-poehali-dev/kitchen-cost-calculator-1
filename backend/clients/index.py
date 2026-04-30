@@ -13,7 +13,7 @@ CORS = {
     'Access-Control-Allow-Methods': 'GET, POST, PUT, PATCH, OPTIONS',
     'Access-Control-Allow-Headers': 'Content-Type',
 }
-JWT_SECRET = os.environ.get('JWT_SECRET', '1641Bd849poehali')
+JWT_SECRET = os.environ['JWT_SECRET']
 S3_KEY = os.environ.get('AWS_ACCESS_KEY_ID', '')
 S3_SECRET = os.environ.get('AWS_SECRET_ACCESS_KEY', '')
 
@@ -23,8 +23,9 @@ def get_db():
 
 
 def verify_token(event: dict):
-    qs = event.get('queryStringParameters') or {}
-    token = (qs.get('token') or '').strip()
+    headers = event.get('headers') or {}
+    auth = headers.get('X-Authorization') or headers.get('Authorization') or ''
+    token = auth[7:].strip() if auth.startswith('Bearer ') else ''
     if not token:
         return None
     try:
@@ -326,7 +327,18 @@ def handler(event: dict, context) -> dict:
         name = body.get('name', 'photo.jpg')
         content_type = body.get('content_type', 'image/jpeg')
 
+        ALLOWED_TYPES = {'image/jpeg', 'image/png', 'image/gif', 'image/webp'}
+        if content_type not in ALLOWED_TYPES:
+            return err('Недопустимый тип файла. Разрешены: JPEG, PNG, GIF, WEBP')
+
+        MAX_SIZE_BYTES = 10 * 1024 * 1024
+        if len(data_b64) > MAX_SIZE_BYTES * 4 // 3:
+            return err('Файл слишком большой. Максимум 10 МБ')
+
         img_data = base64.b64decode(data_b64)
+
+        if len(img_data) > MAX_SIZE_BYTES:
+            return err('Файл слишком большой. Максимум 10 МБ')
         photo_id = str(uuid.uuid4())
         ext = name.rsplit('.', 1)[-1] if '.' in name else 'jpg'
         key = f'clients/{cid}/{photo_id}.{ext}'
@@ -360,7 +372,7 @@ def handler(event: dict, context) -> dict:
             return err('Фото не найдено', 404)
         cid, url, name = row
         cur.execute('UPDATE client_photos SET url = %s WHERE id = %s', ('', photo_id))
-        log_history(conn, str(cid), payload, 'photo_added', f'Удалено фото: {name}')
+        log_history(conn, str(cid), payload, 'photo_deleted', f'Удалено фото: {name}')
         conn.commit()
         conn.close()
         return ok({'ok': True})

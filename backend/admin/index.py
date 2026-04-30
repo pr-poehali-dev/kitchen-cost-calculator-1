@@ -10,7 +10,7 @@ CORS = {
     'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Authorization',
 }
 
-JWT_SECRET = os.environ.get('JWT_SECRET', '1641Bd849poehali')
+JWT_SECRET = os.environ['JWT_SECRET']
 
 
 def get_db():
@@ -18,25 +18,18 @@ def get_db():
 
 
 def extract_token(event: dict) -> str:
-    """Токен берём из query string ?token=... или из тела запроса поле token"""
-    qs = event.get('queryStringParameters') or {}
-    if qs.get('token'):
-        return qs['token'].strip()
-    body_raw = event.get('body') or ''
-    if body_raw:
-        try:
-            body = json.loads(body_raw)
-            if body.get('token'):
-                return str(body['token']).strip()
-        except Exception:
-            pass
+    """Токен из заголовка Authorization: Bearer <token>"""
+    headers = event.get('headers') or {}
+    auth = headers.get('X-Authorization') or headers.get('Authorization') or ''
+    if auth.startswith('Bearer '):
+        return auth[7:].strip()
     return ''
 
 
 def verify_admin(event: dict) -> dict | None:
     token = extract_token(event)
     if not token:
-        print('[auth] no token in qs or body')
+        print('[auth] no token in Authorization header')
         return None
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=['HS256'])
@@ -93,8 +86,8 @@ def handler(event: dict, context) -> dict:
 
         if len(login) < 3:
             return err('Логин минимум 3 символа')
-        if len(password) < 4:
-            return err('Пароль минимум 4 символа')
+        if len(password) < 8:
+            return err('Пароль минимум 8 символов')
         if role not in ('user', 'admin'):
             return err('Недопустимая роль')
 
@@ -125,8 +118,8 @@ def handler(event: dict, context) -> dict:
 
         if 'password' in body:
             new_pass = (body.get('password') or '').strip()
-            if len(new_pass) < 4:
-                return err('Пароль минимум 4 символа')
+            if len(new_pass) < 8:
+                return err('Пароль минимум 8 символов')
             pw_hash = bcrypt.hashpw(new_pass.encode(), bcrypt.gensalt()).decode()
             conn = get_db()
             cur = conn.cursor()

@@ -30,12 +30,12 @@ type Modal =
   | { type: 'delete'; user: UserRow }
   | null;
 
-function adminUrl(token: string) {
-  return `${ADMIN_URL}?token=${encodeURIComponent(token)}`;
+function adminUrl() {
+  return `${ADMIN_URL}`;
 }
 
-function authHeaders() {
-  return { 'Content-Type': 'application/json' };
+function authHeaders(token: string) {
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` };
 }
 
 export default function AdminPanel({ currentUser, token, inline, onClose }: Props) {
@@ -46,7 +46,7 @@ export default function AdminPanel({ currentUser, token, inline, onClose }: Prop
 
   const fetchUsers = async () => {
     setLoading(true);
-    const res = await fetch(adminUrl(token), { headers: authHeaders() });
+    const res = await fetch(adminUrl(), { headers: authHeaders(token) });
     const data = await res.json();
     setUsers(data.users || []);
     setLoading(false);
@@ -56,9 +56,9 @@ export default function AdminPanel({ currentUser, token, inline, onClose }: Prop
 
   const update = async (id: number, fields: Record<string, string>) => {
     setSaving(id);
-    await fetch(adminUrl(token), {
+    await fetch(adminUrl(), {
       method: 'PUT',
-      headers: authHeaders(),
+      headers: authHeaders(token),
       body: JSON.stringify({ id, ...fields }),
     });
     setSaving(null);
@@ -262,9 +262,9 @@ function CreateUserForm({ token, onDone, onCancel }: { token: string; onDone: ()
     e.preventDefault();
     setError('');
     setLoading(true);
-    const res = await fetch(adminUrl(token), {
+    const res = await fetch(adminUrl(), {
       method: 'POST',
-      headers: authHeaders(),
+      headers: authHeaders(token),
       body: JSON.stringify({ login: login.trim().toLowerCase(), password, role, plan }),
     });
     const data = await res.json();
@@ -296,9 +296,9 @@ function CreateUserForm({ token, onDone, onCancel }: { token: string; onDone: ()
           <input
             value={password}
             onChange={e => setPassword(e.target.value)}
-            required minLength={4}
+            required minLength={8}
             className="w-full bg-[hsl(220,12%,16%)] border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold transition-colors"
-            placeholder="Минимум 4 символа"
+            placeholder="Минимум 8 символов"
           />
         </div>
         <div className="grid grid-cols-2 gap-3">
@@ -343,9 +343,9 @@ function ChangePasswordForm({ user, token, onDone, onCancel }: { user: UserRow; 
     e.preventDefault();
     setError('');
     setLoading(true);
-    const res = await fetch(adminUrl(token), {
+    const res = await fetch(adminUrl(), {
       method: 'PUT',
-      headers: authHeaders(),
+      headers: authHeaders(token),
       body: JSON.stringify({ id: user.id, password }),
     });
     const data = await res.json();
@@ -368,9 +368,9 @@ function ChangePasswordForm({ user, token, onDone, onCancel }: { user: UserRow; 
             autoFocus
             value={password}
             onChange={e => setPassword(e.target.value)}
-            required minLength={4}
+            required minLength={8}
             className="w-full bg-[hsl(220,12%,16%)] border border-border rounded-lg px-3 py-2 text-sm text-foreground outline-none focus:border-gold transition-colors"
-            placeholder="Минимум 4 символа"
+            placeholder="Минимум 8 символов"
           />
         </div>
         {error && <p className="text-xs text-destructive">{error}</p>}
@@ -394,9 +394,9 @@ function DeleteConfirm({ user, token, onDone, onCancel }: { user: UserRow; token
 
   const confirm = async () => {
     setLoading(true);
-    await fetch(adminUrl(token), {
+    await fetch(adminUrl(), {
       method: 'DELETE',
-      headers: authHeaders(),
+      headers: authHeaders(token),
       body: JSON.stringify({ id: user.id }),
     });
     setLoading(false);

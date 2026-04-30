@@ -16,7 +16,7 @@ CORS = {
 def get_db():
     return psycopg2.connect(os.environ['DATABASE_URL'])
 
-JWT_SECRET = os.environ.get('JWT_SECRET', '1641Bd849poehali')
+JWT_SECRET = os.environ['JWT_SECRET']
 
 def make_token(user_id: int, role: str) -> str:
     secret = JWT_SECRET
@@ -61,8 +61,8 @@ def handler(event: dict, context) -> dict:
 
         if len(login) < 3:
             return err('Логин должен быть минимум 3 символа')
-        if len(password) < 6:
-            return err('Пароль должен быть минимум 6 символов')
+        if len(password) < 8:
+            return err('Пароль должен быть минимум 8 символов')
 
         pw_hash = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
 

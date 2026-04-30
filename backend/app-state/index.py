@@ -9,7 +9,7 @@ CORS = {
     'Access-Control-Allow-Headers': 'Content-Type',
 }
 
-JWT_SECRET = os.environ.get('JWT_SECRET', '1641Bd849poehali')
+JWT_SECRET = os.environ['JWT_SECRET']
 
 
 def get_db():
@@ -17,9 +17,10 @@ def get_db():
 
 
 def verify_token(event: dict) -> dict | None:
-    """Проверяет токен из query string ?token=..."""
-    qs = event.get('queryStringParameters') or {}
-    token = (qs.get('token') or '').strip()
+    """Проверяет токен из заголовка Authorization: Bearer <token>"""
+    headers = event.get('headers') or {}
+    auth = headers.get('X-Authorization') or headers.get('Authorization') or ''
+    token = auth[7:].strip() if auth.startswith('Bearer ') else ''
     if not token:
         return None
     try:

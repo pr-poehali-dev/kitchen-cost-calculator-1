@@ -128,9 +128,9 @@ export function setStoreToken(token: string) {
 async function doSaveToDb(state: AppState) {
   if (!currentToken) return;
   try {
-    const res = await fetch(`${STATE_URL}?token=${encodeURIComponent(currentToken)}`, {
+    const res = await fetch(`${STATE_URL}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${currentToken}` },
       body: JSON.stringify({ state }),
     });
     if (res.ok) {
@@ -157,7 +157,7 @@ function scheduleSaveToDb(state: AppState) {
 // ── Загрузка из БД ────────────────────────────────────────────────────────────
 export async function loadStateFromDb(token: string): Promise<AppState | null> {
   try {
-    const res = await fetch(`${STATE_URL}?token=${encodeURIComponent(token)}`);
+    const res = await fetch(`${STATE_URL}`, { headers: { Authorization: `Bearer ${token}` } });
     if (!res.ok) return null;
     const data = await res.json();
     if (!data.state) return null;

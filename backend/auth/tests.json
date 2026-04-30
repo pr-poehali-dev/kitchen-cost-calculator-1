@@ -1,19 +1,19 @@
 {
   "tests": [
     {
-      "name": "Register first user (becomes admin)",
+      "name": "Short password rejected",
       "method": "POST",
       "path": "/?action=register",
-      "body": {"login": "testadmin", "password": "secret123"},
-      "expectedStatus": 201,
-      "expectedBody": {"role": "admin"},
+      "body": {"login": "newtest99", "password": "short"},
+      "expectedStatus": 400,
+      "expectedBody": {"error": "Пароль должен быть минимум 8 символов"},
       "bodyMatcher": "partial"
     },
     {
       "name": "Login with correct credentials",
       "method": "POST",
       "path": "/?action=login",
-      "body": {"login": "testadmin", "password": "secret123"},
+      "body": {"login": "testadmin", "password": "secret12345"},
       "expectedStatus": 200,
       "expectedBody": {"login": "testadmin"},
       "bodyMatcher": "partial"
@@ -31,7 +31,7 @@
       "name": "Register duplicate login",
       "method": "POST",
       "path": "/?action=register",
-      "body": {"login": "testadmin", "password": "anotherpass"},
+      "body": {"login": "testadmin", "password": "secret12345x"},
       "expectedStatus": 400,
       "expectedBody": {"error": "Такой логин уже занят"},
       "bodyMatcher": "partial"
