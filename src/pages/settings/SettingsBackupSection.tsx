@@ -18,6 +18,8 @@ interface Props {
 export default function SettingsBackupSection({ onExportBackup }: Props) {
   const store = useStore();
   const [confirmReset, setConfirmReset] = useState(false);
+  const [confirmResetStep2, setConfirmResetStep2] = useState(false);
+  const [confirmResetWord, setConfirmResetWord] = useState('');
   const [importError, setImportError] = useState('');
   const [importOk, setImportOk] = useState(false);
   const [pendingImportData, setPendingImportData] = useState<Record<string, unknown> | null>(null);
@@ -112,20 +114,76 @@ export default function SettingsBackupSection({ onExportBackup }: Props) {
       </Section>
 
       <Section title="Опасная зона" danger>
-        <div className="flex items-center justify-between">
+        <div className="flex items-start justify-between gap-4">
           <div>
             <div className="text-sm text-foreground">Сбросить все данные</div>
             <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5">Удалит все проекты, материалы, услуги и расходы</div>
           </div>
-          {!confirmReset ? (
-            <button onClick={() => setConfirmReset(true)} className="px-4 py-2 border border-destructive text-destructive rounded text-sm hover:bg-destructive hover:text-white transition-colors">Сбросить</button>
-          ) : (
-            <div className="flex gap-2">
-              <button onClick={() => { localStorage.clear(); window.location.reload(); }} className="px-4 py-2 bg-destructive text-white rounded text-sm hover:opacity-90">Подтвердить</button>
-              <button onClick={() => setConfirmReset(false)} className="px-4 py-2 border border-border text-[hsl(var(--text-dim))] rounded text-sm hover:text-foreground">Отмена</button>
-            </div>
+          {!confirmReset && (
+            <button
+              onClick={() => { setConfirmReset(true); setConfirmResetStep2(false); setConfirmResetWord(''); }}
+              className="px-4 py-2 border border-destructive text-destructive rounded text-sm hover:bg-destructive hover:text-white transition-colors shrink-0"
+            >
+              Сбросить
+            </button>
           )}
         </div>
+
+        {confirmReset && !confirmResetStep2 && (
+          <div className="mt-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg space-y-3">
+            <div className="flex items-start gap-2.5">
+              <Icon name="AlertTriangle" size={16} className="text-destructive mt-0.5 shrink-0" />
+              <div className="text-sm text-foreground">
+                Это удалит <span className="font-semibold text-destructive">все данные без возможности восстановления</span>. Вы уверены?
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setConfirmResetStep2(true)}
+                className="px-4 py-2 bg-destructive text-white rounded text-sm hover:opacity-90"
+              >
+                Да, хочу сбросить
+              </button>
+              <button
+                onClick={() => { setConfirmReset(false); setConfirmResetWord(''); }}
+                className="px-4 py-2 border border-border text-[hsl(var(--text-dim))] rounded text-sm hover:text-foreground"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        )}
+
+        {confirmReset && confirmResetStep2 && (
+          <div className="mt-4 p-4 bg-destructive/10 border border-destructive/40 rounded-lg space-y-3">
+            <div className="text-sm text-foreground">
+              Введите <span className="font-mono font-bold text-destructive">СБРОС</span> для подтверждения:
+            </div>
+            <input
+              type="text"
+              value={confirmResetWord}
+              onChange={e => setConfirmResetWord(e.target.value)}
+              placeholder="СБРОС"
+              className="w-full px-3 py-2 bg-[hsl(220,14%,8%)] border border-destructive/40 rounded text-sm text-foreground placeholder:text-[hsl(var(--text-muted))] focus:outline-none focus:border-destructive font-mono"
+              autoFocus
+            />
+            <div className="flex gap-2">
+              <button
+                onClick={() => { localStorage.clear(); window.location.reload(); }}
+                disabled={confirmResetWord !== 'СБРОС'}
+                className="px-4 py-2 bg-destructive text-white rounded text-sm hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+              >
+                Удалить всё
+              </button>
+              <button
+                onClick={() => { setConfirmReset(false); setConfirmResetStep2(false); setConfirmResetWord(''); }}
+                className="px-4 py-2 border border-border text-[hsl(var(--text-dim))] rounded text-sm hover:text-foreground"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        )}
       </Section>
 
       {/* Диалог подтверждения импорта */}

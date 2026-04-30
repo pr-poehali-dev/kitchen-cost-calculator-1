@@ -25,6 +25,7 @@ export default function SettingsCatalogSection() {
   const [editingType, setEditingType] = useState<Partial<MaterialType> | null>(null);
   const [editingCategory, setEditingCategory] = useState<Partial<MaterialCategory & { typeIds: string[] }> | null>(null);
   const [catTypeFilter, setCatTypeFilter] = useState<string>('all');
+  const [deleteConfirm, setDeleteConfirm] = useState<{ kind: 'type' | 'category'; id: string; name: string } | null>(null);
 
   const categories = store.settings.materialCategories || [];
   const filteredCategories = catTypeFilter === 'all'
@@ -49,7 +50,7 @@ export default function SettingsCatalogSection() {
               </span>
               <div className="flex gap-1 shrink-0">
                 <button onClick={() => setEditingType(t)} className="text-[hsl(var(--text-muted))] hover:text-foreground p-1 transition-colors opacity-0 group-hover:opacity-100"><Icon name="Pencil" size={12} /></button>
-                <button onClick={() => store.deleteMaterialType(t.id)} className="text-[hsl(var(--text-muted))] hover:text-destructive p-1 transition-colors opacity-0 group-hover:opacity-100"><Icon name="Trash2" size={12} /></button>
+                <button onClick={() => setDeleteConfirm({ kind: 'type', id: t.id, name: t.name })} className="text-[hsl(var(--text-muted))] hover:text-destructive p-1 transition-colors opacity-0 group-hover:opacity-100"><Icon name="Trash2" size={12} /></button>
               </div>
             </div>
           ))}
@@ -99,7 +100,7 @@ export default function SettingsCatalogSection() {
                 <span className="text-xs text-[hsl(var(--text-muted))] font-mono shrink-0 hidden sm:inline">{store.materials.filter(m => m.categoryId === cat.id).length}</span>
                 <div className="flex gap-1 shrink-0">
                   <button onClick={() => setEditingCategory({ ...cat, typeIds: getCatTypeIds(cat) })} className="text-[hsl(var(--text-muted))] hover:text-foreground p-1 transition-colors opacity-0 group-hover:opacity-100"><Icon name="Pencil" size={12} /></button>
-                  <button onClick={() => store.deleteMaterialCategory(cat.id)} className="text-[hsl(var(--text-muted))] hover:text-destructive p-1 transition-colors opacity-0 group-hover:opacity-100"><Icon name="Trash2" size={12} /></button>
+                  <button onClick={() => setDeleteConfirm({ kind: 'category', id: cat.id, name: cat.name })} className="text-[hsl(var(--text-muted))] hover:text-destructive p-1 transition-colors opacity-0 group-hover:opacity-100"><Icon name="Trash2" size={12} /></button>
                 </div>
               </div>
             );
@@ -126,6 +127,44 @@ export default function SettingsCatalogSection() {
           onChange={setEditingCategory}
           onClose={() => setEditingCategory(null)}
         />
+      )}
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
+          <div className="bg-[hsl(220,14%,11%)] border border-border rounded-xl p-6 w-full max-w-sm shadow-2xl space-y-4">
+            <div className="flex items-start gap-3">
+              <div className="w-9 h-9 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+                <Icon name="Trash2" size={16} className="text-destructive" />
+              </div>
+              <div>
+                <div className="font-semibold text-sm text-foreground">
+                  Удалить {deleteConfirm.kind === 'type' ? 'тип' : 'категорию'}?
+                </div>
+                <div className="text-xs text-[hsl(var(--text-muted))] mt-1">
+                  «{deleteConfirm.name}» будет удалён{deleteConfirm.kind === 'category' ? 'а' : ''} безвозвратно
+                </div>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => {
+                  if (deleteConfirm.kind === 'type') store.deleteMaterialType(deleteConfirm.id);
+                  else store.deleteMaterialCategory(deleteConfirm.id);
+                  setDeleteConfirm(null);
+                }}
+                className="flex-1 py-2 bg-destructive text-white rounded text-sm font-semibold hover:opacity-90"
+              >
+                Удалить
+              </button>
+              <button
+                onClick={() => setDeleteConfirm(null)}
+                className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground"
+              >
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </>
   );
