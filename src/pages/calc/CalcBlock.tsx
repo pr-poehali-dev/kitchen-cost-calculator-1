@@ -250,7 +250,11 @@ export default function CalcBlock({
             <Icon name="SlidersHorizontal" size={13} />
           </button>
           <button
-            onClick={() => store.deleteBlock(projectId, block.id)}
+            onClick={() => {
+              if (window.confirm(`Удалить блок «${block.name}»? Все строки в нём будут потеряны.`)) {
+                store.deleteBlock(projectId, block.id);
+              }
+            }}
             className="text-[hsl(var(--text-muted))] hover:text-destructive transition-colors"
             title="Удалить блок"
           >

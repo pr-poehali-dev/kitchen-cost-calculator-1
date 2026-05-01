@@ -65,7 +65,7 @@ export default function ExpenseGroupBlock({
                   <Icon name="Pencil" size={12} />
                 </button>
                 <button
-                  onClick={() => onDeleteGroup(group.id)}
+                  onClick={() => { if (window.confirm(`Удалить группу «${group.name}» со всеми статьями?`)) onDeleteGroup(group.id); }}
                   className="text-[hsl(var(--text-muted))] hover:text-destructive transition-colors p-1"
                 >
                   <Icon name="Trash2" size={12} />

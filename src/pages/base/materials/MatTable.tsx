@@ -159,7 +159,7 @@ export default function MatTable({
                 </span>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                   <button onClick={() => onEdit(m)} className="text-[hsl(var(--text-muted))] hover:text-foreground"><Icon name="Pencil" size={12} /></button>
-                  <button onClick={() => onDelete(m.id)} className="text-[hsl(var(--text-muted))] hover:text-destructive"><Icon name="Trash2" size={12} /></button>
+                  <button onClick={() => { if (window.confirm(`Удалить материал «${m.name}»?`)) onDelete(m.id); }} className="text-[hsl(var(--text-muted))] hover:text-destructive"><Icon name="Trash2" size={12} /></button>
                 </div>
               </div>
             );

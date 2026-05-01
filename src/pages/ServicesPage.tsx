@@ -177,7 +177,11 @@ function ServiceBlockCard({ block, projectId }: { block: ServiceBlock; projectId
             <Icon name="Copy" size={13} />
           </button>
           <button
-            onClick={() => store.deleteServiceBlock(projectId, block.id)}
+            onClick={() => {
+              if (window.confirm(`Удалить блок услуг «${block.name}»?`)) {
+                store.deleteServiceBlock(projectId, block.id);
+              }
+            }}
             className="text-[hsl(var(--text-muted))] hover:text-destructive transition-colors"
           >
             <Icon name="Trash2" size={13} />

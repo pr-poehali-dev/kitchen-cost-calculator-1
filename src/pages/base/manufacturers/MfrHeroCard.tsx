@@ -70,7 +70,8 @@ export default function MfrHeroCard({ manufacturer, mfrMaterialsCount, onEdit, o
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[hsl(220,12%,16%)] border border-border rounded-lg hover:border-gold/50 hover:text-gold text-[hsl(var(--text-dim))] transition-all">
                   <Icon name="Pencil" size={11} /> Изменить
                 </button>
-                <button onClick={onDelete}
+                <button
+                  onClick={() => { if (window.confirm(`Удалить производителя «${manufacturer.name}»?`)) onDelete(); }}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[hsl(220,12%,16%)] border border-border rounded-lg hover:border-destructive/50 hover:text-destructive text-[hsl(var(--text-muted))] transition-all">
                   <Icon name="Trash2" size={11} />
                 </button>
