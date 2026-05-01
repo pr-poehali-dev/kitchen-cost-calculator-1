@@ -64,6 +64,7 @@ export interface Client {
   delivery_cost: number;
   assembly_cost: number;
   // Ответственные
+  manager_name: string;
   designer: string;
   measurer: string;
   // Сметы
@@ -122,7 +123,7 @@ export function emptyClient(): Omit<Client, 'id' | 'created_at' | 'updated_at'> 
     prepaid_amount: 0, balance_due: 0, custom_payment_scheme: '',
     delivery_date: '', production_days: 0, assembly_days: 0,
     delivery_cost: 0, assembly_cost: 0,
-    designer: '', measurer: '',
+    manager_name: '', designer: '', measurer: '',
     project_ids: [],
     reminder_date: '', reminder_note: '', comment: '',
     source: '', tags: [], rating: null,
