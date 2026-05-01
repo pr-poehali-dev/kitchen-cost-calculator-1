@@ -443,13 +443,27 @@ def parse_boyard(csv_text: str) -> dict:
         def g(i):
             return cells[i].strip() if i < len(cells) else ''
 
-        # Курс из первой строки (число 50..200) — до header_passed
+        # Курс из строки с "Курс" или первых строк до заголовка (число 50..200)
         if not header_passed and rate == 0.0:
-            for cell in cells:
-                v = parse_price(cell)
-                if 50 < v < 200:
-                    rate = v
-                    break
+            row_text = ' '.join(cells)
+            if 'курс' in row_text.lower():
+                for cell in cells:
+                    c = cell.replace(',', '.').strip()
+                    m = re.search(r'(\d{2,3}[.,]\d+)', cell)
+                    if m:
+                        try:
+                            v = float(m.group(1).replace(',', '.'))
+                            if 50 < v < 500:
+                                rate = v
+                                break
+                        except ValueError:
+                            pass
+            if rate == 0.0:
+                for cell in cells:
+                    v = parse_price(cell)
+                    if 50 < v < 200:
+                        rate = v
+                        break
 
         col0 = g(0)
         col1 = g(1)
