@@ -13,6 +13,9 @@ interface UserRow {
   plan: string;
   created_at: string;
   last_login: string | null;
+  full_name: string;
+  poa_number: string;
+  poa_date: string;
 }
 
 interface Props {
@@ -29,6 +32,7 @@ type Modal =
   | { type: 'create' }
   | { type: 'password'; user: UserRow }
   | { type: 'delete'; user: UserRow }
+  | { type: 'profile'; user: UserRow }
   | null;
 
 function adminUrl() {
@@ -187,6 +191,13 @@ export default function AdminPanel({ currentUser, token, inline, onClose }: Prop
                 {/* Действия */}
                 <div className="flex items-center gap-1 pl-2">
                   <button
+                    title="Профиль менеджера"
+                    onClick={() => setModal({ type: 'profile', user: u })}
+                    className="p-1.5 text-[hsl(var(--text-muted))] hover:text-foreground hover:bg-[hsl(220,12%,22%)] rounded transition-colors"
+                  >
+                    <Icon name="ScrollText" size={13} />
+                  </button>
+                  <button
                     title="Сменить пароль"
                     onClick={() => setModal({ type: 'password', user: u })}
                     className="p-1.5 text-[hsl(var(--text-muted))] hover:text-foreground hover:bg-[hsl(220,12%,22%)] rounded transition-colors"
@@ -237,6 +248,93 @@ export default function AdminPanel({ currentUser, token, inline, onClose }: Prop
           )}
         </ModalOverlay>
       )}
+
+      {/* Профиль менеджера */}
+      {modal?.type === 'profile' && (
+        <ProfileModal
+          user={modal.user}
+          token={token}
+          onSave={() => { setModal(null); fetchUsers(); }}
+          onClose={() => setModal(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+function ProfileModal({ user, token, onSave, onClose }: { user: UserRow; token: string; onSave: () => void; onClose: () => void }) {
+  const [fullName, setFullName] = useState(user.full_name || '');
+  const [poaNumber, setPoaNumber] = useState(user.poa_number || '');
+  const [poaDate, setPoaDate] = useState(user.poa_date || '');
+  const [saving, setSaving] = useState(false);
+
+  const inp = 'w-full bg-[hsl(220,12%,14%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold transition-colors placeholder:text-[hsl(var(--text-muted))]';
+
+  const handleSave = async () => {
+    setSaving(true);
+    await fetch(`${ADMIN_URL}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ id: user.id, full_name: fullName, poa_number: poaNumber, poa_date: poaDate || null }),
+    });
+    setSaving(false);
+    onSave();
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+      <div className="bg-[hsl(220,14%,11%)] border border-border rounded-xl w-full max-w-md p-6 space-y-4">
+        <div className="flex items-center justify-between mb-2">
+          <div>
+            <h3 className="font-semibold text-sm">Профиль менеджера</h3>
+            <p className="text-xs text-[hsl(var(--text-muted))] mt-0.5">{user.login}</p>
+          </div>
+          <button onClick={onClose} className="p-1.5 text-[hsl(var(--text-muted))] hover:text-foreground rounded transition-colors">
+            <Icon name="X" size={16} />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1 block">ФИО менеджера</label>
+            <input className={inp} value={fullName} onChange={e => setFullName(e.target.value)} placeholder="Иванов Иван Иванович" />
+          </div>
+
+          <div className="pt-1 pb-1 border-t border-border">
+            <div className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-2 mt-1 flex items-center gap-1.5">
+              <Icon name="ScrollText" size={11} /> Доверенность
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-[hsl(var(--text-muted))] mb-1 block">Номер</label>
+                <input className={inp} value={poaNumber} onChange={e => setPoaNumber(e.target.value)} placeholder="12/2024" />
+              </div>
+              <div>
+                <label className="text-xs text-[hsl(var(--text-muted))] mb-1 block">Дата</label>
+                <input type="date" className={inp} value={poaDate} onChange={e => setPoaDate(e.target.value)} />
+              </div>
+            </div>
+            {(poaNumber || poaDate) && (
+              <div className="mt-2 p-2 bg-[hsl(220,12%,14%)] rounded text-xs text-[hsl(var(--text-muted))] border border-border">
+                В договоре: <span className="text-foreground">«действующего на основании доверенности № {poaNumber || '___'} от {poaDate ? new Date(poaDate).toLocaleDateString('ru') : '___'}»</span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="flex gap-2 pt-2">
+          <button onClick={onClose} className="flex-1 px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-muted))] hover:text-foreground transition-colors">
+            Отмена
+          </button>
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="flex-1 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-50"
+          >
+            {saving ? 'Сохраняю...' : 'Сохранить'}
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

@@ -96,6 +96,33 @@ def _get_company(user_id) -> dict:
         return {}
 
 
+def _get_manager_poa(manager_name: str) -> dict:
+    """Ищет данные менеджера по имени в таблице users и возвращает его доверенность."""
+    if not manager_name or not manager_name.strip():
+        return {}
+    try:
+        name = manager_name.strip()
+        with get_db() as conn:
+            cur = conn.cursor()
+            # Ищем по full_name (точное совпадение или login содержит имя)
+            cur.execute(
+                '''SELECT full_name, poa_number, poa_date FROM users
+                   WHERE LOWER(full_name) = LOWER(%s) OR LOWER(login) = LOWER(%s)
+                   LIMIT 1''',
+                (name, name)
+            )
+            row = cur.fetchone()
+        if not row:
+            return {}
+        return {
+            'full_name': row[0] or '',
+            'poa_number': row[1] or '',
+            'poa_date': str(row[2]) if row[2] else '',
+        }
+    except Exception:
+        return {}
+
+
 def _co(company: dict, field: str, fallback: str = '___________') -> str:
     """Возвращает поле компании или заглушку."""
     return str(company.get(field) or '').strip() or fallback
@@ -515,6 +542,9 @@ def handler(event: dict, context) -> dict:
             client = dict(zip(cols, row))
         user_id = payload.get('sub') or payload.get('user_id') or payload.get('id')
         company = _get_company(user_id)
+        manager_poa = _get_manager_poa(client.get('manager_name', ''))
+        if manager_poa.get('poa_number') or manager_poa.get('poa_date'):
+            company = {**company, 'poaNumber': manager_poa.get('poa_number', ''), 'poaDate': manager_poa.get('poa_date', '')}
         html = _build_contract_html(client, doc_type, company)
         return {'statusCode': 200, 'headers': {**cors, 'Content-Type': 'text/html; charset=utf-8'}, 'body': html}
 
@@ -534,6 +564,9 @@ def handler(event: dict, context) -> dict:
             client = dict(zip(cols, row))
         user_id = payload.get('sub') or payload.get('user_id') or payload.get('id')
         company = _get_company(user_id)
+        manager_poa = _get_manager_poa(client.get('manager_name', ''))
+        if manager_poa.get('poa_number') or manager_poa.get('poa_date'):
+            company = {**company, 'poaNumber': manager_poa.get('poa_number', ''), 'poaDate': manager_poa.get('poa_date', '')}
         html = _build_contract_html(client, doc_type, company)
         doc_id = str(uuid.uuid4())
         key = f'documents/{doc_id}.html'
@@ -557,6 +590,9 @@ def handler(event: dict, context) -> dict:
             client = dict(zip(cols, row))
         user_id = payload.get('sub') or payload.get('user_id') or payload.get('id')
         company = _get_company(user_id)
+        manager_poa = _get_manager_poa(client.get('manager_name', ''))
+        if manager_poa.get('poa_number') or manager_poa.get('poa_date'):
+            company = {**company, 'poaNumber': manager_poa.get('poa_number', ''), 'poaDate': manager_poa.get('poa_date', '')}
         docx_bytes = _build_docx(client, doc_type, company)
         b64 = base64.b64encode(docx_bytes).decode('utf-8')
         return {

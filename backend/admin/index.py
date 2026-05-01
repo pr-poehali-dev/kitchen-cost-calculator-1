@@ -85,11 +85,12 @@ def handler(event: dict, context) -> dict:
     if method == 'GET':
         with get_db() as conn:
             cur = conn.cursor()
-            cur.execute('SELECT id, login, role, status, plan, created_at, last_login FROM users ORDER BY created_at DESC')
+            cur.execute('SELECT id, login, role, status, plan, created_at, last_login, full_name, poa_number, poa_date FROM users ORDER BY created_at DESC')
             rows = cur.fetchall()
         users = [
             {'id': r[0], 'login': r[1], 'role': r[2], 'status': r[3],
-             'plan': r[4], 'created_at': str(r[5]), 'last_login': str(r[6]) if r[6] else None}
+             'plan': r[4], 'created_at': str(r[5]), 'last_login': str(r[6]) if r[6] else None,
+             'full_name': r[7] or '', 'poa_number': r[8] or '', 'poa_date': str(r[9]) if r[9] else ''}
             for r in rows
         ]
         return ok({'users': users})
@@ -146,7 +147,7 @@ def handler(event: dict, context) -> dict:
 
         fields = []
         values = []
-        for key in ('status', 'plan', 'role'):
+        for key in ('status', 'plan', 'role', 'full_name', 'poa_number', 'poa_date'):
             if key in body:
                 fields.append(f'{key} = %s')
                 values.append(body[key])
