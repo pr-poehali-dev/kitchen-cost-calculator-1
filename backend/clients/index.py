@@ -206,7 +206,8 @@ def handler(event: dict, context) -> dict:
                 SELECT id, status, last_name, first_name, middle_name, phone, phone2, messenger,
                        contract_number, contract_date, total_amount, payment_type,
                        delivery_date, designer, measurer, reminder_date, reminder_note,
-                       comment, created_at, updated_at, project_ids
+                       comment, created_at, updated_at, project_ids,
+                       source, tags, rating, property_type, property_area, has_children, has_pets
                 FROM clients {where}
                 ORDER BY {sort_field} {sort_dir} {null_last}
                 LIMIT %s OFFSET %s
@@ -262,6 +263,7 @@ def handler(event: dict, context) -> dict:
                 delivery_date, production_days, assembly_days,
                 delivery_cost, assembly_cost,
                 designer, measurer, manager_name, project_ids, reminder_date, reminder_note, comment,
+                source, tags, rating, property_type, property_area, has_children, has_pets,
                 created_by, updated_by
             ) VALUES (
                 %s,%s,%s,%s,%s,%s,%s,%s,
@@ -273,6 +275,7 @@ def handler(event: dict, context) -> dict:
                 %s,%s,%s,
                 %s,%s,%s,
                 %s,%s,
+                %s,%s,%s,%s,%s,%s,%s,
                 %s,%s,%s,%s,%s,%s,%s,
                 %s,%s
             ) RETURNING id
@@ -295,6 +298,9 @@ def handler(event: dict, context) -> dict:
             c.get('designer', ''), c.get('measurer', ''), c.get('manager_name', ''),
             json.dumps(c.get('project_ids', [])),
             c.get('reminder_date', ''), c.get('reminder_note', ''), c.get('comment', ''),
+            c.get('source', ''), c.get('tags', []), c.get('rating') or None,
+            c.get('property_type', ''), c.get('property_area', ''),
+            bool(c.get('has_children', False)), bool(c.get('has_pets', False)),
             payload.get('sub'), payload.get('sub'),
         ))
             new_id = cur.fetchone()[0]
@@ -329,6 +335,8 @@ def handler(event: dict, context) -> dict:
                     delivery_cost=%s, assembly_cost=%s,
                     designer=%s, measurer=%s, manager_name=%s, project_ids=%s,
                     reminder_date=%s, reminder_note=%s, comment=%s,
+                    source=%s, tags=%s, rating=%s, property_type=%s, property_area=%s,
+                    has_children=%s, has_pets=%s,
                     updated_at=NOW(), updated_by=%s
                 WHERE id=%s
             ''', (
@@ -350,6 +358,9 @@ def handler(event: dict, context) -> dict:
                 c.get('designer', ''), c.get('measurer', ''), c.get('manager_name', ''),
                 json.dumps(c.get('project_ids', [])),
                 c.get('reminder_date', ''), c.get('reminder_note', ''), c.get('comment', ''),
+                c.get('source', ''), c.get('tags', []), c.get('rating') or None,
+                c.get('property_type', ''), c.get('property_area', ''),
+                bool(c.get('has_children', False)), bool(c.get('has_pets', False)),
                 payload.get('sub'), cid,
             ))
             log_history(conn, cid, payload, 'updated', 'Данные клиента обновлены')

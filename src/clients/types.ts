@@ -72,6 +72,14 @@ export interface Client {
   reminder_date: string;
   reminder_note: string;
   comment: string;
+  // Профиль клиента
+  source: string;
+  tags: string[];
+  rating: number | null;
+  property_type: string;
+  property_area: string;
+  has_children: boolean;
+  has_pets: boolean;
   // Мета
   created_at: string;
   updated_at: string;
@@ -117,5 +125,8 @@ export function emptyClient(): Omit<Client, 'id' | 'created_at' | 'updated_at'> 
     designer: '', measurer: '',
     project_ids: [],
     reminder_date: '', reminder_note: '', comment: '',
+    source: '', tags: [], rating: null,
+    property_type: '', property_area: '',
+    has_children: false, has_pets: false,
   };
 }

@@ -53,10 +53,19 @@ export function ClientRow({ client, selected, onSelect, onClick }: {
         <span className="text-gold text-xs font-bold">{(client.last_name?.[0] || client.first_name?.[0] || '?').toUpperCase()}</span>
       </div>
       <div className="flex-1 min-w-0" onClick={onClick}>
-        <div className="text-sm font-medium text-foreground truncate">{name}</div>
-        <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5 flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="text-sm font-medium text-foreground truncate">{name}</div>
+          {client.tags?.slice(0, 2).map(tag => (
+            <span key={tag} className="px-1.5 py-0 rounded text-[10px] bg-gold/15 text-gold border border-gold/30 leading-5">{tag}</span>
+          ))}
+          {(client.tags?.length ?? 0) > 2 && (
+            <span className="text-[10px] text-[hsl(var(--text-muted))]">+{(client.tags?.length ?? 0) - 2}</span>
+          )}
+        </div>
+        <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5 flex items-center gap-2 flex-wrap">
           {client.phone && <span>{client.phone}</span>}
           {client.contract_number && <span>№{client.contract_number}</span>}
+          {client.source && <span className="text-[hsl(var(--text-muted))] opacity-70">· {client.source}</span>}
           {client.designer && <span className="text-[hsl(var(--text-muted))]">· {client.designer}</span>}
         </div>
       </div>
