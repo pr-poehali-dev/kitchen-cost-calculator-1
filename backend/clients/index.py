@@ -142,6 +142,53 @@ def _co(company: dict, field: str, fallback: str = '___________') -> str:
     return str(company.get(field) or '').strip() or fallback
 
 
+def _genitive_name(full_name: str) -> str:
+    """Склоняет ФИО (Фамилия Имя Отчество) в родительный падеж.
+    Работает для типичных русских имён мужского и женского рода.
+    """
+    if not full_name or not full_name.strip():
+        return full_name
+
+    parts = full_name.strip().split()
+    if not parts:
+        return full_name
+
+    def _word_genitive(word: str) -> str:
+        if not word:
+            return word
+        w = word
+        low = w.lower()
+
+        # Женские окончания
+        if low.endswith('ья'):   return w[:-2] + 'ьи'
+        if low.endswith('ия'):   return w[:-2] + 'ии'
+        if low.endswith('ая'):   return w[:-2] + 'ой'
+        if low.endswith('яя'):   return w[:-2] + 'ей'
+        if low.endswith('на') and len(w) > 4 and low[-3] not in 'аеёиоуыэюя':
+            return w[:-1] + 'ы'  # Татьяна → Татьяны, но не трогать «она»
+        if low.endswith('а') and low[-2] not in 'аеёиоуыэюя':
+            return w[:-1] + 'ы'
+        if low.endswith('я') and low[-2] not in 'аеёиоуыэюя':
+            return w[:-1] + 'и'
+
+        # Мужские окончания
+        if low.endswith('ий'):   return w[:-2] + 'ого'
+        if low.endswith('ой'):   return w[:-2] + 'ого'
+        if low.endswith('ый'):   return w[:-2] + 'ого'
+        if low.endswith('ич'):   return w + 'а'
+        if low.endswith('ец'):   return w[:-2] + 'ца'
+        if low.endswith('ь'):    return w[:-1] + 'я'
+        # Согласная в конце — добавляем «а»
+        consonants = 'бвгджзйклмнпрстфхцчшщ'
+        if low[-1] in consonants:
+            return w + 'а'
+
+        return w
+
+    result = [_word_genitive(p) for p in parts]
+    return ' '.join(result)
+
+
 def log_history(conn, client_id, payload, action, description, old_val=None, new_val=None):
     cur = conn.cursor()
     cur.execute(
@@ -905,6 +952,8 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 
     manager = c.get('manager_name') or ''
     manager_line = manager if manager else '&nbsp;' * 30
+    # Менеджер в родительном падеже для преамбулы: «в лице менеджера Сазонова Василия Николаевича»
+    manager_genitive = _genitive_name(manager) if manager else '&nbsp;' * 30
 
     # Поля кредитного договора
     credit_num   = c.get('credit_contract_number', '') or ''
@@ -950,7 +999,7 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 <h1>ДОГОВОР</h1>
 <h2>бытового подряда на изготовление мебели</h2>
 <div class="city-date"><span>г. {co_city}</span><span>№ {contract_num} от {contract_date_full}</span></div>
-<p class="no-indent">{co_name}, в лице менеджера <strong>{manager_line}</strong>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик», и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», заключили настоящий Договор о нижеследующем:</p>
+<p class="no-indent">{co_name}, в лице менеджера <strong>{manager_genitive}</strong>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик», и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», заключили настоящий Договор о нижеследующем:</p>
 
 <p class="sec">1. ПРЕДМЕТ ДОГОВОРА</p>
 <p>1.1. Подрядчик обязуется выполнить работу по изготовлению мебели и передать результат работы Заказчику (мебель передается в разобранном виде), а Заказчик обязуется принять и оплатить результат работ.</p>
