@@ -36,7 +36,7 @@ export function setCatalogToken(token: string) {
   _token = token;
 }
 
-export function getCatalogCache(): CatalogState {
+export function getCatalogSnapshot(): CatalogState {
   return _cache;
 }
 
@@ -246,6 +246,6 @@ export function useCatalog(): CatalogState {
 }
 
 // ── Геттеры без хука (для синхронного доступа) ────────────────
-export function getCatalogCache(): CatalogState {
+export function getCatalogSnapshot(): CatalogState {
   return _cache;
 }

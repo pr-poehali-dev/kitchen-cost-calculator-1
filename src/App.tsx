@@ -4,7 +4,7 @@ import GlobalSearch from '@/components/GlobalSearch';
 import { AppLoadingSkeleton } from '@/components/Skeleton';
 import { useStore, loadStateFromDb, setStoreToken, forceSetGlobalState, saveStateToDb } from '@/store/useStore';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
-import { setCatalogToken, loadCatalog, syncCatalogFromAppState, getCatalogCache } from '@/hooks/useCatalog';
+import { setCatalogToken, loadCatalog, syncCatalogFromAppState, getCatalogSnapshot } from '@/hooks/useCatalog';
 import HomePage from '@/pages/HomePage';
 import ClientsPage from '@/clients/ClientsPage';
 import CalcPage from '@/pages/CalcPage';
@@ -77,7 +77,7 @@ export default function App() {
       try {
         await loadCatalog();
         const { getGlobalState } = await import('@/store/stateCore');
-        const catalogEmpty = getCatalogCache().materials.length === 0;
+        const catalogEmpty = getCatalogSnapshot().materials.length === 0;
         if (catalogEmpty) {
           const currentState = getGlobalState();
           await syncCatalogFromAppState(
