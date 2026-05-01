@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { useCatalog } from '@/hooks/useCatalog';
 import ManufacturersTab from './base/ManufacturersTab';
 import VendorsTab from './base/VendorsTab';
 import MaterialsTab from './base/MaterialsTab';
@@ -9,15 +10,16 @@ type Tab = 'manufacturers' | 'vendors' | 'materials' | 'services';
 
 export default function BasePage({ initialSearch, initialTab }: { initialSearch?: string; initialTab?: Tab }) {
   const store = useStore();
+  const catalog = useCatalog();
   const [tab, setTab] = useState<Tab>(initialTab ?? 'manufacturers');
   const [selectedManufacturer, setSelectedManufacturer] = useState<string | null>(null);
   const [selectedVendor, setSelectedVendor] = useState<string | null>(null);
   const [matTypeFilter, setMatTypeFilter] = useState<string>('all');
 
   const TABS = [
-    { id: 'manufacturers' as Tab, label: 'Производители', count: store.manufacturers.length },
-    { id: 'vendors' as Tab, label: 'Поставщики', count: store.vendors.length },
-    { id: 'materials' as Tab, label: 'Материалы', count: store.materials.length },
+    { id: 'manufacturers' as Tab, label: 'Производители', count: catalog.manufacturers.length },
+    { id: 'vendors' as Tab, label: 'Поставщики', count: catalog.vendors.length },
+    { id: 'materials' as Tab, label: 'Материалы', count: catalog.materials.length },
     { id: 'services' as Tab, label: 'Услуги', count: store.services.length },
   ];
 

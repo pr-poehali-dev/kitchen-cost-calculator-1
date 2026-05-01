@@ -1,4 +1,5 @@
 import { useStore } from '@/store/useStore';
+import { useCatalog } from '@/hooks/useCatalog';
 import type { Manufacturer } from '@/store/types';
 import Icon from '@/components/ui/icon';
 
@@ -11,6 +12,7 @@ interface Props {
 
 export default function MfrHeroCard({ manufacturer, mfrMaterialsCount, onEdit, onDelete }: Props) {
   const store = useStore();
+  const catalog = useCatalog();
 
   return (
     <div className="bg-[hsl(220,14%,11%)] rounded-lg border border-border overflow-hidden">
@@ -95,7 +97,7 @@ export default function MfrHeroCard({ manufacturer, mfrMaterialsCount, onEdit, o
           <div className="bg-[hsl(220,12%,14%)] rounded-lg px-3 py-2.5 text-center">
             <div className="text-lg font-bold text-foreground">
               {new Set(
-                store.materials.filter(m => m.manufacturerId === manufacturer.id).map(m => m.vendorId).filter(Boolean)
+                catalog.materials.filter(m => m.manufacturerId === manufacturer.id).map(m => m.vendorId).filter(Boolean)
               ).size || '—'}
             </div>
             <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5">поставщ.</div>
@@ -125,4 +127,3 @@ export default function MfrHeroCard({ manufacturer, mfrMaterialsCount, onEdit, o
     </div>
   );
 }
-

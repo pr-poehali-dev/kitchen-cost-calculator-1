@@ -7,7 +7,7 @@ from contextlib import contextmanager
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
-# v2
+# v3
 
 JWT_SECRET = os.environ['JWT_SECRET']
 

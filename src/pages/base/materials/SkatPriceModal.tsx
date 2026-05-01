@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useStore } from '@/store/useStore';
+import { useCatalog, updatePricesBatch, loadCatalog } from '@/hooks/useCatalog';
 import Icon from '@/components/ui/icon';
 import { fmt, Modal } from '../BaseShared';
 import func2url from '../../../../backend/func2url.json';
@@ -28,7 +28,7 @@ interface ChangedMaterial {
 }
 
 export default function SkatPriceModal({ onClose }: { onClose: () => void }) {
-  const store = useStore();
+  const catalog = useCatalog();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [changed, setChanged] = useState<ChangedMaterial[] | null>(null);
@@ -61,7 +61,7 @@ export default function SkatPriceModal({ onClose }: { onClose: () => void }) {
 
       // Ищем изменения по всем 5 вариантам
       const result: ChangedMaterial[] = [];
-      for (const mat of store.materials) {
+      for (const mat of catalog.materials) {
         if (!mat.article || !mat.variants?.length) continue;
         const item = priceMap.get(mat.article);
         if (!item) continue;
@@ -99,9 +99,8 @@ export default function SkatPriceModal({ onClose }: { onClose: () => void }) {
   const toggle = (idx: number) =>
     setChanged(prev => prev?.map((m, i) => i === idx ? { ...m, selected: !m.selected } : m) ?? null);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!changed) return;
-    // Строим карту article → item для получения size/thickness
     const priceMap = new Map<string, SkatAllItem>();
     for (const item of allItems) {
       priceMap.set(skatArticle(item.thickness_section, item.subsection, item.facade_type), item);
@@ -123,7 +122,8 @@ export default function SkatPriceModal({ onClose }: { onClose: () => void }) {
         })),
       };
     });
-    store.updateSkatPrices(updates);
+    await updatePricesBatch(updates);
+    await loadCatalog();
     setSaved(true);
     setTimeout(onClose, 1500);
   };

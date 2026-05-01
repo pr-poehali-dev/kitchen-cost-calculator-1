@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { getGlobalState } from '@/store/stateCore';
+import { useCatalog, bulkUpsertMaterials, loadCatalog } from '@/hooks/useCatalog';
 import Icon from '@/components/ui/icon';
 import { Modal } from '../BaseShared';
 import func2url from '../../../../backend/func2url.json';
@@ -35,6 +37,7 @@ interface PreviewGroup {
 
 export default function BoyardImportModal({ onClose }: { onClose: () => void }) {
   const store = useStore();
+  const catalog = useCatalog();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [rate, setRate] = useState(0);
@@ -45,9 +48,9 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
 
   // Кол-во старых материалов BOYARD — все производители с именем boyard, article без "boyard__group__"
   const boyardMfrIds = new Set(
-    store.manufacturers.filter(m => m.name.toLowerCase() === 'boyard').map(m => m.id)
+    catalog.manufacturers.filter(m => m.name.toLowerCase() === 'boyard').map(m => m.id)
   );
-  const legacyCount = store.materials.filter(
+  const legacyCount = catalog.materials.filter(
     m => boyardMfrIds.has(m.manufacturerId) && !m.article?.startsWith('boyard__group__')
   ).length;
 
@@ -72,13 +75,12 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
     }
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     setImporting(true);
 
-    // Берём производителя у которого уже есть новые материалы (boyard__group__), иначе первого попавшегося
-    const allBoyardMfrs = store.manufacturers.filter(m => m.name.toLowerCase() === 'boyard');
+    const allBoyardMfrs = catalog.manufacturers.filter(m => m.name.toLowerCase() === 'boyard');
     const existingMfr = allBoyardMfrs.find(mfr =>
-      store.materials.some(mat => mat.manufacturerId === mfr.id && mat.article?.startsWith('boyard__group__'))
+      catalog.materials.some(mat => mat.manufacturerId === mfr.id && mat.article?.startsWith('boyard__group__'))
     ) ?? allBoyardMfrs[0];
 
     // Уникальные категории
@@ -133,6 +135,9 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
       materials
     );
 
+    await bulkUpsertMaterials(getGlobalState().materials);
+    await loadCatalog();
+
     setResult(res);
     setImporting(false);
     setStep('done');
@@ -153,7 +158,7 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
 
   // Общая статистика
   const totalNames = new Set(items.map(i => i.name)).size;
-  const existingKeys = new Set(store.materials.map(m => m.article).filter(Boolean));
+  const existingKeys = new Set(catalog.materials.map(m => m.article).filter(Boolean));
   const toCreate = Array.from(new Set(items.map(i => i.name))).filter(name => !existingKeys.has(boyardGroupKey(name))).length;
   const toUpdate = totalNames - toCreate;
 

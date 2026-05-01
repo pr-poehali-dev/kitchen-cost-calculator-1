@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
+import { useCatalog } from '@/hooks/useCatalog';
 import Icon from '@/components/ui/icon';
 
 type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings';
@@ -24,6 +25,7 @@ interface Props {
 
 export default function GlobalSearch({ clients, onNav, onClose, onOpenClient, onOpenBase }: Props) {
   const store = useStore();
+  const catalog = useCatalog();
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -91,7 +93,7 @@ export default function GlobalSearch({ clients, onNav, onClose, onOpenClient, on
     });
 
     // Материалы
-    store.materials.forEach(m => {
+    catalog.materials.forEach(m => {
       if (
         m.name.toLowerCase().includes(q) ||
         (m.article || '').toLowerCase().includes(q) ||
@@ -147,7 +149,7 @@ export default function GlobalSearch({ clients, onNav, onClose, onOpenClient, on
 
     return out.slice(0, 16);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [query, clients, store.projects, store.materials, store.services, store.savedBlocks]);
+  }, [query, clients, store.projects, catalog.materials, store.services, store.savedBlocks]);
 
   useEffect(() => {
     setSelected(0);

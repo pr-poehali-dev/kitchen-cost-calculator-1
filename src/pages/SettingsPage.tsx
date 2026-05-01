@@ -1,4 +1,5 @@
 import { useStore } from '@/store/useStore';
+import { useCatalog } from '@/hooks/useCatalog';
 import Icon from '@/components/ui/icon';
 import SettingsCompanySection from './settings/SettingsCompanySection';
 import SettingsCatalogSection from './settings/SettingsCatalogSection';
@@ -7,14 +8,15 @@ import SettingsBackupSection from './settings/SettingsBackupSection';
 
 export default function SettingsPage() {
   const store = useStore();
+  const catalog = useCatalog();
 
   const handleExportBackup = () => {
     const data = {
       version: '1.0',
       exportedAt: new Date().toISOString(),
-      materials: store.materials,
-      manufacturers: store.manufacturers,
-      vendors: store.vendors,
+      materials: catalog.materials,
+      manufacturers: catalog.manufacturers,
+      vendors: catalog.vendors,
       services: store.services,
       expenses: store.expenses,
       expenseGroups: store.expenseGroups,

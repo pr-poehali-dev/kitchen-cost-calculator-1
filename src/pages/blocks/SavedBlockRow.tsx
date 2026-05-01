@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '@/store/useStore';
+import { useCatalog } from '@/hooks/useCatalog';
 import type { SavedBlock, CalcColumnKey } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { fmt } from '../calc/constants';
@@ -16,6 +17,7 @@ interface Props {
 
 export default function SavedBlockRow({ block, rowId, visibleCols, gridCols, currency: _currency, assemblyId }: Props) {
   const store = useStore();
+  const catalog = useCatalog();
   const assembly = assemblyId ? (block.assemblies || []).find(a => a.id === assemblyId) : null;
   const row = assembly ? assembly.rows.find(r => r.id === rowId) : block.rows.find(r => r.id === rowId);
   const [nameFilter, setNameFilter] = useState(row?.name || '');
@@ -34,7 +36,7 @@ export default function SavedBlockRow({ block, rowId, visibleCols, gridCols, cur
 
   if (!row) return null;
 
-  const allMaterials = store.materials;
+  const allMaterials = catalog.materials;
   const baseFiltered = block.allowedTypeIds.length > 0
     ? allMaterials.filter(m => block.allowedTypeIds.includes(m.typeId))
     : allMaterials;

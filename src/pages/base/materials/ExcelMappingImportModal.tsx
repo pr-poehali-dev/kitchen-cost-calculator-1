@@ -1,5 +1,6 @@
 import { useState, useRef } from 'react';
 import { useStore } from '@/store/useStore';
+import { useCatalog, bulkUpsertMaterials } from '@/hooks/useCatalog';
 import Icon from '@/components/ui/icon';
 import * as XLSX from 'xlsx';
 
@@ -25,13 +26,14 @@ const COL_OPTIONS: { value: ColKey; label: string }[] = [
 
 export default function ExcelMappingImportModal({ onClose }: Props) {
   const store = useStore();
+  const catalog = useCatalog();
   const fileRef = useRef<HTMLInputElement>(null);
 
   const [rows, setRows] = useState<string[][]>([]);
   const [headers, setHeaders] = useState<string[]>([]);
   const [mapping, setMapping] = useState<ColKey[]>([]);
   const [typeId, setTypeId] = useState(store.settings.materialTypes[0]?.id || '');
-  const [manufacturerId, setManufacturerId] = useState(store.manufacturers[0]?.id || '');
+  const [manufacturerId, setManufacturerId] = useState(catalog.manufacturers[0]?.id || '');
   const [headerRow, setHeaderRow] = useState(true);
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState<{ created: number; skipped: number } | null>(null);
@@ -68,21 +70,20 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
 
   const dataRows = headerRow ? rows.slice(1) : rows;
 
-  const handleImport = () => {
+  const handleImport = async () => {
     if (!mapping.includes('name') || !mapping.includes('basePrice')) return;
     setImporting(true);
 
     let created = 0; let skipped = 0;
     const today = new Date().toISOString().slice(0, 10);
 
-    // Вспомогательные функции поиска по названию (нечёткое совпадение)
     const findManufacturer = (val: string) => {
       const v = val.toLowerCase();
-      return store.manufacturers.find(m => m.name.toLowerCase().includes(v) || v.includes(m.name.toLowerCase()));
+      return catalog.manufacturers.find(m => m.name.toLowerCase().includes(v) || v.includes(m.name.toLowerCase()));
     };
     const findVendor = (val: string) => {
       const v = val.toLowerCase();
-      return store.vendors.find(m => m.name.toLowerCase().includes(v) || v.includes(m.name.toLowerCase()));
+      return catalog.vendors.find(m => m.name.toLowerCase().includes(v) || v.includes(m.name.toLowerCase()));
     };
     const findType = (val: string) => {
       const v = val.toLowerCase();
@@ -94,6 +95,8 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
       return cats.find(c => c.name.toLowerCase().includes(v) || v.includes(c.name.toLowerCase()));
     };
 
+    const newMaterials: Parameters<typeof bulkUpsertMaterials>[0] = [];
+
     dataRows.forEach(row => {
       const get = (key: ColKey) => {
         const idx = mapping.indexOf(key);
@@ -103,35 +106,31 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
       const price = parseFloat(get('basePrice').replace(',', '.'));
       if (!name || isNaN(price)) { skipped++; return; }
 
-      // Производитель: из колонки или из глобального выбора
       const mfrRaw = get('manufacturer');
       const resolvedMfr = mfrRaw ? findManufacturer(mfrRaw) : null;
       const resolvedMfrId = resolvedMfr?.id ?? manufacturerId;
 
-      // Поставщик: из колонки или не задан
       const vendorRaw = get('vendor');
       const resolvedVendor = vendorRaw ? findVendor(vendorRaw) : null;
       const resolvedVendorId = resolvedVendor?.id;
 
-      // Тип материала: из колонки или из глобального выбора
       const typeRaw = get('type');
       const resolvedType = typeRaw ? findType(typeRaw) : null;
       const resolvedTypeId = resolvedType?.id ?? typeId;
 
-      // Категория: из колонки (относительно разрешённого типа)
       const catRaw = get('category');
       const resolvedCategory = catRaw ? findCategory(catRaw, resolvedTypeId) : null;
 
-      // Проверяем дубликат по артикулу или имени
       const article = get('article');
       const exists = article
-        ? store.materials.some(m => m.article === article)
-        : store.materials.some(m => m.name === name && m.typeId === resolvedTypeId);
+        ? catalog.materials.some(m => m.article === article)
+        : catalog.materials.some(m => m.name === name && m.typeId === resolvedTypeId);
 
       if (exists) { skipped++; return; }
 
       const thickness = parseFloat(get('thickness'));
-      store.addMaterial({
+      newMaterials.push({
+        id: `excel_import_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         name,
         manufacturerId: resolvedMfrId,
         vendorId: resolvedVendorId,
@@ -146,6 +145,10 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
       });
       created++;
     });
+
+    if (newMaterials.length > 0) {
+      await bulkUpsertMaterials(newMaterials);
+    }
 
     setResult({ created, skipped });
     setImporting(false);
@@ -215,7 +218,7 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
                         <label className="text-xs text-[hsl(var(--text-muted))] mb-1 block">Производитель (по умолчанию)</label>
                         <select value={manufacturerId} onChange={e => setManufacturerId(e.target.value)} className={INP + ' w-full'}>
                           <option value="">— не задан —</option>
-                          {store.manufacturers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                          {catalog.manufacturers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
                         </select>
                       </div>
                     </div>

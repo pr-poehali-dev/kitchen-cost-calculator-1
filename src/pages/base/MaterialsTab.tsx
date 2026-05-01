@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
+import { useCatalog, deleteMaterial, updateMaterial } from '@/hooks/useCatalog';
 import type { Material } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import PricelistUpdateModal from './materials/PricelistUpdateModal';
@@ -25,6 +26,7 @@ interface Props {
 
 export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSearch = '' }: Props) {
   const store = useStore();
+  const catalog = useCatalog();
 
   // Состояние модалок
   const [editingMaterial, setEditingMaterial] = useState<Partial<Material> | null>(null);
@@ -60,9 +62,9 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
 
   const typeFiltered = useMemo(() =>
     matTypeFilter === 'all'
-      ? store.materials
-      : store.materials.filter(m => m.typeId === matTypeFilter),
-    [store.materials, matTypeFilter]
+      ? catalog.materials
+      : catalog.materials.filter(m => m.typeId === matTypeFilter),
+    [catalog.materials, matTypeFilter]
   );
 
   const catFiltered = useMemo(() =>
@@ -92,15 +94,15 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
 
   const staleCount = useMemo(() => {
     const now = Date.now();
-    return store.materials.filter(m => {
+    return catalog.materials.filter(m => {
       if (!m.priceUpdatedAt || m.archived) return false;
       return Math.floor((now - new Date(m.priceUpdatedAt).getTime()) / 86400000) >= 30;
     }).length;
-  }, [store.materials]);
+  }, [catalog.materials]);
 
   const archivedCount = useMemo(
-    () => store.materials.filter(m => m.archived).length,
-    [store.materials]
+    () => catalog.materials.filter(m => m.archived).length,
+    [catalog.materials]
   );
 
   const typeMatSet = useMemo(() => {
@@ -114,12 +116,12 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
   );
 
   const mfrMap = useMemo(
-    () => new Map(store.manufacturers.map(m => [m.id, m])),
-    [store.manufacturers]
+    () => new Map(catalog.manufacturers.map(m => [m.id, m])),
+    [catalog.manufacturers]
   );
   const vendorMap = useMemo(
-    () => new Map(store.vendors.map(v => [v.id, v])),
-    [store.vendors]
+    () => new Map(catalog.vendors.map(v => [v.id, v])),
+    [catalog.vendors]
   );
   const typeMap = useMemo(
     () => new Map(store.settings.materialTypes.map(t => [t.id, t])),
@@ -151,14 +153,14 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
     }
   };
 
-  const handleBulkDelete = () => {
-    selected.forEach(id => store.deleteMaterial(id));
+  const handleBulkDelete = async () => {
+    for (const id of selected) await deleteMaterial(id);
     setSelected(new Set());
     setConfirmDelete(false);
   };
 
-  const handleBulkArchive = () => {
-    selected.forEach(id => store.updateMaterial(id, { archived: true }));
+  const handleBulkArchive = async () => {
+    for (const id of selected) await updateMaterial(id, { archived: true });
     setSelected(new Set());
   };
 
@@ -219,7 +221,7 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
           onToggleOne={toggleOne}
           onToggleAllVisible={toggleAllVisible}
           onEdit={m => setEditingMaterial(m)}
-          onDelete={id => store.deleteMaterial(id)}
+          onDelete={async id => { await deleteMaterial(id); }}
         />
       </div>
 
@@ -296,12 +298,12 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
             )}
             <div className="flex gap-2">
               <button
-                onClick={() => {
+                onClick={async () => {
                   const pct = parseFloat(percentVal);
                   if (isNaN(pct) || pct === 0) return;
-                  filteredMaterials.forEach(m => {
-                    store.updateMaterial(m.id, { basePrice: Math.round(m.basePrice * (1 + pct / 100)) });
-                  });
+                  for (const m of filteredMaterials) {
+                    await updateMaterial(m.id, { basePrice: Math.round(m.basePrice * (1 + pct / 100)) });
+                  }
                   setPercentApplied(true);
                 }}
                 className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90"

@@ -1,4 +1,5 @@
 import { useStore } from '@/store/useStore';
+import { useCatalog } from '@/hooks/useCatalog';
 import type { MaterialCategory } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import SearchInput from '@/components/ui/search-input';
@@ -35,6 +36,7 @@ export default function MatFilterBar({
   onSelectAll, onBulkArchive, onBulkDeleteRequest, onClearSelection,
 }: Props) {
   const store = useStore();
+  const catalog = useCatalog();
 
   return (
     <>
@@ -54,7 +56,7 @@ export default function MatFilterBar({
           onClick={() => onShowArchivedChange(false)}
           className={`flex items-center gap-1.5 px-2.5 py-1 rounded text-xs transition-colors ${!showArchived ? 'bg-gold/20 text-gold' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
         >
-          <Icon name="Package" size={12} /> Активные ({store.materials.filter(m => !m.archived).length})
+          <Icon name="Package" size={12} /> Активные ({catalog.materials.filter(m => !m.archived).length})
         </button>
         {archivedCount > 0 && (
           <button
@@ -68,7 +70,7 @@ export default function MatFilterBar({
           <button
             onClick={() => {
               if (!confirm(`Восстановить все ${archivedCount} архивных материалов?`)) return;
-              store.materials.filter(m => m.archived).forEach(m => store.updateMaterial(m.id, { archived: false }));
+              catalog.materials.filter(m => m.archived).forEach(m => store.updateMaterial(m.id, { archived: false }));
             }}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs text-[hsl(var(--text-muted))] hover:text-gold transition-colors ml-auto"
           >

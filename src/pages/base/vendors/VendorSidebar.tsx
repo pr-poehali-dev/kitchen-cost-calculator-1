@@ -1,4 +1,5 @@
 import { useStore } from '@/store/useStore';
+import { useCatalog } from '@/hooks/useCatalog';
 import type { Vendor } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import SearchInput from '@/components/ui/search-input';
@@ -23,12 +24,13 @@ export default function VendorSidebar({
   onAddVendor,
 }: Props) {
   const store = useStore();
+  const catalog = useCatalog();
 
   return (
     <div className="w-full flex flex-col gap-2">
       <div className="flex items-center justify-between mb-2">
         <div className="text-xs uppercase tracking-wider text-[hsl(var(--text-muted))]">Поставщики</div>
-        <span className="text-xs text-[hsl(var(--text-muted))]">{store.vendors.length}</span>
+        <span className="text-xs text-[hsl(var(--text-muted))]">{catalog.vendors.length}</span>
       </div>
       <SearchInput value={sideSearch} onChange={onSearchChange} className="mb-2" />
       {visibleVendors.map(v => {

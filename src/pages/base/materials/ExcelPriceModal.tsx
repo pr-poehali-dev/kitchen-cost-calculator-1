@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { useStore } from '@/store/useStore';
+import { useCatalog, updateMaterial, loadCatalog } from '@/hooks/useCatalog';
 import Icon from '@/components/ui/icon';
 import { fmt, Modal } from '../BaseShared';
 
@@ -96,7 +96,7 @@ function parseExcel(file: File): Promise<PriceRow[]> {
   });
 }
 
-function findMatches(priceRows: PriceRow[], materials: ReturnType<typeof useStore>['materials']): Match[] {
+function findMatches(priceRows: PriceRow[], materials: import('@/store/types').Material[]): Match[] {
   const matches: Match[] = [];
 
   for (const mat of materials) {
@@ -138,7 +138,7 @@ function findMatches(priceRows: PriceRow[], materials: ReturnType<typeof useStor
 }
 
 export default function ExcelPriceModal({ onClose }: { onClose: () => void }) {
-  const store = useStore();
+  const catalog = useCatalog();
   const inputRef = useRef<HTMLInputElement>(null);
   const [fileName, setFileName] = useState('');
   const [loading, setLoading] = useState(false);
@@ -157,7 +157,7 @@ export default function ExcelPriceModal({ onClose }: { onClose: () => void }) {
     try {
       const rows = await parseExcel(file);
       setTotalRows(rows.length);
-      const found = findMatches(rows, store.materials);
+      const found = findMatches(rows, catalog.materials);
       setMatches(found);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -175,11 +175,12 @@ export default function ExcelPriceModal({ onClose }: { onClose: () => void }) {
   const toggle = (idx: number) =>
     setMatches(prev => prev?.map((m, i) => i === idx ? { ...m, selected: !m.selected } : m) ?? null);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!matches) return;
-    matches.filter(m => m.selected).forEach(m => {
-      store.updateMaterial(m.materialId, { basePrice: m.newPrice });
-    });
+    for (const m of matches.filter(m => m.selected)) {
+      await updateMaterial(m.materialId, { basePrice: m.newPrice });
+    }
+    await loadCatalog();
     setSaved(true);
     setTimeout(onClose, 1500);
   };

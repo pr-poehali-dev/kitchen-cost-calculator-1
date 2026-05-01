@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
+import { useCatalog, addVendor, updateVendor, deleteVendor, addMaterial, updateMaterial } from '@/hooks/useCatalog';
 import type { Vendor, Material } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { Field, Modal } from './BaseShared';
@@ -15,37 +16,38 @@ interface Props {
 
 export default function VendorsTab({ selectedId, onSelect }: Props) {
   const store = useStore();
+  const catalog = useCatalog();
   const [editingVendor, setEditingVendor] = useState<Partial<Vendor> | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Partial<Material> | null>(null);
   const [expandedMfr, setExpandedMfr] = useState<Record<string, boolean>>({});
   const [sideSearch, setSideSearch] = useState('');
   const [matSearch, setMatSearch] = useState('');
 
-  const vendor = store.vendors.find(v => v.id === selectedId);
+  const vendor = catalog.vendors.find(v => v.id === selectedId);
   const allTypes = store.settings.materialTypes;
 
   // Map: vendorId → {count, mfrIds} — O(1) для сайдбара
   const vendorStats = useMemo(() => {
     const countMap = new Map<string, number>();
     const mfrMap = new Map<string, Set<string>>();
-    for (const m of store.materials) {
+    for (const m of catalog.materials) {
       if (!m.vendorId) continue;
       countMap.set(m.vendorId, (countMap.get(m.vendorId) || 0) + 1);
       if (!mfrMap.has(m.vendorId)) mfrMap.set(m.vendorId, new Set());
       if (m.manufacturerId) mfrMap.get(m.vendorId)!.add(m.manufacturerId);
     }
     return { countMap, mfrMap };
-  }, [store.materials]);
+  }, [catalog.materials]);
 
   const vendorMaterials = useMemo(() =>
-    store.materials.filter(m => m.vendorId === selectedId),
-    [store.materials, selectedId]
+    catalog.materials.filter(m => m.vendorId === selectedId),
+    [catalog.materials, selectedId]
   );
 
   const visibleVendors = useMemo(() => {
     const sq = sideSearch.trim().toLowerCase();
-    return sq ? store.vendors.filter(v => v.name.toLowerCase().includes(sq)) : store.vendors;
-  }, [store.vendors, sideSearch]);
+    return sq ? catalog.vendors.filter(v => v.name.toLowerCase().includes(sq)) : catalog.vendors;
+  }, [catalog.vendors, sideSearch]);
 
   const filteredVendorMaterials = useMemo(() => {
     const mq = matSearch.trim().toLowerCase();
@@ -59,13 +61,13 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
 
   // Производители у которых уже есть материалы у этого поставщика
   const mfrWithMaterials = useMemo(() =>
-    store.manufacturers
+    catalog.manufacturers
       .filter(mfr => filteredVendorMaterials.some(m => m.manufacturerId === mfr.id))
       .map(mfr => ({
         manufacturer: mfr,
         materials: filteredVendorMaterials.filter(m => m.manufacturerId === mfr.id),
       })),
-    [store.manufacturers, filteredVendorMaterials]
+    [catalog.manufacturers, filteredVendorMaterials]
   );
 
   const toggleMfr = (mfrId: string) =>
@@ -106,7 +108,7 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
               mfrWithMaterials={mfrWithMaterials}
               allTypes={allTypes}
               onEditVendor={() => setEditingVendor(vendor)}
-              onDeleteVendor={() => { store.deleteVendor(vendor.id); onSelect(null); }}
+              onDeleteVendor={async () => { await deleteVendor(vendor.id); onSelect(null); }}
               onAddMaterial={handleAddMaterial}
             />
             <VendorAssortment
@@ -178,10 +180,10 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
             </div>
             <div className="flex gap-2 pt-1">
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!editingVendor.name) return;
-                  if (editingVendor.id) store.updateVendor(editingVendor.id, editingVendor);
-                  else store.addVendor({ ...editingVendor, materialTypeIds: editingVendor.materialTypeIds || [] } as Omit<Vendor, 'id'>);
+                  if (editingVendor.id) await updateVendor(editingVendor.id, editingVendor);
+                  else await addVendor({ ...editingVendor, materialTypeIds: editingVendor.materialTypeIds || [] } as Omit<Vendor, 'id'>);
                   setEditingVendor(null);
                 }}
                 className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90"
@@ -203,7 +205,7 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
                 <select value={editingMaterial.manufacturerId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, manufacturerId: e.target.value }))}
                   className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
                   <option value="">— выбрать —</option>
-                  {store.manufacturers.map(m => <option key={m.id} value={m.id} className="bg-[hsl(220,14%,11%)]">{m.name}</option>)}
+                  {catalog.manufacturers.map(m => <option key={m.id} value={m.id} className="bg-[hsl(220,14%,11%)]">{m.name}</option>)}
                 </select>
               </div>
               <div>
@@ -211,7 +213,7 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
                 <select value={editingMaterial.vendorId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, vendorId: e.target.value || undefined }))}
                   className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
                   <option value="">— не указан —</option>
-                  {store.vendors.map(v => <option key={v.id} value={v.id} className="bg-[hsl(220,14%,11%)]">{v.name}</option>)}
+                  {catalog.vendors.map(v => <option key={v.id} value={v.id} className="bg-[hsl(220,14%,11%)]">{v.name}</option>)}
                 </select>
               </div>
             </div>
@@ -257,10 +259,10 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
             />
             <div className="flex gap-2 pt-1">
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!editingMaterial.name || !editingMaterial.typeId) return;
-                  if (editingMaterial.id) store.updateMaterial(editingMaterial.id, editingMaterial);
-                  else store.addMaterial(editingMaterial as Omit<Material, 'id'>);
+                  if (editingMaterial.id) await updateMaterial(editingMaterial.id, editingMaterial);
+                  else await addMaterial(editingMaterial as Omit<Material, 'id'>);
                   setEditingMaterial(null);
                 }}
                 className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90"

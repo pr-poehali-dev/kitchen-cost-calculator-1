@@ -4,6 +4,7 @@ import GlobalSearch from '@/components/GlobalSearch';
 import { AppLoadingSkeleton } from '@/components/Skeleton';
 import { useStore, loadStateFromDb, setStoreToken, forceSetGlobalState, saveStateToDb } from '@/store/useStore';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
+import { setCatalogToken, loadCatalog, syncCatalogFromAppState } from '@/hooks/useCatalog';
 import HomePage from '@/pages/HomePage';
 import ClientsPage from '@/clients/ClientsPage';
 import CalcPage from '@/pages/CalcPage';
@@ -61,16 +62,39 @@ export default function App() {
     if (!token) return;
 
     setStoreToken(token);
+    setCatalogToken(token);
     setStateLoading(true);
 
-    loadStateFromDb(token).then(dbState => {
+    loadStateFromDb(token).then(async dbState => {
       if (dbState) {
         forceSetGlobalState(dbState);
       } else {
-        // БД пуста — первый вход, сохраняем то что есть
         saveStateToDb();
       }
       store.patchSkatMaterials('mt2', 'v2');
+
+      // Загружаем каталог из БД; если пуст — синхронизируем из AppState
+      try {
+        const res = await fetch(`${(await import('@/config/api')).API_URLS.catalog}/?action=all`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        const catalogData = await res.json();
+        const hasData = (catalogData.materials?.length || 0) > 0 ||
+                        (catalogData.manufacturers?.length || 0) > 0;
+        if (hasData) {
+          await loadCatalog();
+        } else {
+          const currentState = (await import('@/store/stateCore')).getGlobalState();
+          await syncCatalogFromAppState(
+            currentState.manufacturers,
+            currentState.vendors,
+            currentState.materials,
+          );
+        }
+      } catch {
+        await loadCatalog();
+      }
+
       setStateLoading(false);
     });
   }, [state.status]);

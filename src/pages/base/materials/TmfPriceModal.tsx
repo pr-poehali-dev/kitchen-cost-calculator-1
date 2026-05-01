@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
-import { useStore, saveStateToDb } from '@/store/useStore';
+import { useCatalog, updatePricesBatch, loadCatalog } from '@/hooks/useCatalog';
 import Icon from '@/components/ui/icon';
 import { fmt, Modal } from '../BaseShared';
 import { tmfColorMaterialId } from './TmfImportModal';
@@ -111,7 +111,7 @@ interface PriceChange {
 interface Props { onClose: () => void }
 
 export default function TmfPriceModal({ onClose }: Props) {
-  const store = useStore();
+  const catalog = useCatalog();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [fileName, setFileName] = useState('');
@@ -144,7 +144,7 @@ export default function TmfPriceModal({ onClose }: Props) {
 
           // Ищем все материалы этой коллекции в базе (по префиксу id)
           const prefix = `tmf__${cfg.label.toLowerCase().replace(/[^a-zа-яё0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')}__`;
-          const collMaterials = store.materials.filter(m => m.id.startsWith(prefix));
+          const collMaterials = catalog.materials.filter(m => m.id.startsWith(prefix));
 
           for (const v of cfg.variants) {
             const newPrice = newPrices[v.key];
@@ -190,43 +190,34 @@ export default function TmfPriceModal({ onClose }: Props) {
   const toggle = (idx: number) =>
     setChanges(prev => prev?.map((c, i) => i === idx ? { ...c, selected: !c.selected } : c) ?? null);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!changes) return;
     const sel = changes.filter(c => c.selected);
-    const today = new Date().toISOString().slice(0, 10);
 
-    // Обновляем все материалы-цвета одним setState
-    store.setState(s => {
-      const materials = s.materials.map(mat => {
-        if (!mat.id.startsWith('tmf__')) return mat;
-        if (!mat.variants?.length) return mat;
+    const updates: Array<{ materialId: string; variants: Array<{ variantId: string; basePrice: number }> }> = [];
 
-        let changed = false;
-        const newVariants = mat.variants.map(v => {
-          for (const chg of sel) {
-            const variantSuffix = `__${chg.variantKey.toLowerCase().replace(/[^a-zа-яё0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')}`;
-            const collPrefix = `tmf__${chg.collectionLabel.toLowerCase().replace(/[^a-zа-яё0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')}__`;
-            if (mat.id.startsWith(collPrefix) && v.id.endsWith(variantSuffix)) {
-              changed = true;
-              return { ...v, basePrice: chg.newPrice };
-            }
+    for (const mat of catalog.materials) {
+      if (!mat.id.startsWith('tmf__')) continue;
+      if (!mat.variants?.length) continue;
+
+      const changedVariants: Array<{ variantId: string; basePrice: number }> = [];
+      for (const v of mat.variants) {
+        for (const chg of sel) {
+          const variantSuffix = `__${chg.variantKey.toLowerCase().replace(/[^a-zа-яё0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')}`;
+          const collPrefix = `tmf__${chg.collectionLabel.toLowerCase().replace(/[^a-zа-яё0-9]/gi, '_').replace(/_+/g, '_').replace(/^_|_$/g, '')}__`;
+          if (mat.id.startsWith(collPrefix) && v.id.endsWith(variantSuffix)) {
+            changedVariants.push({ variantId: v.id, basePrice: chg.newPrice });
+            break;
           }
-          return v;
-        });
+        }
+      }
+      if (changedVariants.length > 0) {
+        updates.push({ materialId: mat.id, variants: changedVariants });
+      }
+    }
 
-        if (!changed) return mat;
-        return {
-          ...mat,
-          variants: newVariants,
-          basePrice: newVariants[0]?.basePrice ?? mat.basePrice,
-          priceUpdatedAt: today,
-        };
-      });
-
-      return { ...s, materials };
-    });
-
-    saveStateToDb();
+    await updatePricesBatch(updates);
+    await loadCatalog();
     setSaved(true);
     setTimeout(onClose, 1500);
   };

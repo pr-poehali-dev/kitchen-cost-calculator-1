@@ -1,4 +1,5 @@
 import { useStore } from '@/store/useStore';
+import { useCatalog, addMaterial, updateMaterial } from '@/hooks/useCatalog';
 import type { Material } from '@/store/types';
 import { Field, Modal } from '../BaseShared';
 import VariantsEditor from '../VariantsEditor';
@@ -11,12 +12,13 @@ interface Props {
 
 export default function MaterialEditModal({ editingMaterial, onChange, onClose }: Props) {
   const store = useStore();
+  const catalog = useCatalog();
   const allTypes = store.settings.materialTypes;
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!editingMaterial.name || !editingMaterial.typeId) return;
-    if (editingMaterial.id) store.updateMaterial(editingMaterial.id, editingMaterial);
-    else store.addMaterial(editingMaterial as Omit<Material, 'id'>);
+    if (editingMaterial.id) await updateMaterial(editingMaterial.id, editingMaterial);
+    else await addMaterial(editingMaterial as Omit<Material, 'id'>);
     onClose();
   };
 
@@ -30,7 +32,7 @@ export default function MaterialEditModal({ editingMaterial, onChange, onClose }
             <select value={editingMaterial.manufacturerId || ''} onChange={e => onChange({ ...editingMaterial, manufacturerId: e.target.value })}
               className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
               <option value="">— выбрать —</option>
-              {store.manufacturers.map(m => <option key={m.id} value={m.id} className="bg-[hsl(220,14%,11%)]">{m.name}</option>)}
+              {catalog.manufacturers.map(m => <option key={m.id} value={m.id} className="bg-[hsl(220,14%,11%)]">{m.name}</option>)}
             </select>
           </div>
           <div>
@@ -38,7 +40,7 @@ export default function MaterialEditModal({ editingMaterial, onChange, onClose }
             <select value={editingMaterial.vendorId || ''} onChange={e => onChange({ ...editingMaterial, vendorId: e.target.value || undefined })}
               className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
               <option value="">— не указан —</option>
-              {store.vendors.map(v => <option key={v.id} value={v.id} className="bg-[hsl(220,14%,11%)]">{v.name}</option>)}
+              {catalog.vendors.map(v => <option key={v.id} value={v.id} className="bg-[hsl(220,14%,11%)]">{v.name}</option>)}
             </select>
           </div>
         </div>

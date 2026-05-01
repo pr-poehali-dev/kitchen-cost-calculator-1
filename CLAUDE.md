@@ -107,6 +107,31 @@ headers.get('X-Authorization') || headers.get('Authorization')
 
 ---
 
+## Каталог материалов (отдельный API)
+
+Каталог (материалы, производители, поставщики) вынесен из AppState в отдельный бэкенд.
+
+**Хук:** `src/hooks/useCatalog.ts`  
+**Бэкенд:** `backend/catalog/index.py` → `API_URLS.catalog`  
+**Таблицы БД:** `catalog_manufacturers`, `catalog_vendors`, `catalog_materials`
+
+```typescript
+import { useCatalog, addMaterial, updateMaterial, deleteMaterial,
+         addManufacturer, updateManufacturer, deleteManufacturer,
+         addVendor, updateVendor, deleteVendor,
+         bulkUpsertMaterials, updatePricesBatch, loadCatalog } from '@/hooks/useCatalog'
+
+const catalog = useCatalog()
+// catalog.materials, catalog.manufacturers, catalog.vendors, catalog.loading
+```
+
+**Правило:** ВСЕГДА использовать `useCatalog()` для каталога, НЕ `useStore()`.  
+`useStore()` — только для settings, projects, expenses, blocks, services.
+
+При первом входе: если каталог пуст → автосинхронизация из AppState в БД (App.tsx).
+
+---
+
 ## Хранилище (Store)
 
 Главное хранилище: `src/store/useStore.ts` — `useSyncExternalStore`
@@ -114,7 +139,7 @@ headers.get('X-Authorization') || headers.get('Authorization')
 ### Слайсы
 ```
 src/store/slices/
-  catalogSlice.ts      — материалы, производители, поставщики
+  catalogSlice.ts      — УСТАРЕЛ для прямого использования (данные теперь в useCatalog)
   projectSlice.ts      — проекты (расчёты), активный проект
   servicesSlice.ts     — блоки услуг
   expensesSlice.ts     — расходы и наценки

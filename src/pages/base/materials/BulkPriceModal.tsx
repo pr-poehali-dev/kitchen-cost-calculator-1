@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { useStore } from '@/store/useStore';
+import { updateMaterial, loadCatalog } from '@/hooks/useCatalog';
 import type { Material } from '@/store/types';
 import { fmt, Modal } from '../BaseShared';
 
 export default function BulkPriceModal({ materials, onClose }: { materials: Material[]; onClose: () => void }) {
-  const store = useStore();
   const [prices, setPrices] = useState<Record<string, string>>(
     () => Object.fromEntries(materials.map(m => [m.id, m.basePrice > 0 ? String(m.basePrice) : '']))
   );
@@ -14,11 +13,12 @@ export default function BulkPriceModal({ materials, onClose }: { materials: Mate
     return val !== m.basePrice && !isNaN(val);
   });
 
-  const handleSave = () => {
-    changed.forEach(m => {
+  const handleSave = async () => {
+    for (const m of changed) {
       const val = parseFloat(prices[m.id]);
-      if (!isNaN(val)) store.updateMaterial(m.id, { basePrice: val });
-    });
+      if (!isNaN(val)) await updateMaterial(m.id, { basePrice: val });
+    }
+    await loadCatalog();
     onClose();
   };
 

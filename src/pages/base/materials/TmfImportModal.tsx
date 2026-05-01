@@ -1,6 +1,8 @@
 import { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useStore, saveStateToDb } from '@/store/useStore';
+import { getGlobalState } from '@/store/stateCore';
+import { useCatalog, bulkUpsertMaterials, loadCatalog } from '@/hooks/useCatalog';
 import { Modal } from '../BaseShared';
 import { TMF_COLLECTIONS, tmfColorMaterialId, tmfColorVariantId } from './tmfConfig';
 import { extractPrices, extractColorVariants, type ParsedCollection } from './tmfParser';
@@ -12,6 +14,7 @@ interface Props { onClose: () => void }
 
 export default function TmfImportModal({ onClose }: Props) {
   const store = useStore();
+  const catalog = useCatalog();
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload');
@@ -105,11 +108,11 @@ export default function TmfImportModal({ onClose }: Props) {
     });
   };
 
-  const handleImport = () => {
-    const tmfMfr = store.manufacturers.find(m =>
+  const handleImport = async () => {
+    const tmfMfr = catalog.manufacturers.find(m =>
       m.name.toLowerCase() === 'тмф' || m.name.toLowerCase().includes('томск')
     );
-    const evseyevVendor = store.vendors.find(v => v.name.toLowerCase().includes('евсеев'));
+    const evseyevVendor = catalog.vendors.find(v => v.name.toLowerCase().includes('евсеев'));
     const today = new Date().toISOString().slice(0, 10);
     let created = 0;
     let updated = 0;
@@ -176,6 +179,10 @@ export default function TmfImportModal({ onClose }: Props) {
     });
 
     saveStateToDb();
+
+    await bulkUpsertMaterials(getGlobalState().materials);
+    await loadCatalog();
+
     setResult({ created, updated });
     setStep('done');
   };

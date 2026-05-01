@@ -1,4 +1,5 @@
 import { useStore } from '@/store/useStore';
+import { useCatalog } from '@/hooks/useCatalog';
 import type { MaterialType } from '@/store/types';
 import Icon from '@/components/ui/icon';
 
@@ -32,6 +33,7 @@ export default function MatTypeBar({
   onAddMaterial, priceMenu,
 }: Props) {
   const store = useStore();
+  const catalog = useCatalog();
   const allTypes: MaterialType[] = store.settings.materialTypes;
 
   return (
@@ -42,16 +44,16 @@ export default function MatTypeBar({
           onClick={() => onFilterChange('all')}
           className={`px-3 py-1.5 rounded text-xs transition-colors shrink-0 ${matTypeFilter === 'all' ? 'bg-gold text-[hsl(220,16%,8%)] font-medium' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
         >
-          Все ({store.materials.length})
+          Все ({catalog.materials.length})
         </button>
-        {allTypes.filter(t => store.materials.some(m => m.typeId === t.id)).map(t => (
+        {allTypes.filter(t => catalog.materials.some(m => m.typeId === t.id)).map(t => (
           <button
             key={t.id}
             onClick={() => onFilterChange(t.id)}
             className={`px-3 py-1.5 rounded text-xs transition-colors font-medium shrink-0 ${matTypeFilter === t.id ? 'text-[hsl(220,16%,8%)]' : 'bg-[hsl(220,12%,16%)] text-[hsl(var(--text-dim))] hover:text-foreground'}`}
             style={matTypeFilter === t.id ? { backgroundColor: t.color || '#c8a96e' } : {}}
           >
-            {t.name} ({store.materials.filter(m => m.typeId === t.id).length})
+            {t.name} ({catalog.materials.filter(m => m.typeId === t.id).length})
           </button>
         ))}
       </div>

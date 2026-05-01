@@ -1,4 +1,5 @@
 import { useStore } from '@/store/useStore';
+import { useCatalog } from '@/hooks/useCatalog';
 import type { Vendor, Material, MaterialType } from '@/store/types';
 import Icon from '@/components/ui/icon';
 
@@ -41,7 +42,8 @@ export default function VendorHeroCard({
   onAddMaterial,
 }: Props) {
   const store = useStore();
-  const availableMfrs = store.manufacturers;
+  const catalog = useCatalog();
+  const availableMfrs = catalog.manufacturers;
 
   return (
     <div className="bg-[hsl(220,14%,11%)] rounded-lg border border-border overflow-hidden">

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { useCatalog } from '@/hooks/useCatalog';
 import type { MaterialType, MaterialCategory } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import MaterialTypeModal from './MaterialTypeModal';
@@ -22,6 +23,7 @@ function getCatTypeIds(cat: MaterialCategory): string[] {
 
 export default function SettingsCatalogSection() {
   const store = useStore();
+  const catalog = useCatalog();
   const [editingType, setEditingType] = useState<Partial<MaterialType> | null>(null);
   const [editingCategory, setEditingCategory] = useState<Partial<MaterialCategory & { typeIds: string[] }> | null>(null);
   const [catTypeFilter, setCatTypeFilter] = useState<string>('all');
@@ -44,7 +46,7 @@ export default function SettingsCatalogSection() {
             <div key={t.id} className="flex items-center gap-2 px-3 py-2 bg-[hsl(220,12%,14%)] rounded group">
               <span className="w-3.5 h-3.5 rounded-full shrink-0" style={{ backgroundColor: t.color || '#888' }} />
               <span className="flex-1 text-sm text-foreground min-w-0 truncate">{t.name}</span>
-              <span className="text-xs text-[hsl(var(--text-muted))] font-mono shrink-0 hidden sm:inline">{store.materials.filter(m => m.typeId === t.id).length} матер.</span>
+              <span className="text-xs text-[hsl(var(--text-muted))] font-mono shrink-0 hidden sm:inline">{catalog.materials.filter(m => m.typeId === t.id).length} матер.</span>
               <span className="text-xs text-[hsl(var(--text-muted))] shrink-0 hidden sm:inline">
                 {categories.filter(c => getCatTypeIds(c).includes(t.id)).length > 0 && `${categories.filter(c => getCatTypeIds(c).includes(t.id)).length} катег.`}
               </span>
@@ -97,7 +99,7 @@ export default function SettingsCatalogSection() {
                     ? types.map(t => <span key={t.id} className="text-xs px-2 py-0.5 rounded-full text-[hsl(220,16%,8%)] font-medium" style={{ backgroundColor: t.color || '#888' }}>{t.name}</span>)
                     : <span className="text-xs text-[hsl(var(--text-muted))]">Общая</span>}
                 </div>
-                <span className="text-xs text-[hsl(var(--text-muted))] font-mono shrink-0 hidden sm:inline">{store.materials.filter(m => m.categoryId === cat.id).length}</span>
+                <span className="text-xs text-[hsl(var(--text-muted))] font-mono shrink-0 hidden sm:inline">{catalog.materials.filter(m => m.categoryId === cat.id).length}</span>
                 <div className="flex gap-1 shrink-0">
                   <button onClick={() => setEditingCategory({ ...cat, typeIds: getCatTypeIds(cat) })} className="text-[hsl(var(--text-muted))] hover:text-foreground p-1 transition-colors opacity-0 group-hover:opacity-100"><Icon name="Pencil" size={12} /></button>
                   <button onClick={() => setDeleteConfirm({ kind: 'category', id: cat.id, name: cat.name })} className="text-[hsl(var(--text-muted))] hover:text-destructive p-1 transition-colors opacity-0 group-hover:opacity-100"><Icon name="Trash2" size={12} /></button>

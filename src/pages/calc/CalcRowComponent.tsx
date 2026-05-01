@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '@/store/useStore';
+import { useCatalog } from '@/hooks/useCatalog';
 import type { CalcRow, CalcColumnKey, Material, MaterialVariant } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { COLUMN_WIDTHS, fmt } from './constants';
@@ -25,6 +26,7 @@ export default function CalcRowComponent({
   otherBlocks, onDelete, onDuplicate, onCopyTo,
 }: Props) {
   const store = useStore();
+  const catalog = useCatalog();
   const [showSuggest, setShowSuggest] = useState(false);
   const [nameFilter, setNameFilter] = useState(row.name);
   const [variantPickerMat, setVariantPickerMat] = useState<Material | null>(null);
@@ -43,7 +45,7 @@ export default function CalcRowComponent({
 
   const rowTotal = row.qty * row.price;
 
-  const filteredMaterials = store.materials.filter(m => {
+  const filteredMaterials = catalog.materials.filter(m => {
     const typeOk = allowedTypeIds.length === 0 || allowedTypeIds.includes(m.typeId);
     const q = nameFilter.toLowerCase();
     const variantSizeMatch = q !== '' && m.variants?.some(v => (v.size || '').toLowerCase().includes(q));
@@ -81,7 +83,7 @@ export default function CalcRowComponent({
   };
 
   const applyMaterial = (matId: string) => {
-    const mat = store.materials.find(m => m.id === matId);
+    const mat = catalog.materials.find(m => m.id === matId);
     if (!mat) return;
     if (mat.variants && mat.variants.length > 0) {
       setShowSuggest(false);
@@ -121,7 +123,7 @@ export default function CalcRowComponent({
         className="bg-transparent text-sm text-foreground w-full outline-none placeholder:text-[hsl(var(--text-muted))] border-b border-transparent focus:border-[hsl(var(--gold))]"
       />
       {row.materialId && row.variantId && (() => {
-        const mat = store.materials.find(m => m.id === row.materialId);
+        const mat = catalog.materials.find(m => m.id === row.materialId);
         return mat ? (
           <button onMouseDown={e => { e.preventDefault(); setVariantPickerMat(mat); }} className="shrink-0 text-[hsl(var(--text-muted))] hover:text-gold transition-colors" title="Сменить размер">
             <Icon name="ChevronDown" size={11} />
@@ -206,7 +208,7 @@ export default function CalcRowComponent({
                   className="bg-transparent text-sm text-foreground w-full outline-none placeholder:text-[hsl(var(--text-muted))] border-b border-transparent focus:border-[hsl(var(--gold))]"
                 />
                 {row.materialId && row.variantId && (() => {
-                  const mat = store.materials.find(m => m.id === row.materialId);
+                  const mat = catalog.materials.find(m => m.id === row.materialId);
                   return mat ? (
                     <button
                       onMouseDown={e => { e.preventDefault(); setVariantPickerMat(mat); }}

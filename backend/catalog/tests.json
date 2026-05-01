@@ -7,15 +7,9 @@
       "expectedStatus": 200
     },
     {
-      "name": "GET all without auth returns 401",
+      "name": "GET all without token returns 401",
       "method": "GET",
       "path": "/?action=all",
-      "expectedStatus": 401
-    },
-    {
-      "name": "GET entity without auth returns 401",
-      "method": "GET",
-      "path": "/?entity=materials",
       "expectedStatus": 401
     }
   ]

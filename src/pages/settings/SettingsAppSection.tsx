@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
+import { useCatalog } from '@/hooks/useCatalog';
 import Icon from '@/components/ui/icon';
 
 const ACCENT_KEY = 'kuhni_pro_accent';
@@ -33,6 +34,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export default function SettingsAppSection() {
   const store = useStore();
+  const catalog = useCatalog();
   const [accent, setAccent] = useState<AccentId>(() => (localStorage.getItem(ACCENT_KEY) as AccentId) || 'gold');
 
   useEffect(() => {
@@ -50,9 +52,9 @@ export default function SettingsAppSection() {
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
           {[
             { label: 'Проектов',      value: store.projects.length,      icon: 'FolderOpen' },
-            { label: 'Производителей', value: store.manufacturers.length, icon: 'Building2' },
-            { label: 'Поставщиков',   value: store.vendors.length,        icon: 'Truck' },
-            { label: 'Материалов',    value: store.materials.length,      icon: 'Package' },
+            { label: 'Производителей', value: catalog.manufacturers.length, icon: 'Building2' },
+            { label: 'Поставщиков',   value: catalog.vendors.length,        icon: 'Truck' },
+            { label: 'Материалов',    value: catalog.materials.length,      icon: 'Package' },
             { label: 'Услуг',         value: store.services.length,       icon: 'Wrench' },
           ].map(stat => (
             <div key={stat.label} className="bg-[hsl(220,12%,14%)] rounded p-3 text-center">

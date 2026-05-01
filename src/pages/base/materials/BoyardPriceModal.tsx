@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useStore } from '@/store/useStore';
+import { useCatalog, updatePricesBatch, loadCatalog } from '@/hooks/useCatalog';
 import Icon from '@/components/ui/icon';
 import { Modal } from '../BaseShared';
 import func2url from '../../../../backend/func2url.json';
@@ -29,7 +29,7 @@ interface ChangedVariant {
 }
 
 export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
-  const store = useStore();
+  const catalog = useCatalog();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [rate, setRate] = useState(0);
@@ -61,10 +61,10 @@ export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
         priceMap.set(item.article, item);
       }
 
-      const boyardMfr = store.manufacturers.find(m => m.name.toLowerCase() === 'boyard');
+      const boyardMfr = catalog.manufacturers.find(m => m.name.toLowerCase() === 'boyard');
       const result: ChangedVariant[] = [];
 
-      for (const mat of store.materials) {
+      for (const mat of catalog.materials) {
         if (mat.manufacturerId !== boyardMfr?.id) continue;
         if (!mat.variants?.length) continue;
 
@@ -108,14 +108,13 @@ export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
   const toggleAll = (val: boolean) =>
     setChanged(prev => prev?.map(m => ({ ...m, selected: val })) ?? null);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!changed) return;
     const selected = changed.filter(m => m.selected);
 
-    // Группируем обновления по materialId
     const byMaterial = new Map<string, { article: string; materialId: string; variants: Array<{ variantId: string; basePrice: number }> }>();
     for (const ch of selected) {
-      const mat = store.materials.find(m => m.id === ch.materialId);
+      const mat = catalog.materials.find(m => m.id === ch.materialId);
       if (!mat) continue;
       if (!byMaterial.has(ch.materialId)) {
         byMaterial.set(ch.materialId, { article: mat.article || '', materialId: ch.materialId, variants: [] });
@@ -126,7 +125,8 @@ export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
       });
     }
 
-    store.updateSkatPrices(Array.from(byMaterial.values()));
+    await updatePricesBatch(Array.from(byMaterial.values()));
+    await loadCatalog();
     setSaved(true);
     setTimeout(onClose, 1500);
   };

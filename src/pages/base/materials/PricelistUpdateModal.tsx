@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useStore } from '@/store/useStore';
+import { useCatalog, updatePricesBatch, loadCatalog } from '@/hooks/useCatalog';
 import Icon from '@/components/ui/icon';
 import { fmt, Modal } from '../BaseShared';
 import func2url from '../../../../backend/func2url.json';
@@ -28,7 +28,7 @@ interface Match {
 }
 
 export default function PricelistUpdateModal({ onClose }: { onClose: () => void }) {
-  const store = useStore();
+  const catalog = useCatalog();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [matches, setMatches] = useState<Match[] | null>(null);
@@ -47,7 +47,7 @@ export default function PricelistUpdateModal({ onClose }: { onClose: () => void 
       bySeries[item.series].push(item);
     }
 
-    for (const mat of store.materials) {
+    for (const mat of catalog.materials) {
       if (!mat.variants?.length) continue;
 
       for (const v of mat.variants) {
@@ -120,27 +120,23 @@ export default function PricelistUpdateModal({ onClose }: { onClose: () => void 
   const toggle = (idx: number) =>
     setMatches(prev => prev?.map((m, i) => i === idx ? { ...m, selected: !m.selected } : m) ?? null);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!matches) return;
     const selected = matches.filter(m => m.selected);
 
-    // Группируем по materialId — один updateMaterial на материал со всеми изменёнными вариантами
-    const byMaterial = new Map<string, Map<string, number>>();
+    const byMaterial = new Map<string, Array<{ variantId: string; basePrice: number }>>();
     for (const m of selected) {
-      if (!byMaterial.has(m.materialId)) byMaterial.set(m.materialId, new Map());
-      byMaterial.get(m.materialId)!.set(m.variantId, m.newPrice);
+      if (!byMaterial.has(m.materialId)) byMaterial.set(m.materialId, []);
+      byMaterial.get(m.materialId)!.push({ variantId: m.variantId, basePrice: m.newPrice });
     }
 
-    for (const [materialId, variantPrices] of byMaterial) {
-      const mat = store.materials.find(x => x.id === materialId);
-      if (!mat?.variants) continue;
-      store.updateMaterial(materialId, {
-        variants: mat.variants.map(v =>
-          variantPrices.has(v.id) ? { ...v, basePrice: variantPrices.get(v.id)! } : v
-        ),
-      });
-    }
+    const updates = Array.from(byMaterial.entries()).map(([materialId, variants]) => ({
+      materialId,
+      variants,
+    }));
 
+    await updatePricesBatch(updates);
+    await loadCatalog();
     setSaved(true);
     setTimeout(onClose, 1500);
   };

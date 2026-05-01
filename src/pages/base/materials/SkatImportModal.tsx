@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { getGlobalState } from '@/store/stateCore';
+import { useCatalog, bulkUpsertMaterials, loadCatalog } from '@/hooks/useCatalog';
 import Icon from '@/components/ui/icon';
 import { Modal } from '../BaseShared';
 import func2url from '../../../../backend/func2url.json';
@@ -52,6 +54,7 @@ function shortCatName(subsection: string): string {
 
 export default function SkatImportModal({ onClose }: { onClose: () => void }) {
   const store = useStore();
+  const catalog = useCatalog();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [items, setItems] = useState<SkatAllItem[]>([]);
@@ -61,7 +64,7 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
 
   const facades = items.filter(i => (i.item_type ?? 'facade') === 'facade');
   const decors = items.filter(i => i.item_type === 'decor');
-  const existingArticles = new Set(store.materials.map(m => m.article).filter(Boolean));
+  const existingArticles = new Set(catalog.materials.map(m => m.article).filter(Boolean));
   const toCreate = items.filter(i => !existingArticles.has(skatArticle(i.thickness_section, i.subsection, i.facade_type))).length;
   const toUpdate = items.length - toCreate;
 
@@ -85,10 +88,10 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
     }
   };
 
-  const handleImport = () => {
+  const handleImport = async () => {
     setImporting(true);
 
-    const existingMfr = store.manufacturers.find(m => m.name.toLowerCase() === 'скат');
+    const existingMfr = catalog.manufacturers.find(m => m.name.toLowerCase() === 'скат');
 
     // Категории по подсекциям (фасады)
     const subsections = Array.from(new Set(facades.map(i => i.subsection).filter(Boolean)));
@@ -166,6 +169,9 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
     );
 
     store.patchSkatMaterials(SKAT_TYPE_ID, SKAT_VENDOR_ID);
+
+    await bulkUpsertMaterials(getGlobalState().materials);
+    await loadCatalog();
 
     setResult(res);
     setImporting(false);

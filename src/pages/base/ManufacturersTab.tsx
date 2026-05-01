@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
+import { useCatalog, addManufacturer, updateManufacturer, deleteManufacturer, addMaterial, updateMaterial } from '@/hooks/useCatalog';
 import type { Manufacturer, Material } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { Field, Modal } from './BaseShared';
@@ -15,34 +16,35 @@ interface Props {
 
 export default function ManufacturersTab({ selectedId, onSelect }: Props) {
   const store = useStore();
+  const catalog = useCatalog();
   const [editingMfr, setEditingMfr] = useState<Partial<Manufacturer> | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Partial<Material> | null>(null);
   const [catFilter, setCatFilter] = useState<string>('all');
   const [sideSearch, setSideSearch] = useState('');
   const [matSearch, setMatSearch] = useState('');
 
-  const manufacturer = store.manufacturers.find(m => m.id === selectedId);
+  const manufacturer = catalog.manufacturers.find(m => m.id === selectedId);
   const allTypes = store.settings.materialTypes;
   const allCategories = store.settings.materialCategories || [];
 
   // Map: manufacturerId → count (O(1) вместо filter() внутри map сайдбара)
   const mfrMatCount = useMemo(() => {
     const map = new Map<string, number>();
-    for (const m of store.materials) {
+    for (const m of catalog.materials) {
       map.set(m.manufacturerId, (map.get(m.manufacturerId) || 0) + 1);
     }
     return map;
-  }, [store.materials]);
+  }, [catalog.materials]);
 
   const mfrMaterials = useMemo(() =>
-    store.materials.filter(m => m.manufacturerId === selectedId),
-    [store.materials, selectedId]
+    catalog.materials.filter(m => m.manufacturerId === selectedId),
+    [catalog.materials, selectedId]
   );
 
   const visibleMfrs = useMemo(() => {
     const sq = sideSearch.trim().toLowerCase();
-    return sq ? store.manufacturers.filter(m => m.name.toLowerCase().includes(sq)) : store.manufacturers;
-  }, [store.manufacturers, sideSearch]);
+    return sq ? catalog.manufacturers.filter(m => m.name.toLowerCase().includes(sq)) : catalog.manufacturers;
+  }, [catalog.manufacturers, sideSearch]);
 
   const filteredMfrMaterials = useMemo(() => {
     const catMaterials = catFilter === 'all'
@@ -102,7 +104,7 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
               manufacturer={manufacturer}
               mfrMaterialsCount={mfrMaterials.length}
               onEdit={() => setEditingMfr(manufacturer)}
-              onDelete={() => { store.deleteManufacturer(manufacturer.id); onSelect(null); }}
+              onDelete={async () => { await deleteManufacturer(manufacturer.id); onSelect(null); }}
             />
             <MfrAssortment
               manufacturer={manufacturer}
@@ -169,10 +171,10 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
             </div>
             <div className="flex gap-2 pt-1">
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!editingMfr.name) return;
-                  if (editingMfr.id) store.updateManufacturer(editingMfr.id, editingMfr);
-                  else store.addManufacturer({ ...editingMfr, materialTypeIds: editingMfr.materialTypeIds || [] } as Omit<Manufacturer, 'id'>);
+                  if (editingMfr.id) await updateManufacturer(editingMfr.id, editingMfr);
+                  else await addManufacturer({ ...editingMfr, materialTypeIds: editingMfr.materialTypeIds || [] } as Omit<Manufacturer, 'id'>);
                   setEditingMfr(null);
                 }}
                 className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90"
@@ -194,7 +196,7 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
                 <select value={editingMaterial.manufacturerId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, manufacturerId: e.target.value }))}
                   className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
                   <option value="">— выбрать —</option>
-                  {store.manufacturers.map(m => <option key={m.id} value={m.id} className="bg-[hsl(220,14%,11%)]">{m.name}</option>)}
+                  {catalog.manufacturers.map(m => <option key={m.id} value={m.id} className="bg-[hsl(220,14%,11%)]">{m.name}</option>)}
                 </select>
               </div>
               <div>
@@ -202,7 +204,7 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
                 <select value={editingMaterial.vendorId || ''} onChange={e => setEditingMaterial(p => ({ ...p!, vendorId: e.target.value || undefined }))}
                   className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-gold">
                   <option value="">— не указан —</option>
-                  {store.vendors.map(v => <option key={v.id} value={v.id} className="bg-[hsl(220,14%,11%)]">{v.name}</option>)}
+                  {catalog.vendors.map(v => <option key={v.id} value={v.id} className="bg-[hsl(220,14%,11%)]">{v.name}</option>)}
                 </select>
               </div>
             </div>
@@ -248,10 +250,10 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
             />
             <div className="flex gap-2 pt-1">
               <button
-                onClick={() => {
+                onClick={async () => {
                   if (!editingMaterial.name || !editingMaterial.typeId) return;
-                  if (editingMaterial.id) store.updateMaterial(editingMaterial.id, editingMaterial);
-                  else store.addMaterial(editingMaterial as Omit<Material, 'id'>);
+                  if (editingMaterial.id) await updateMaterial(editingMaterial.id, editingMaterial);
+                  else await addMaterial(editingMaterial as Omit<Material, 'id'>);
                   setEditingMaterial(null);
                 }}
                 className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90"
