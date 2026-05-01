@@ -6,15 +6,33 @@ import { apiFetch } from './docTypes';
 
 function DocPreviewModal({ url, title, onClose }: { url: string; title: string; onClose: () => void }) {
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/80 animate-fade-in" onClick={onClose}>
-      <div className="flex items-center justify-between px-4 py-2 bg-[hsl(220,14%,11%)] border-b border-border shrink-0" onClick={e => e.stopPropagation()}>
-        <span className="text-sm font-medium text-foreground truncate">{title}</span>
-        <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded hover:bg-white/10 transition-colors text-[hsl(var(--text-muted))] hover:text-foreground">
-          <Icon name="X" size={16} />
-        </button>
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#1a1a1a] animate-fade-in">
+      {/* Toolbar */}
+      <div className="flex items-center justify-between px-4 py-2 bg-[hsl(220,14%,11%)] border-b border-border shrink-0">
+        <div className="flex items-center gap-3">
+          <Icon name="FileText" size={14} className="text-gold" />
+          <span className="text-sm font-medium text-foreground truncate">{title}</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <a href={url} target="_blank" rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:text-foreground hover:border-gold/40 transition-all"
+            title="Открыть в новой вкладке"
+          >
+            <Icon name="ExternalLink" size={12} /> На весь экран
+          </a>
+          <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded hover:bg-white/10 transition-colors text-[hsl(var(--text-muted))] hover:text-foreground">
+            <Icon name="X" size={16} />
+          </button>
+        </div>
       </div>
-      <div className="flex-1 overflow-hidden" onClick={e => e.stopPropagation()}>
-        <iframe src={url} className="w-full h-full border-0" title={title} />
+      {/* Document viewer */}
+      <div className="flex-1 overflow-auto bg-[#2d2d2d]">
+        <iframe
+          src={url}
+          className="border-0"
+          title={title}
+          style={{ width: '100%', height: '100%', minHeight: '600px' }}
+        />
       </div>
     </div>
   );

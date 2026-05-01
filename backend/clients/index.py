@@ -775,9 +775,15 @@ def _doc_style(title='', contract_num=''):
   }}
 }}
 *{{box-sizing:border-box;margin:0;padding:0}}
-html{{background:#2d2d2d}}
-body{{font-family:'PT Serif',Georgia,serif;font-size:11pt;line-height:1.6;color:#000;background:#fff}}
-.page{{width:210mm;min-height:297mm;margin:10mm auto;padding:20mm 20mm 20mm 25mm;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.45)}}
+html{{background:#2d2d2d;min-height:100vh}}
+body{{font-family:'PT Serif',Georgia,serif;font-size:11pt;line-height:1.6;color:#000;background:transparent}}
+.page{{width:210mm;min-height:297mm;margin:16px auto;padding:20mm 20mm 20mm 25mm;background:#fff;box-shadow:0 6px 32px rgba(0,0,0,.6)}}
+@media screen and (min-width:900px){{
+  .page{{transform-origin:top center;transform:scale(1.1);margin-bottom:60px}}
+}}
+@media screen and (min-width:1200px){{
+  .page{{transform:scale(1.25);margin-bottom:120px}}
+}}
 h1{{font-size:13pt;text-align:center;font-weight:bold;margin:0 0 3px;text-transform:uppercase;letter-spacing:.1em}}
 h2{{font-size:11pt;text-align:center;font-weight:normal;margin:0 0 14px}}
 .city-date{{display:flex;justify-content:space-between;margin:10px 0 14px;font-size:11pt}}
@@ -884,7 +890,9 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
     contract_date_full = _fmt_date_full(c.get('contract_date') or '')
     prod_days = int(c.get('production_days') or 45)
     prepaid = float(c.get('prepaid_amount') or 0)
-    balance = float(c.get('balance_due') or 0)
+    # balance_due: если не заполнено явно — вычисляем из total - prepaid
+    _balance_stored = float(c.get('balance_due') or 0)
+    balance = _balance_stored if _balance_stored > 0 else max(0.0, total - prepaid)
     ptype = c.get('payment_type', '100% предоплата')
     custom = c.get('custom_payment_scheme', '') or ''
     products = _get_products(c)
@@ -942,7 +950,7 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 <h1>ДОГОВОР</h1>
 <h2>бытового подряда на изготовление мебели</h2>
 <div class="city-date"><span>г. {co_city}</span><span>№ {contract_num} от {contract_date_full}</span></div>
-<p class="no-indent">{co_name}, в лице {co_dir_pos}а <strong>{manager_line}</strong>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик», и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», заключили настоящий Договор о нижеследующем:</p>
+<p class="no-indent">{co_name}, в лице менеджера <strong>{manager_line}</strong>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик», и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», заключили настоящий Договор о нижеследующем:</p>
 
 <p class="sec">1. ПРЕДМЕТ ДОГОВОРА</p>
 <p>1.1. Подрядчик обязуется выполнить работу по изготовлению мебели и передать результат работы Заказчику (мебель передается в разобранном виде), а Заказчик обязуется принять и оплатить результат работ.</p>
@@ -1738,12 +1746,22 @@ def _build_docx(c: dict, doc_type: str, company: dict = None) -> bytes:
     zoom_el.set(_qn('w:percent'), '100')
     zoom_el.set(_qn('w:val'), 'bestFit')
     settings.append(zoom_el)
+    # Включаем автоматические переносы слов
+    hyph_el = _OxmlElement('w:autoHyphenation')
+    hyph_el.set(_qn('w:val'), '1')
+    settings.append(hyph_el)
+    # Ограничиваем зону переносов (консервативный режим)
+    hyph_zone = _OxmlElement('w:hyphenationZone')
+    hyph_zone.set(_qn('w:val'), '426')  # ~15mm
+    settings.append(hyph_zone)
 
     style = doc.styles['Normal']
     style.font.name = 'Times New Roman'
     style.font.size = Pt(11)
     style.paragraph_format.line_spacing = Pt(13)
     style.paragraph_format.space_after = Pt(0)
+    # Переносы и выравнивание по ширине для Normal
+    style.paragraph_format.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
     def _set_font(run, size=11, bold=False, name='Times New Roman'):
         run.font.name = name; run.font.size = Pt(size); run.bold = bold
