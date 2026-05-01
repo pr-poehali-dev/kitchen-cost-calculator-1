@@ -274,7 +274,8 @@ def handler(event: dict, context) -> dict:
                        contract_number, contract_date, total_amount, payment_type,
                        delivery_date, designer, measurer, reminder_date, reminder_note,
                        comment, created_at, updated_at, project_ids,
-                       source, tags, rating, property_type, property_area, has_children, has_pets
+                       source, tags, rating, property_type, property_area, has_children, has_pets,
+                       credit_contract_number, credit_contract_date, credit_bank, credit_prepaid, credit_balance
                 FROM clients {where}
                 ORDER BY {sort_field} {sort_dir} {null_last}
                 LIMIT %s OFFSET %s
@@ -331,6 +332,7 @@ def handler(event: dict, context) -> dict:
                 delivery_cost, assembly_cost,
                 designer, measurer, manager_name, project_ids, reminder_date, reminder_note, comment,
                 source, tags, rating, property_type, property_area, has_children, has_pets,
+                credit_contract_number, credit_contract_date, credit_bank, credit_prepaid, credit_balance,
                 created_by, updated_by
             ) VALUES (
                 %s,%s,%s,%s,%s,%s,%s,%s,
@@ -344,6 +346,7 @@ def handler(event: dict, context) -> dict:
                 %s,%s,
                 %s,%s,%s,%s,%s,%s,%s,
                 %s,%s,%s,%s,%s,%s,%s,
+                %s,%s,%s,%s,%s,
                 %s,%s
             ) RETURNING id
         ''', (
@@ -368,6 +371,8 @@ def handler(event: dict, context) -> dict:
             c.get('source', ''), c.get('tags', []), c.get('rating') or None,
             c.get('property_type', ''), c.get('property_area', ''),
             bool(c.get('has_children', False)), bool(c.get('has_pets', False)),
+            c.get('credit_contract_number', ''), c.get('credit_contract_date', '') or None,
+            c.get('credit_bank', ''), c.get('credit_prepaid', 0), c.get('credit_balance', 0),
             payload.get('sub'), payload.get('sub'),
         ))
             new_id = cur.fetchone()[0]
@@ -404,6 +409,8 @@ def handler(event: dict, context) -> dict:
                     reminder_date=%s, reminder_note=%s, comment=%s,
                     source=%s, tags=%s, rating=%s, property_type=%s, property_area=%s,
                     has_children=%s, has_pets=%s,
+                    credit_contract_number=%s, credit_contract_date=%s, credit_bank=%s,
+                    credit_prepaid=%s, credit_balance=%s,
                     updated_at=NOW(), updated_by=%s
                 WHERE id=%s
             ''', (
@@ -428,6 +435,8 @@ def handler(event: dict, context) -> dict:
                 c.get('source', ''), c.get('tags', []), c.get('rating') or None,
                 c.get('property_type', ''), c.get('property_area', ''),
                 bool(c.get('has_children', False)), bool(c.get('has_pets', False)),
+                c.get('credit_contract_number', ''), c.get('credit_contract_date', '') or None,
+                c.get('credit_bank', ''), c.get('credit_prepaid', 0), c.get('credit_balance', 0),
                 payload.get('sub'), cid,
             ))
             log_history(conn, cid, payload, 'updated', 'Данные клиента обновлены')
@@ -886,15 +895,46 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
     if not products_rows:
         products_rows = f'<tr><td class="num">1</td><td>Кухонный гарнитур</td><td class="num">шт.</td><td class="num">1</td><td class="right">{_fmt_money(total)}</td></tr>'
 
+    manager = c.get('manager_name') or ''
+    manager_line = manager if manager else '&nbsp;' * 30
+
+    # Поля кредитного договора
+    credit_num   = c.get('credit_contract_number', '') or ''
+    credit_date  = _fmt_date(c.get('credit_contract_date', '') or '')
+    credit_bank_name = c.get('credit_bank', '') or ''
+    credit_pre   = float(c.get('credit_prepaid') or 0)
+    credit_bal   = float(c.get('credit_balance') or 0)
+
+    # Раздел 3 — схема оплаты
     if custom:
         pay_html = f'<p>{custom}</p>'
     elif ptype == '100% предоплата':
-        pay_html = f'<p>3.2.1. Предварительная оплата производится при заключении Договора в размере {_fmt_money(prepaid)} ({_num_to_words(prepaid)}) рублей.</p><p>3.2.2. Окончательный платёж не предусмотрен. Стоимость работ оплачена полностью при заключении Договора.</p>'
+        pay_html = (
+            f'<p>3.2.1. Предварительная оплата производится при заключении Договора в размере '
+            f'{_fmt_money(prepaid)} ({_num_to_words(prepaid)}) рублей.</p>'
+            f'<p>3.2.2. Окончательный платёж не предусмотрен. Стоимость работ оплачена полностью при заключении Договора.</p>'
+        )
+    elif ptype == 'Кредит/рассрочка банка':
+        pay_html = (
+            f'<p>3.2.1. Предварительная оплата производится при заключении Договора в размере '
+            f'{_fmt_money(credit_pre)} ({_num_to_words(credit_pre)}) рублей, за счёт заёмных средств, '
+            f'при оформлении Заказчиком кредитного договора № {credit_num or "___"} от «{credit_date}», '
+            f'заключённым между Заказчиком и {credit_bank_name or "Банком"} на приобретение мебели '
+            f'и выплачивается Банком за Заказчика на условиях и в порядке, определённых кредитным договором.</p>'
+            f'<p>3.2.2. Окончательный платёж за выполненные по Договору работы в размере '
+            f'{_fmt_money(credit_bal)} ({_num_to_words(credit_bal)}) рублей, осуществляется за счёт заёмных средств, '
+            f'при оформлении Заказчиком кредитного договора № {credit_num or "___"} от «{credit_date}», '
+            f'заключённым между Заказчиком и {credit_bank_name or "Банком"} на приобретение мебели '
+            f'и выплачивается Банком за Заказчика на условиях и в порядке, определённых кредитным договором.</p>'
+        )
     else:
-        pay_html = f'<p>3.2.1. Предварительная оплата производится при заключении Договора в размере {_fmt_money(prepaid)} ({_num_to_words(prepaid)}) рублей.</p><p>3.2.2. Окончательный платёж за выполненные по Договору работы в размере {_fmt_money(balance)} ({_num_to_words(balance)}) рублей осуществляется в течение 3 (трёх) дней с момента получения Заказчиком уведомления о готовности мебели, но не позднее дня доставки.</p>'
-
-    manager = c.get('manager_name') or ''
-    manager_line = manager if manager else '&nbsp;' * 30
+        pay_html = (
+            f'<p>3.2.1. Предварительная оплата производится при заключении Договора в размере '
+            f'{_fmt_money(prepaid)} ({_num_to_words(prepaid)}) рублей.</p>'
+            f'<p>3.2.2. Окончательный платёж за выполненные по Договору работы в размере '
+            f'{_fmt_money(balance)} ({_num_to_words(balance)}) рублей осуществляется в течение 3 (трёх) дней '
+            f'с момента получения Заказчиком уведомления о готовности мебели, но не позднее дня доставки.</p>'
+        )
 
     if doc_type == 'contract':
         style = _doc_style('Договор бытового подряда', contract_num)
@@ -925,11 +965,11 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 <p>2.6. Подрядчик в течение 5 (пяти) рабочих дней с момента получения уведомления о внесении изменений или дополнений в Технический проект сообщает Заказчику о возможности или невозможности таких изменений. В случае, если изменения или дополнения Технического проекта повлекут увеличение стоимости, сроков изготовления и иных условий, стороны внесут соответствующие изменения в договор путем заключения дополнительного соглашения.</p>
 
 <p class="sec">3. СТОИМОСТЬ РАБОТ И ПОРЯДОК РАСЧЕТОВ</p>
-<p>3.1. Общая стоимость работ, подлежащих выполнению по настоящему Договору складывается на основании Калькуляции (Приложение №2 к настоящему договору) и составляет <strong>{total:,.0f} ({total_words})</strong> рублей. НДС не облагается на основании ст. 346.11 НК РФ. В стоимость работ включается стоимость материалов Подрядчика, из которых производится работы.</p>
+<p>3.1. Общая стоимость работ, подлежащих выполнению по настоящему Договору складывается на основании Калькуляции (Приложение №2 к настоящему договору) и составляет <strong>{_fmt_money(total)} ({total_words})</strong> рублей. НДС не облагается на основании ст. 346.11 НК РФ. В стоимость работ включается стоимость материалов Подрядчика, из которых производится работы.</p>
 <p>3.2. Оплата работ осуществляется в следующем порядке:</p>
 {pay_html}
-<p>3.3. Оплата производится безналичным расчетом на счет Подрядчика либо наличными денежными средствами в кассу.</p>
-<p>3.4. Обязательство Заказчика по безналичной оплате считается исполненным в момент зачисления денежных средств на счет Подрядчика, указанный в реквизитах.</p>
+<p>3.3. Оплата производится безналичным расчётом на счёт Подрядчика либо наличными денежными средствами в кассу Подрядчика.</p>
+<p>3.4. Обязательство Заказчика по безналичной оплате считается исполненным в момент зачисления денежных средств на счёт Подрядчика, указанный в реквизитах.»</p>
 
 <p class="sec">4. ПРАВА И ОБЯЗАННОСТИ СТОРОН</p>
 <p><strong>4.1. Подрядчик обязан:</strong></p>
@@ -971,7 +1011,7 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 <p>5.3. Приемка Мебели по количеству и качеству (внешние недостатки) осуществляется:</p>
 <p>5.3.1. При самовывозе: Заказчиком в момент приемки мебели на складе Подрядчика и подписания акта выполненных работ;</p>
 <p>5.3.2. При доставке: Подрядчиком (грузоперевозчиком Подрядчика): Заказчиком (уполномоченным им грузоперевозчиком или грузополучателем) в момент приемки мебели от Подрядчика уполномоченного на это акта оказания услуг.</p>
-<p>5.3.3. Если в будущем сборка мебели будет осуществляться силами ООО «Интерьерные решения» на основании отдельно заключенного договора, то Заказчик обязуется вскрыть упаковку в присутствии уполномоченного лица ООО «Интерьерные решения», осуществляющего сборку мебели.</p>
+<p>5.3.3. Если в будущем сборка мебели будет осуществляться силами {co_name} на основании отдельно заключённого договора, то Заказчик обязуется вскрыть упаковку в присутствии уполномоченного лица {co_name}, осуществляющего сборку мебели.</p>
 <p>5.4. При обнаружении нарушения целостности упаковки, несоответствия мебели в момент приемки по качеству и/или количеству, Заказчик делает отметку в акте выполненных работ/оказания услуг. Мебель, в отношении которой у Заказчика имеются замечания, Заказчик принимает на ответственное хранение, о чем делается отметку в акте выполненных работ/оказания услуг. Плата за хранение в этом случае не взимается. Заказчик не вправе использовать (продавать, производить монтаж и т.д.) такую мебель.</p>
 <p>5.4.1. Претензия должна содержать информацию о номере договора, дате приемки мебели, дате выявления недостатков, наименование и количество мебели с недостатками, описание недостатков, местонахождение мебели с недостатками, пожелания Заказчика по урегулированию претензии. К претензии Заказчик обязан приложить фотографии мебели с недостатками, на которых отчетливо различимы все выявленные недостатки. Несоблюдение Заказчиком вышеуказанных требований, является основанием для отклонения претензии Подрядчиком.</p>
 <p>5.5. В случае несоответствия количества, ассортимента, качества (внешние недостатки) мебели, возникших по вине Подрядчика, Подрядчик обязуется доставить или обеспечить замену некачественной мебели в следующей поставке или в срок, согласованный Сторонами.</p>
@@ -1037,28 +1077,39 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 
 <p class="sec">11. РЕКВИЗИТЫ СТОРОН</p>
 <table>
-<tr><th style="width:50%">ПОДРЯДЧИК</th><th style="width:50%">ЗАКАЗЧИК</th></tr>
+<tr><th style="width:50%">Подрядчик:</th><th style="width:50%">Заказчик:</th></tr>
 <tr>
-<td style="vertical-align:top;padding:10px 12px">
-{co_requisites}<br>
+<td style="vertical-align:top;padding:10px 12px;font-size:10pt;line-height:1.7">
+<strong>{co_name}</strong><br>
+ИНН/КПП: {co_inn}{f'/{co_kpp}' if co_kpp else ''}<br>
+ОГРН: {co_ogrn}<br>
+Юридический и фактический адрес: {co_address}<br>
+{f'Банковские реквизиты:<br>{co_bank}<br>БИК: {co_bik}<br>Рас/с: {co_rs}<br>Кор/с: {co_ks}<br>' if (co_bank or co_bik) else ''}
+{f'Телефон: {co_phone}<br>' if co_phone else ''}
+{f'E-mail: {company.get("email","")}<br>' if company.get("email") else ''}
 <br>
-Менеджер: <strong>{manager_line}</strong><br>
+Менеджер:<br>
+<strong>{manager_line}</strong><br>
 <br>
-Подпись: <span class="ul" style="min-width:140px">&nbsp;</span>&nbsp;/&nbsp;<span class="ul" style="min-width:120px">&nbsp;</span><br>
-<span style="font-size:9pt;color:#555">(подпись) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (расшифровка)</span><br>
-М.П.{stamp_sig_html}
+<span class="ul" style="min-width:200px">&nbsp;</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ul" style="min-width:200px">&nbsp;</span><br>
+<span style="font-size:9pt;color:#555">(подпись)</span>
+{stamp_sig_html}
+М.П.
 </td>
-<td style="vertical-align:top;padding:10px 12px">
+<td style="vertical-align:top;padding:10px 12px;font-size:10pt;line-height:1.7">
 <strong>{fname}</strong><br>
-Паспорт: {_passport_str(c)}<br>
-Выдан: {c.get("passport_issued_by") or "___________"}<br>
-{_fmt_date(c.get("passport_issued_date") or "")}, код {c.get("passport_dept_code") or "___"}<br>
-Адрес: {_reg_address(c)}<br>
-Тел.: {c.get("phone") or "___________"}<br>
-Email: {c.get("email") or "___________"}<br>
+Паспорт. Серия, номер: {_passport_str(c)}<br>
+Кем выдан: {c.get("passport_issued_by") or "___________"}<br>
+Дата выдачи: {_fmt_date(c.get("passport_issued_date") or "")}, код {c.get("passport_dept_code") or "___"}<br>
 <br>
-Подпись: <span class="ul" style="min-width:140px">&nbsp;</span>&nbsp;/&nbsp;<span class="ul" style="min-width:120px">&nbsp;</span><br>
-<span style="font-size:9pt;color:#555">(подпись) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (расшифровка)</span>
+Адрес прописки:<br>
+{_reg_address(c)}<br>
+<br>
+Телефон: {c.get("phone") or "___________"}<br>
+Предпочитаемый канал обмена сообщениями: {c.get("messenger") or "НЕТ"}<br>
+<br>
+<span class="ul" style="min-width:200px">&nbsp;</span>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="ul" style="min-width:200px">&nbsp;</span><br>
+<span style="font-size:9pt;color:#555">(подпись)</span>
 </td>
 </tr>
 </table>

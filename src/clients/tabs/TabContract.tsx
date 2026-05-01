@@ -15,7 +15,8 @@ export function TabContract({ client, onChange }: { client: Client; onChange: (f
     onChange('products', client.products.map(p => p.id === id ? { ...p, [field]: value } : p));
   };
 
-  const showBalance = client.payment_type === '50% предоплата' || client.payment_type === 'Рассрочка';
+  const showBalance = client.payment_type === '50% предоплата' || client.payment_type === 'Рассрочка' || client.payment_type === 'Кредит/рассрочка банка';
+  const showCredit = client.payment_type === 'Кредит/рассрочка банка';
 
   const handleGenContractNumber = () => {
     const prefix = store.settings.company?.contractPrefix || 'К-';
@@ -116,18 +117,49 @@ export function TabContract({ client, onChange }: { client: Client; onChange: (f
             </Field>
             <Field label="Схема оплаты">
               <select className={SELECT} value={client.payment_type} onChange={e => onChange('payment_type', e.target.value)}>
-                {['100% предоплата', '50% предоплата', 'Рассрочка', 'Своя схема'].map(t => <option key={t}>{t}</option>)}
+                {['100% предоплата', '50% предоплата', 'Рассрочка', 'Кредит/рассрочка банка', 'Своя схема'].map(t => <option key={t}>{t}</option>)}
               </select>
             </Field>
           </div>
           {showBalance && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <Field label="Внесено (₽)">
+              <Field label="Внесено / предоплата (₽)">
                 <input type="number" min={0} className={INPUT} value={client.prepaid_amount || ''} onChange={e => onChange('prepaid_amount', parseFloat(e.target.value) || 0)} placeholder="0" />
               </Field>
               <Field label="Остаток (₽)">
                 <input type="number" readOnly className={INPUT + ' opacity-60'} value={Math.max(0, client.total_amount - client.prepaid_amount)} />
               </Field>
+            </div>
+          )}
+          {showCredit && (
+            <div className="p-3 bg-[hsl(220,12%,13%)] border border-border rounded-lg space-y-3">
+              <div className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider flex items-center gap-1.5">
+                <Icon name="Building2" size={11} /> Кредитный договор банка
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <Field label="Банк">
+                  <input className={INPUT} value={client.credit_bank || ''} onChange={e => onChange('credit_bank', e.target.value)} placeholder="АО «ОТП Банк»" />
+                </Field>
+                <Field label="№ кредитного договора">
+                  <input className={INPUT} value={client.credit_contract_number || ''} onChange={e => onChange('credit_contract_number', e.target.value)} placeholder="4006559570" />
+                </Field>
+                <Field label="Дата кредитного договора">
+                  <input type="date" className={INPUT} value={client.credit_contract_date || ''} onChange={e => onChange('credit_contract_date', e.target.value)} />
+                </Field>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Сумма первоначального взноса (₽)">
+                  <input type="number" min={0} className={INPUT} value={client.credit_prepaid || ''} onChange={e => onChange('credit_prepaid', parseFloat(e.target.value) || 0)} placeholder="0" />
+                </Field>
+                <Field label="Сумма в рассрочку (₽)">
+                  <input type="number" min={0} className={INPUT} value={client.credit_balance || ''} onChange={e => onChange('credit_balance', parseFloat(e.target.value) || 0)} placeholder="0" />
+                </Field>
+              </div>
+              {(client.credit_contract_number || client.credit_bank) && (
+                <div className="text-xs text-[hsl(var(--text-muted))] bg-[hsl(220,12%,16%)] rounded p-2">
+                  В договоре: кредитного договора № <span className="text-foreground">{client.credit_contract_number || '___'}</span> от «<span className="text-foreground">{client.credit_contract_date ? new Date(client.credit_contract_date).toLocaleDateString('ru') : '___'}</span>», заключённым между Заказчиком и {client.credit_bank || 'Банк'}
+                </div>
+              )}
             </div>
           )}
           {client.payment_type === 'Своя схема' && (

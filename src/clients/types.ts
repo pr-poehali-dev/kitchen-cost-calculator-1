@@ -74,6 +74,12 @@ export interface Client {
   reminder_date: string;
   reminder_note: string;
   comment: string;
+  // Кредитный договор (для рассрочки)
+  credit_contract_number: string;
+  credit_contract_date: string;
+  credit_bank: string;
+  credit_prepaid: number;
+  credit_balance: number;
   // Профиль клиента
   source: string;
   tags: string[];
@@ -127,6 +133,8 @@ export function emptyClient(): Omit<Client, 'id' | 'created_at' | 'updated_at'> 
     manager_name: '', designer: '', measurer: '',
     project_ids: [],
     reminder_date: '', reminder_note: '', comment: '',
+    credit_contract_number: '', credit_contract_date: '', credit_bank: '',
+    credit_prepaid: 0, credit_balance: 0,
     source: '', tags: [], rating: null,
     property_type: '', property_area: '',
     has_children: false, has_pets: false,
