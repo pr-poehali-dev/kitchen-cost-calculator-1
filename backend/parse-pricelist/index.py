@@ -586,6 +586,8 @@ def handler(event: dict, context) -> dict:
         if series_key == 'boyard':
             csv_text = fetch_csv(BOYARD_SHEET_ID, BOYARD_GID)
             result = parse_boyard(csv_text)
+            import logging
+            logging.getLogger(__name__).warning(f"BOYARD parsed: rate={result['rate']} items={len(result['items'])} first3={result['items'][:3]}")
             return {'statusCode': 200, 'headers': hdrs,
                     'body': json.dumps({'ok': True, 'series': 'boyard',
                                         'rate': result['rate'],
