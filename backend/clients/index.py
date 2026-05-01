@@ -472,6 +472,33 @@ def handler(event: dict, context) -> dict:
             log_history(conn, str(cid), payload, 'photo_deleted', f'Удалено фото: {name}')
         return ok({'ok': True})
 
+    # ── UPLOAD COMPANY ASSET (печать / подпись) ───────────────────
+    if action == 'upload_asset' and method == 'POST':
+        body = json.loads(event.get('body') or '{}')
+        data_b64 = body.get('data', '')
+        asset_type = body.get('asset_type', 'stamp')  # 'stamp' | 'signature'
+        name = body.get('name', 'asset.png')
+        content_type = body.get('content_type', 'image/png')
+
+        if content_type not in {'image/jpeg', 'image/png', 'image/webp'}:
+            return err('Допустимы только PNG, JPEG, WEBP')
+        if not data_b64:
+            return err('Нет данных файла')
+
+        img_data = base64.b64decode(data_b64)
+        if len(img_data) > 5 * 1024 * 1024:
+            return err('Файл слишком большой. Максимум 5 МБ')
+
+        user_id = payload.get('sub') or payload.get('user_id') or payload.get('id')
+        ext = name.rsplit('.', 1)[-1] if '.' in name else 'png'
+        asset_id = str(uuid.uuid4())
+        key = f'company/{user_id}/{asset_type}/{asset_id}.{ext}'
+
+        s3 = s3_client()
+        s3.put_object(Bucket='files', Key=key, Body=img_data, ContentType=content_type)
+        cdn_url = f'https://cdn.poehali.dev/projects/{S3_KEY}/bucket/{key}'
+        return ok({'url': cdn_url}, 201)
+
     # ── DOCUMENT: HTML preview ────────────────────────────────────
     if action == 'doc_html':
         cid = qs.get('client_id')
@@ -747,10 +774,24 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
     co_phone    = _co(company, 'phone',             '')
     co_director = _co(company, 'director',          '')
     co_dir_pos  = _co(company, 'directorPosition',  'менеджера')
-    co_bank     = _co(company, 'bank',              '')
-    co_bik      = _co(company, 'bik',               '')
-    co_rs       = _co(company, 'rs',                '')
-    co_ks       = _co(company, 'ks',                '')
+    co_bank        = _co(company, 'bank',              '')
+    co_bik         = _co(company, 'bik',               '')
+    co_rs          = _co(company, 'rs',                '')
+    co_ks          = _co(company, 'ks',                '')
+    co_poa_num     = _co(company, 'poaNumber',         '')
+    co_poa_date    = _co(company, 'poaDate',           '')
+    co_stamp_url   = company.get('stampUrl', '') or ''
+    co_sig_url     = company.get('signatureUrl', '') or ''
+    use_stamp      = bool(company.get('useStamp', False)) and bool(co_stamp_url)
+    use_sig        = bool(company.get('useSignature', False)) and bool(co_sig_url)
+
+    # Строка доверенности для преамбулы
+    if co_poa_num or co_poa_date:
+        poa_num_str  = co_poa_num or '<span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>'
+        poa_date_str = co_poa_date or '<span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>'
+        poa_str = f'доверенности № {poa_num_str} от {poa_date_str}'
+    else:
+        poa_str = 'доверенности № <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>'
 
     bank_block = ''
     if co_bank or co_bik or co_rs or co_ks:
@@ -760,6 +801,16 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
             f'р/с: {co_rs}' if co_rs else '',
             f'к/с: {co_ks}' if co_ks else '',
         ]))
+
+    # Блок печати/подписи для реквизитов
+    stamp_sig_html = ''
+    if use_sig or use_stamp:
+        stamp_sig_html = '<div style="display:flex;gap:16px;margin-top:12px;align-items:flex-end">'
+        if use_sig:
+            stamp_sig_html += f'<img src="{co_sig_url}" alt="Подпись" style="height:60px;max-width:120px;object-fit:contain" />'
+        if use_stamp:
+            stamp_sig_html += f'<img src="{co_stamp_url}" alt="Печать" style="height:70px;max-width:70px;object-fit:contain" />'
+        stamp_sig_html += '</div>'
 
     co_requisites = f'''{co_name}<br>
 ОГРН:&nbsp;{co_ogrn}{f' &nbsp;|&nbsp; КПП:&nbsp;{co_kpp}' if co_kpp else ''} &nbsp;|&nbsp; ИНН:&nbsp;{co_inn}<br>
@@ -798,7 +849,7 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 <h1>ДОГОВОР</h1>
 <h2>бытового подряда на изготовление мебели</h2>
 <div class="city-date"><span>г. {co_city}</span><span>№ {contract_num} от {contract_date_full}</span></div>
-<p class="no-indent">{co_name}, в лице {co_dir_pos}а <strong>{manager_line}</strong>, действующего на основании доверенности № <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, именуемый в дальнейшем «Подрядчик», и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», заключили настоящий Договор о нижеследующем:</p>
+<p class="no-indent">{co_name}, в лице {co_dir_pos}а <strong>{manager_line}</strong>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик», и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», заключили настоящий Договор о нижеследующем:</p>
 
 <p class="sec">1. ПРЕДМЕТ ДОГОВОРА</p>
 <p>1.1. Подрядчик обязуется выполнить работу по изготовлению мебели и передать результат работы Заказчику (мебель передается в разобранном виде), а Заказчик обязуется принять и оплатить результат работ.</p>
@@ -942,7 +993,7 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 <br>
 Подпись: <span class="ul" style="min-width:140px">&nbsp;</span>&nbsp;/&nbsp;<span class="ul" style="min-width:120px">&nbsp;</span><br>
 <span style="font-size:9pt;color:#555">(подпись) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (расшифровка)</span><br>
-М.П.
+М.П.{stamp_sig_html}
 </td>
 <td style="vertical-align:top;padding:10px 12px">
 <strong>{fname}</strong><br>
@@ -969,7 +1020,7 @@ Email: {c.get("email") or "___________"}<br>
 <h1>«Акт выполненных работ»</h1>
 <div class="city-date"><span></span><span>от «____» ______________ 20____ г.</span></div>
 <p style="text-align:center">(ФОРМА)</p>
-<p class="no-indent">{co_name}, в лице {co_dir_pos}а <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, <span class="ul" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, действующего на основании доверенности № <span class="ul" style="min-width:40px">&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, именуемый в дальнейшем «Подрядчик» и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», подписали настоящий Акт выполненных работ о нижеследующем:</p>
+<p class="no-indent">{co_name}, в лице {co_dir_pos}а <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик» и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», подписали настоящий Акт выполненных работ о нижеследующем:</p>
 <p class="no-indent">1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда на изготовление мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>:</p>
 <table><tr><th style="width:5%">№</th><th>Наименование мебели, включая ее элементы</th><th style="width:13%">Ед. измерения</th><th style="width:12%">Кол-во изделий</th><th style="width:18%">Стоимость в руб.</th></tr>
 <tr><td style="text-align:center">1</td><td>Кухонный гарнитур</td><td style="text-align:center">Шт.</td><td style="text-align:center">1</td><td style="text-align:center">(сумма прописью)</td></tr>
@@ -1036,7 +1087,7 @@ Email: {c.get("email") or "___________"}<br>
 <h1>ДОГОВОР</h1>
 <h2>на оказание услуг по доставке мебели</h2>
 <div class="city-date"><span>г. {co_city}</span><span>{contract_date_full}</span></div>
-<p class="no-indent">{co_name}, в лице {co_dir_pos}а <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, <span class="ul" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, действующего на основании доверенности № <span class="ul" style="min-width:40px">&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, именуемый в дальнейшем «Исполнитель», и <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», заключили настоящий Договор о нижеследующем:</p>
+<p class="no-indent">{co_name}, в лице {co_dir_pos}а <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, действующего на основании {poa_str}, именуемый в дальнейшем «Исполнитель», и <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», заключили настоящий Договор о нижеследующем:</p>
 <p class="sec">1. ПРЕДМЕТ ДОГОВОРА</p>
 <p>1.1. В соответствии с настоящим Договором Исполнитель обязуется доставить мебель в разобранном виде (далее – мебель) в пункт назначения и выдать его Заказчику или иному лицу, указанному в п. 1.4. договора, на условиях, указанных в настоящем Договоре, а Заказчик обязуется оплатить за доставку установленную плату в порядке и на условиях, указанных в настоящем Договоре.</p>
 <p>1.2. Исполнитель при оказании услуг по настоящему Договору обязуется соблюдать нормы действующего законодательства Российской Федерации.</p>
@@ -1099,7 +1150,7 @@ Email: {c.get("email") or "___________"}<br>
 <p>7.5. К настоящему Договору прилагаются и являются неотъемлемой частью следующие приложения:<br>1. Калькуляция на выполнение услуг по доставке мебели.<br>2. Прайс на выполнение услуг по подъему мебели.<br>3. Образец Акта оказанных услуг.</p>
 <p class="sec">8. РЕКВИЗИТЫ СТОРОН</p>
 <table><tr><th style="width:50%">Исполнитель:</th><th style="width:50%">Заказчик:</th></tr>
-<tr><td>{co_requisites}</td>
+<tr><td>{co_requisites}{stamp_sig_html}</td>
 <td>Паспорт. Серия, номер: {_passport_str(c)}<br>Кем выдан:<br><br>Адрес прописки:<br><br>Телефон: {c.get("phone") or "___________"}<br><br>Предпочитаемый канал обмена сообщениями:</td></tr>
 <tr><td style="padding-top:20px">Менеджер: <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td></td></tr>
 <tr><td style="height:60px"></td><td></td></tr>
@@ -1210,7 +1261,7 @@ Email: {c.get("email") or "___________"}<br>
 <p>9.5. К настоящему Договору прилагаются и являются неотъемлемой частью следующие приложения:<br>1. Калькуляция на выполнение работ по сборке мебели.<br>2. Прайс на дополнительные работы.<br>3. Образец Акта выполненных работ.</p>
 <p class="sec">10. РЕКВИЗИТЫ СТОРОН</p>
 <table><tr><th style="width:50%">Подрядчик:</th><th style="width:50%">Заказчик:</th></tr>
-<tr><td>{co_requisites}</td>
+<tr><td>{co_requisites}{stamp_sig_html}</td>
 <td>Паспорт. Серия, номер: {_passport_str(c)}<br>Кем выдан:<br><br>Адрес прописки:<br><br>Телефон: {c.get("phone") or "___________"}<br><br>Предпочитаемый канал обмена сообщениями:</td></tr>
 <tr><td style="padding-top:20px">Менеджер: <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td></td></tr>
 <tr><td style="height:60px"></td><td></td></tr>

@@ -198,6 +198,14 @@ export interface CompanyInfo {
   bik?: string;
   rs?: string;
   ks?: string;
+  // Доверенность
+  poaNumber?: string;
+  poaDate?: string;
+  // Печать и подпись
+  stampUrl?: string;
+  signatureUrl?: string;
+  useStamp?: boolean;
+  useSignature?: boolean;
 }
 
 export interface Settings {
