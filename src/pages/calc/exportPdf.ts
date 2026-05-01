@@ -40,7 +40,7 @@ export function exportProjectPdf(ctx: ExportCtx) {
   const blocksHtml = project.blocks
     .filter(b => b.rows.length > 0)
     .map(block => {
-      const blockTotal = block.rows.reduce((s, r) => s + r.qty * r.price, 0);
+      const blockTotal = block.rows.filter(r => r.name.trim() !== '').reduce((s, r) => s + r.qty * r.price, 0);
 
       // Определяем колонки по cv
       const cols = [

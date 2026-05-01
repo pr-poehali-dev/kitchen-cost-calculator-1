@@ -202,7 +202,7 @@ export const refreshProjectPrices = (
     blocks: p.blocks.map(b => ({
       ...b,
       rows: b.rows.map(r => {
-        if (!r.materialId) return r;
+        if (!r.name.trim() || !r.materialId) return r;
         const mat = state.materials.find((m: Material) => m.id === r.materialId);
         if (!mat) return r;
         const variant = r.variantId ? (mat.variants || []).find(v => v.id === r.variantId) : null;

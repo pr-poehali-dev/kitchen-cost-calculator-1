@@ -43,7 +43,8 @@ export default function CalcRowComponent({
     }
   }, []);
 
-  const rowTotal = row.qty * row.price;
+  const isNameEmpty = row.name.trim() === '';
+  const rowTotal = isNameEmpty ? 0 : row.qty * row.price;
 
   const filteredMaterials = catalog.materials.filter(m => {
     const typeOk = allowedTypeIds.length === 0 || allowedTypeIds.includes(m.typeId);
@@ -138,7 +139,7 @@ export default function CalcRowComponent({
   );
 
   const MobileCard = (
-    <div className="md:hidden border-b border-[hsl(220,12%,14%)] px-3 py-2.5 bg-[hsl(220,13%,12%)]">
+    <div className={`md:hidden border-b border-[hsl(220,12%,14%)] px-3 py-2.5 bg-[hsl(220,13%,12%)] ${isNameEmpty && (row.price > 0 || row.qty > 0) ? 'border-l-2 border-l-amber-400/60' : ''}`}>
       <div className="flex items-start gap-2">
         <div className="flex-1 min-w-0">
           {MaterialInput}
@@ -190,8 +191,9 @@ export default function CalcRowComponent({
   // ── Десктоп строка ─────────────────────────────────────────────
   const DesktopRow = (
     <div
-      className="relative group border-b border-[hsl(220,12%,14%)] hover:bg-[hsl(220,12%,12%)] transition-colors hidden md:grid"
+      className={`relative group border-b border-[hsl(220,12%,14%)] hover:bg-[hsl(220,12%,12%)] transition-colors hidden md:grid ${isNameEmpty && (row.price > 0 || row.qty > 0) ? 'bg-amber-400/5 border-l-2 border-l-amber-400/60' : ''}`}
       style={{ gridTemplateColumns: gridCols, alignItems: 'center', padding: '6px 16px' }}
+      title={isNameEmpty && (row.price > 0 || row.qty > 0) ? 'Введите название материала — строка не учитывается в расчёте' : undefined}
     >
       {visibleColumns.map(col => {
         switch (col) {

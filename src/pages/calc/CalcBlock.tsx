@@ -125,7 +125,7 @@ export default function CalcBlock({
   };
 
   const blockColor = block.color;
-  const blockTotal = block.rows.reduce((s, r) => s + r.qty * r.price, 0);
+  const blockTotal = block.rows.filter(r => r.name.trim() !== '').reduce((s, r) => s + r.qty * r.price, 0);
   const visibleCols: CalcColumnKey[] = block.visibleColumns.length > 0
     ? block.visibleColumns
     : DEFAULT_VISIBLE_COLUMNS;
