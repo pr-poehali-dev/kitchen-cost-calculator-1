@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import type { Material, Manufacturer, Vendor } from '@/store/types';
 import { API_URLS } from '@/config/api';
 
