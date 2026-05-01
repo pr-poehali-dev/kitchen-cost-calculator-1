@@ -250,9 +250,21 @@ export function exportProjectPdf(ctx: ExportCtx) {
     .footer { margin-top: 20px; border-top: 1px solid #ddd; padding-top: 6px; display: flex; justify-content: space-between; font-size: 7pt; color: #aaa; }
 
     @media print {
-      @page { size: A4 landscape; margin: 10mm 12mm; }
+      @page {
+        size: A4 landscape;
+        margin: 12mm 14mm;
+        @bottom-right {
+          content: "Стр. " counter(page) " из " counter(pages);
+          font-size: 7pt;
+          color: #999;
+        }
+      }
       body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
       .block { page-break-inside: avoid; }
+      .header { background: #1a1a2e !important; -webkit-print-color-adjust: exact; }
+      .block-header { background: #1a1a2e !important; -webkit-print-color-adjust: exact; }
+      .totals { background: #1a1a2e !important; -webkit-print-color-adjust: exact; }
+      a { color: #000; text-decoration: none; }
     }
   </style>
 </head>

@@ -623,38 +623,76 @@ def _get_products(c):
     return products
 
 
-def _doc_style():
-    return '''<style>
-@import url('https://fonts.googleapis.com/css2?family=PT+Serif:ital@0;1&display=swap');
-@page{size:A4 portrait;margin:20mm 20mm 20mm 25mm}
-*{box-sizing:border-box;margin:0;padding:0}
-html{background:#e8e8e8}
-body{font-family:'PT Serif',Georgia,serif;font-size:11pt;line-height:1.5;color:#000;background:#fff}
-.page{width:210mm;min-height:297mm;margin:0 auto;padding:20mm 20mm 20mm 25mm;background:#fff;box-shadow:0 2px 12px rgba(0,0,0,.18)}
-h1{font-size:13pt;text-align:center;font-weight:bold;margin:0 0 3px;text-transform:uppercase;letter-spacing:.03em}
-h2{font-size:11pt;text-align:center;font-weight:normal;margin:0 0 14px}
-.city-date{display:flex;justify-content:space-between;margin:10px 0 12px;font-size:11pt}
-p{margin:4px 0;text-align:justify;text-indent:1.5em;line-height:1.45}
-p.no-indent{text-indent:0}
-p.center{text-align:center;text-indent:0}
-.sec{font-weight:bold;margin:12px 0 3px;text-indent:0;font-size:11pt}
-table{width:100%;border-collapse:collapse;margin:8px 0;font-size:10pt}
-th,td{border:1px solid #000;padding:4px 7px}
-th{background:#f0f0f0;font-weight:bold;text-align:center;font-size:10pt}
-td{vertical-align:top}
-.ul{border-bottom:1px solid #000;display:inline-block;min-width:180px}
-.sig-table{width:100%;margin-top:16px;border-collapse:collapse}
-.sig-table td{border:none;padding:3px 8px;vertical-align:top;width:50%}
-@media print{
-  html{background:#fff}
-  body{margin:0;font-size:11pt}
-  .page{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}
-  @page{size:A4 portrait;margin:20mm 20mm 20mm 25mm}
-  p{orphans:3;widows:3}
-  .sec{page-break-after:avoid}
-  table{page-break-inside:avoid}
-}
+def _doc_style(title='', contract_num=''):
+    header_content = f'«{title}» · № {contract_num}' if contract_num else (title or '')
+    return f'''<style>
+@import url('https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap');
+@page{{
+  size:A4 portrait;
+  margin:20mm 20mm 20mm 25mm;
+  @top-center{{
+    content:"{header_content}";
+    font-family:'PT Serif',Georgia,serif;
+    font-size:8pt;
+    color:#666;
+    padding-bottom:4mm;
+  }}
+  @bottom-center{{
+    content:"Стр. " counter(page) " из " counter(pages);
+    font-family:'PT Serif',Georgia,serif;
+    font-size:8pt;
+    color:#666;
+    padding-top:4mm;
+  }}
+}}
+*{{box-sizing:border-box;margin:0;padding:0}}
+html{{background:#2d2d2d}}
+body{{font-family:'PT Serif',Georgia,serif;font-size:11pt;line-height:1.6;color:#000;background:#fff}}
+.page{{width:210mm;min-height:297mm;margin:10mm auto;padding:20mm 20mm 20mm 25mm;background:#fff;box-shadow:0 4px 24px rgba(0,0,0,.45)}}
+h1{{font-size:13pt;text-align:center;font-weight:bold;margin:0 0 3px;text-transform:uppercase;letter-spacing:.1em}}
+h2{{font-size:11pt;text-align:center;font-weight:normal;margin:0 0 14px}}
+.city-date{{display:flex;justify-content:space-between;margin:10px 0 14px;font-size:11pt}}
+p{{margin:0 0 6px;text-align:justify;text-indent:1.27cm;line-height:1.6;orphans:3;widows:3}}
+p.no-indent{{text-indent:0}}
+p.center{{text-align:center;text-indent:0}}
+.sec{{font-weight:bold;margin:14px 0 4px;text-indent:0;font-size:11pt;page-break-after:avoid}}
+.sec-block{{page-break-inside:avoid}}
+table{{width:100%;border-collapse:collapse;margin:8px 0;font-size:10pt;page-break-inside:avoid}}
+th,td{{border:1px solid #000;padding:5px 8px}}
+th{{background:#f0f0f0;font-weight:bold;text-align:center;font-size:10pt;letter-spacing:.04em}}
+td{{vertical-align:top}}
+td.num{{text-align:center;width:5%}}
+td.right{{text-align:right;font-variant-numeric:tabular-nums}}
+tbody tr:nth-child(even){{background:#f8f8f8}}
+.ul{{border-bottom:1px solid #000;display:inline-block;min-width:180px}}
+.sig-wrap{{margin-top:24px;border-top:1px solid #000;padding-top:10px}}
+.sig-table{{width:100%;border-collapse:collapse}}
+.sig-table td{{border:none;padding:4px 8px;vertical-align:top;width:50%}}
+.sig-table .sig-label{{font-weight:bold;font-size:10pt;text-transform:uppercase;letter-spacing:.08em;padding-bottom:6px}}
+.sig-table .sig-line{{border-bottom:1px solid #000;min-width:180px;display:inline-block;margin-right:8px}}
+a{{color:#000;text-decoration:none}}
+@media print{{
+  html{{background:#fff}}
+  body{{margin:0;font-size:11pt}}
+  .page{{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}}
+  @page{{size:A4 portrait;margin:20mm 20mm 20mm 25mm}}
+  a{{color:#000;text-decoration:none}}
+}}
 </style>'''
+
+
+def _typo(text: str) -> str:
+    import re
+    text = re.sub(r'"([^"]*)"', r'«\1»', text)
+    text = re.sub(r' - ', ' \u2014 ', text)
+    text = re.sub(r' -- ', ' \u2014 ', text)
+    return text
+
+
+def _fmt_money(n: float) -> str:
+    if n == int(n):
+        return f'{int(n):,}'.replace(',', '\u202f')
+    return f'{n:,.2f}'.replace(',', '\u202f')
 
 
 def _build_contract_html(c: dict, doc_type: str) -> str:
@@ -672,23 +710,22 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 
     products_rows = ''
     for i, p in enumerate(products, 1):
-        products_rows += f'<tr><td style="text-align:center">{i}</td><td>{p.get("name","Кухонный гарнитур")}</td><td style="text-align:center">шт.</td><td style="text-align:center">{p.get("qty",1)}</td><td style="text-align:right"></td></tr>'
+        products_rows += f'<tr><td class="num">{i}</td><td>{p.get("name","Кухонный гарнитур")}</td><td class="num">шт.</td><td class="num">{p.get("qty",1)}</td><td class="right"></td></tr>'
     if not products_rows:
-        products_rows = f'<tr><td style="text-align:center">1</td><td>Кухонный гарнитур</td><td style="text-align:center">шт.</td><td style="text-align:center">1</td><td style="text-align:right">{total:,.0f}</td></tr>'
-
-    style = _doc_style()
+        products_rows = f'<tr><td class="num">1</td><td>Кухонный гарнитур</td><td class="num">шт.</td><td class="num">1</td><td class="right">{_fmt_money(total)}</td></tr>'
 
     if custom:
         pay_html = f'<p>{custom}</p>'
     elif ptype == '100% предоплата':
-        pay_html = f'<p>3.2.1. Предварительная оплата производится при заключении Договора в размере {prepaid:,.0f} ({_num_to_words(prepaid)}) рублей.</p><p>3.2.2. Окончательный платёж не предусмотрен. Стоимость работ оплачена полностью при заключении Договора.</p>'
+        pay_html = f'<p>3.2.1. Предварительная оплата производится при заключении Договора в размере {_fmt_money(prepaid)} ({_num_to_words(prepaid)}) рублей.</p><p>3.2.2. Окончательный платёж не предусмотрен. Стоимость работ оплачена полностью при заключении Договора.</p>'
     else:
-        pay_html = f'<p>3.2.1. Предварительная оплата производится при заключении Договора в размере {prepaid:,.0f} ({_num_to_words(prepaid)}) рублей.</p><p>3.2.2. Окончательный платёж за выполненные по Договору работы в размере {balance:,.0f} ({_num_to_words(balance)}) рублей осуществляется в течение 3 (трёх) дней с момента получения Заказчиком уведомления о готовности мебели, но не позднее дня доставки.</p>'
+        pay_html = f'<p>3.2.1. Предварительная оплата производится при заключении Договора в размере {_fmt_money(prepaid)} ({_num_to_words(prepaid)}) рублей.</p><p>3.2.2. Окончательный платёж за выполненные по Договору работы в размере {_fmt_money(balance)} ({_num_to_words(balance)}) рублей осуществляется в течение 3 (трёх) дней с момента получения Заказчиком уведомления о готовности мебели, но не позднее дня доставки.</p>'
 
     manager = c.get('manager_name') or ''
     manager_line = manager if manager else '&nbsp;' * 30
 
     if doc_type == 'contract':
+        style = _doc_style('Договор бытового подряда', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Договор №{contract_num}</title>{style}</head><body><div class="page">
 <h1>ДОГОВОР</h1>
 <h2>бытового подряда на изготовление мебели</h2>
@@ -827,14 +864,40 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 <p class="no-indent">4. Образец Акта выполненных работ</p>
 
 <p class="sec">11. РЕКВИЗИТЫ СТОРОН</p>
-<table><tr><th style="width:50%">Подрядчик:</th><th style="width:50%">Заказчик:</th></tr>
-<tr><td>ООО «Интерьерные решения»<br>ОГРН: 1196451012251<br>ИНН: 6450106826<br>410018, Саратовская обл., г. Саратов, ул. Усть-Курдюмская, д. 3, пом. 1<br><br>Менеджер: <strong>{manager_line}</strong><br><br>Подпись: <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> / <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span><br>М.П.</td>
-<td><strong>{fname}</strong><br>Паспорт: {_passport_str(c)}<br>Выдан: {c.get("passport_issued_by") or "___________"}<br>{_fmt_date(c.get("passport_issued_date") or "")}, код {c.get("passport_dept_code") or "___"}<br>Адрес регистрации: {_reg_address(c)}<br>Тел.: {c.get("phone") or "___________"}<br>Email: {c.get("email") or "___________"}<br><br>Подпись: <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> / <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr></table>
+<table>
+<tr><th style="width:50%">ПОДРЯДЧИК</th><th style="width:50%">ЗАКАЗЧИК</th></tr>
+<tr>
+<td style="vertical-align:top;padding:10px 12px">
+ООО «Интерьерные решения»<br>
+ОГРН:&nbsp;1196451012251 &nbsp;|&nbsp; ИНН:&nbsp;6450106826<br>
+410018, г.&nbsp;Саратов, ул.&nbsp;Усть-Курдюмская, д.&nbsp;3, пом.&nbsp;1<br>
+<br>
+Менеджер: <strong>{manager_line}</strong><br>
+<br>
+Подпись: <span class="ul" style="min-width:140px">&nbsp;</span>&nbsp;/&nbsp;<span class="ul" style="min-width:120px">&nbsp;</span><br>
+<span style="font-size:9pt;color:#555">(подпись) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (расшифровка)</span><br>
+М.П.
+</td>
+<td style="vertical-align:top;padding:10px 12px">
+<strong>{fname}</strong><br>
+Паспорт: {_passport_str(c)}<br>
+Выдан: {c.get("passport_issued_by") or "___________"}<br>
+{_fmt_date(c.get("passport_issued_date") or "")}, код {c.get("passport_dept_code") or "___"}<br>
+Адрес: {_reg_address(c)}<br>
+Тел.: {c.get("phone") or "___________"}<br>
+Email: {c.get("email") or "___________"}<br>
+<br>
+Подпись: <span class="ul" style="min-width:140px">&nbsp;</span>&nbsp;/&nbsp;<span class="ul" style="min-width:120px">&nbsp;</span><br>
+<span style="font-size:9pt;color:#555">(подпись) &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; (расшифровка)</span>
+</td>
+</tr>
+</table>
 </div></body></html>'''
 
     elif doc_type == 'act':
         total = float(c.get('total_amount') or 0)
         total_words = _num_to_words(total) if total else '___________'
+        style = _doc_style('Акт выполненных работ', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Акт выполненных работ к договору №{contract_num}</title>{style}</head><body><div class="page">
 <p class="no-indent" style="text-align:right">Приложение № 4 к договору бытового подряда на изготовление мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
 <h1>«Акт выполненных работ»</h1>
@@ -858,6 +921,7 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 </div></body></html>'''
 
     elif doc_type == 'tech':
+        style = _doc_style('Технический проект', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Технический проект к договору №{contract_num}</title>{style}</head><body><div class="page">
 <p class="no-indent" style="text-align:right">Приложение № 1 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
 <h1>«Технический проект»</h1>
@@ -901,6 +965,7 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
         delivery_date_str = _fmt_date(c.get('delivery_date') or '')
         dcost = float(c.get('delivery_cost') or 0)
         dcost_str = f'{dcost:,.0f} ({_num_to_words(dcost)})' if dcost else '<span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>'
+        style = _doc_style('Договор доставки', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Договор доставки — {contract_num}</title>{style}</head><body><div class="page">
 <h1>ДОГОВОР</h1>
 <h2>на оказание услуг по доставке мебели</h2>
@@ -1006,6 +1071,7 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
         delivery_date_str = _fmt_date(c.get('delivery_date') or '')
         acost = float(c.get('assembly_cost') or 0)
         acost_str = f'{acost:,.0f} ({_num_to_words(acost)})' if acost else '<span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>'
+        style = _doc_style('Договор монтажа', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Договор монтажа — {contract_num}</title>{style}</head><body><div class="page">
 <h1>ДОГОВОР</h1>
 <h2>на выполнение работ по монтажу и сборке мебели</h2>
@@ -1087,6 +1153,7 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 </div></body></html>'''
 
     elif doc_type == 'rules':
+        style = _doc_style('Правила эксплуатации', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Правила эксплуатации мебели</title>{style}</head><body><div class="page">
 <p class="no-indent" style="text-align:right">Приложение № 3 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
 <h1>«Правила эксплуатации корпусной мебели»</h1>
@@ -1213,6 +1280,7 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
         daddr = _delivery_address(c)
         acost = float(c.get('assembly_cost') or 0)
         acost_words = _num_to_words(acost) if acost else '___________'
+        style = _doc_style('Акт выполненных работ (монтаж)', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Акт выполненных работ — {contract_num}</title>{style}</head><body><div class="page">
 <p class="no-indent" style="text-align:right">Приложение № 3 к договору на выполнение работ по монтажу и сборке мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
 <h1>«Акт выполненных работ»</h1>
@@ -1249,6 +1317,7 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
     elif doc_type == 'measure':
         measurer = c.get('measurer') or ''
         measurer_line = measurer if measurer else ''
+        style = _doc_style('Бланк замера', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Бланк замера к договору №{contract_num}</title>{style}<style>
 .measure-area{{border:1px solid #000;min-height:180mm;margin:10px 0;position:relative;background:#fff}}
 </style></head><body><div class="page">
@@ -1262,6 +1331,7 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 
     elif doc_type == 'delivery_calc':
         dcost = float(c.get('delivery_cost') or 0)
+        style = _doc_style('Калькуляция доставки', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Калькуляция доставки — {contract_num}</title>{style}</head><body><div class="page">
 <p class="no-indent" style="text-align:right">Приложение № 1 к договору на оказание услуг по доставке мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
 <h1>«Калькуляция на выполнение услуг по доставке мебели»</h1>
@@ -1281,6 +1351,7 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 </div></body></html>'''
 
     elif doc_type == 'delivery_lift':
+        style = _doc_style('Прайс — подъём мебели', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Прайс подъём мебели — {contract_num}</title>{style}</head><body><div class="page">
 <p class="no-indent" style="text-align:right">Приложение № 2 к договору на оказание услуг по доставке мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
 <h1>«Прайс на выполнение услуг по подъему и заносу мебели»*</h1>
@@ -1310,6 +1381,7 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 </div></body></html>'''
 
     elif doc_type == 'assembly_calc':
+        style = _doc_style('Калькуляция монтажа', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Калькуляция сборки — {contract_num}</title>{style}</head><body><div class="page">
 <p class="no-indent" style="text-align:right">Приложение № 1 к договору на выполнение работ по монтажу и сборке мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
 <h1>«Калькуляция на выполнение работ по сборке мебели»</h1>
@@ -1329,6 +1401,7 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 </div></body></html>'''
 
     elif doc_type == 'assembly_extra':
+        style = _doc_style('Прайс — дополнительные работы', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Прайс доп. работы сборка — {contract_num}</title>{style}</head><body><div class="page">
 <p class="no-indent" style="text-align:right">Приложение № 2 к договору на выполнение работ по монтажу и сборке мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
 <h1>«Прайс на дополнительные работы»*</h1>
@@ -1373,6 +1446,7 @@ def _build_contract_html(c: dict, doc_type: str) -> str:
 </div></body></html>'''
 
     elif doc_type == 'addendum':
+        style = _doc_style('Дополнительное соглашение', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Дополнительное соглашение к договору №{contract_num}</title>{style}</head><body><div class="page">
 <h1>ДОПОЛНИТЕЛЬНОЕ СОГЛАШЕНИЕ №<span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></h1>
 <h2>К договору бытового подряда на изготовление мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></h2>
