@@ -94,6 +94,30 @@ def fetch_csv(sheet_id: str, gid: str) -> str:
         return resp.read().decode('utf-8')
 
 
+def parse_csv_rows(text: str) -> list:
+    """Разбирает CSV с учётом многострочных ячеек в кавычках."""
+    rows = []
+    cells, in_q, cell = [], False, ''
+    for ch in text:
+        if ch == '"':
+            in_q = not in_q
+        elif ch == ',' and not in_q:
+            cells.append(cell.strip())
+            cell = ''
+        elif ch == '\n' and not in_q:
+            cells.append(cell.strip())
+            rows.append(cells)
+            cells, cell = [], ''
+        elif ch == '\r':
+            pass
+        else:
+            cell += ch
+    if cell or cells:
+        cells.append(cell.strip())
+        rows.append(cells)
+    return rows
+
+
 def split_csv_line(line: str) -> list:
     cells, in_q, cell = [], False, ''
     for ch in line:
@@ -407,26 +431,25 @@ def parse_boyard(csv_text: str) -> dict:
     Иерархия: корневая категория (Крючки, Петли...) → подкатегории.
     category = самая конкретная подсекция, type_id = от корневой.
     """
-    lines = csv_text.splitlines()
+    rows = parse_csv_rows(csv_text)
     rate = 0.0
     items = []
     root_category = ''
     current_category = ''
     header_passed = False
 
-    for raw_line in lines:
-        cells = split_csv_line(raw_line)
+    for cells in rows:
 
-        # Курс из первой строки (число 50..200)
+        def g(i):
+            return cells[i].strip() if i < len(cells) else ''
+
+        # Курс из первой строки (число 50..200) — до header_passed
         if not header_passed and rate == 0.0:
             for cell in cells:
                 v = parse_price(cell)
                 if 50 < v < 200:
                     rate = v
                     break
-
-        def g(i):
-            return cells[i].strip() if i < len(cells) else ''
 
         col0 = g(0)
         col1 = g(1)
@@ -440,7 +463,7 @@ def parse_boyard(csv_text: str) -> dict:
         # Пропускаем служебные строки
         if 'поиск' in low1 or 'поиск' in low0:
             continue
-        if 'курс' in low1:
+        if 'курс' in low1 or 'курс' in low0:
             header_passed = True
             continue
         if 'опт' in low1 or 'розница' in low1:
