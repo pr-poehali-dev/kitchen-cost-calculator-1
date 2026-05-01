@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {
+      "name": "GET all catalog (no auth)",
+      "method": "GET",
+      "path": "/?action=all",
+      "expectedStatus": 401
+    },
+    {
+      "name": "OPTIONS preflight",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    }
+  ]
+}
