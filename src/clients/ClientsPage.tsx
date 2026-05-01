@@ -238,7 +238,7 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
           </div>
         ) : (
           <div className="p-3 md:p-6 flex gap-3 md:gap-4 overflow-x-auto">
-            {CLIENT_STATUSES.map(s => (
+            {CLIENT_STATUSES.filter(s => s.id !== 'archive').map(s => (
               <KanbanColumn key={s.id} status={s} clients={kanbanClients.filter(c => c.status === s.id)} onClient={c => setSelectedId(c.id)} />
             ))}
           </div>

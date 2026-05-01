@@ -116,13 +116,21 @@ export function ClientsSearchBar({
       {/* Статусы — горизонтальный скролл на мобильном */}
       <div className="flex items-center gap-1.5 overflow-x-auto scrollbar-thin pb-0.5">
         <button onClick={() => onFilterStatusChange('all')} className={`px-2.5 py-1 rounded text-xs font-medium transition-colors shrink-0 ${filterStatus === 'all' ? 'bg-gold/20 text-gold' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}>Все</button>
-        {CLIENT_STATUSES.map(s => (
+        {CLIENT_STATUSES.filter(s => s.id !== 'archive').map(s => (
           <button key={s.id} onClick={() => onFilterStatusChange(filterStatus === s.id ? 'all' : s.id)}
             className={`px-2.5 py-1 rounded text-xs font-medium transition-colors shrink-0 ${filterStatus === s.id ? 'text-white' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
             style={filterStatus === s.id ? { background: s.color } : {}}>
             {s.label}
           </button>
         ))}
+        <div className="w-px h-4 bg-border shrink-0 mx-0.5" />
+        <button
+          onClick={() => onFilterStatusChange(filterStatus === 'archive' ? 'all' : 'archive')}
+          className={`flex items-center gap-1 px-2.5 py-1 rounded text-xs font-medium transition-colors shrink-0 ${filterStatus === 'archive' ? 'bg-[#4b5563]/30 text-[#9ca3af]' : 'text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+        >
+          <Icon name="Archive" size={11} />
+          Архив
+        </button>
       </div>
     </div>
   );

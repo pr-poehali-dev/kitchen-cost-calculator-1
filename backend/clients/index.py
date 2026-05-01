@@ -220,6 +220,9 @@ def handler(event: dict, context) -> dict:
         if status_f and status_f != 'all':
             conditions.append('status = %s')
             params.append(status_f)
+        else:
+            # По умолчанию архивные не показываются
+            conditions.append("status != 'archive'")
 
         if designer_f:
             conditions.append('designer = %s')

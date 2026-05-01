@@ -230,6 +230,29 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
                 <Icon name="MapPin" size={13} />
               </a>
             )}
+            {/* В архив / Восстановить из архива */}
+            {current.status === 'archive' ? (
+              <button
+                onClick={() => handleStatusChange('cancelled')}
+                title="Восстановить из архива"
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-[hsl(220,12%,16%)] border border-border text-[hsl(var(--text-muted))] hover:text-emerald-400 hover:border-emerald-400/40 transition-all"
+              >
+                <Icon name="ArchiveRestore" size={13} />
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (window.confirm(`Переместить «${clientFullName(current)}» в архив?`)) {
+                    handleStatusChange('archive');
+                    onBack();
+                  }
+                }}
+                title="В архив"
+                className="w-8 h-8 flex items-center justify-center rounded-lg bg-[hsl(220,12%,16%)] border border-border text-[hsl(var(--text-muted))] hover:text-amber-400 hover:border-amber-400/40 transition-all"
+              >
+                <Icon name="Archive" size={13} />
+              </button>
+            )}
             {/* Дублировать */}
             <button
               onClick={handleDuplicate}

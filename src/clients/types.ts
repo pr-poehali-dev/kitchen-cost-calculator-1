@@ -1,4 +1,4 @@
-export type ClientStatus = 'new' | 'measure' | 'agreement' | 'production' | 'delivery' | 'done' | 'cancelled';
+export type ClientStatus = 'new' | 'measure' | 'agreement' | 'production' | 'delivery' | 'done' | 'cancelled' | 'archive';
 
 export const CLIENT_STATUSES: { id: ClientStatus; label: string; color: string }[] = [
   { id: 'new',        label: 'Новый лид',    color: '#6b7280' },
@@ -8,6 +8,7 @@ export const CLIENT_STATUSES: { id: ClientStatus; label: string; color: string }
   { id: 'delivery',   label: 'Доставка',     color: '#06b6d4' },
   { id: 'done',       label: 'Закрыт',       color: '#10b981' },
   { id: 'cancelled',  label: 'Отменён',      color: '#ef4444' },
+  { id: 'archive',    label: 'Архив',        color: '#4b5563' },
 ];
 
 export interface ProductItem {
