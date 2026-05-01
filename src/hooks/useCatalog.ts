@@ -66,11 +66,14 @@ export async function syncCatalogFromAppState(
   materials: Material[],
 ): Promise<void> {
   if (!_token) return;
+  // Производители и поставщики — небольшие, отправляем сразу
   await fetch(`${API_URLS.catalog}/?action=sync_all`, {
     method: 'POST',
     headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ manufacturers, vendors, materials }),
+    body: JSON.stringify({ manufacturers, vendors, materials: [] }),
   });
+  // Материалы — чанками по 100
+  await bulkUpsertMaterials(materials, 100);
   setCache({ manufacturers, vendors, materials, synced: true });
 }
 
@@ -189,13 +192,16 @@ export async function duplicateMaterial(id: string): Promise<void> {
   await addMaterial({ ...src, name: `${src.name} (копия)`, priceUpdatedAt: today, priceHistory: [] });
 }
 
-export async function bulkUpsertMaterials(materials: Material[]): Promise<void> {
+export async function bulkUpsertMaterials(materials: Material[], chunkSize = 100): Promise<void> {
   if (!materials.length) return;
-  await fetch(`${API_URLS.catalog}/?action=bulk_upsert_materials`, {
-    method: 'POST',
-    headers: { ...authHeaders(), 'Content-Type': 'application/json' },
-    body: JSON.stringify({ materials }),
-  });
+  for (let i = 0; i < materials.length; i += chunkSize) {
+    const chunk = materials.slice(i, i + chunkSize);
+    await fetch(`${API_URLS.catalog}/?action=bulk_upsert_materials`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ materials: chunk }),
+    });
+  }
   await loadCatalog();
 }
 

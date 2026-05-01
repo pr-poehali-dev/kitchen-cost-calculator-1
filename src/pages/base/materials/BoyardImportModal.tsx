@@ -126,6 +126,8 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
       };
     });
 
+    const beforeIds = new Set(getGlobalState().materials.map(m => m.id));
+
     // Сначала удаляем старые материалы (article = "boyard__xxx", не "boyard__group__xxx")
     store.deleteLegacyBoyardMaterials();
 
@@ -135,7 +137,9 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
       materials
     );
 
-    await bulkUpsertMaterials(getGlobalState().materials);
+    const afterMaterials = getGlobalState().materials;
+    const newMaterials = afterMaterials.filter(m => !beforeIds.has(m.id));
+    await bulkUpsertMaterials(newMaterials);
     await loadCatalog();
 
     setResult(res);

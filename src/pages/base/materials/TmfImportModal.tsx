@@ -2,7 +2,7 @@ import { useState, useRef } from 'react';
 import * as XLSX from 'xlsx';
 import { useStore, saveStateToDb } from '@/store/useStore';
 import { getGlobalState } from '@/store/stateCore';
-import { useCatalog, bulkUpsertMaterials, loadCatalog } from '@/hooks/useCatalog';
+import { useCatalog, bulkUpsertMaterials } from '@/hooks/useCatalog';
 import { Modal } from '../BaseShared';
 import { TMF_COLLECTIONS, tmfColorMaterialId, tmfColorVariantId } from './tmfConfig';
 import { extractPrices, extractColorVariants, type ParsedCollection } from './tmfParser';
@@ -117,6 +117,9 @@ export default function TmfImportModal({ onClose }: Props) {
     let created = 0;
     let updated = 0;
 
+    const beforeIds = new Set(getGlobalState().materials.map(m => m.id));
+    const beforePrices = new Map(getGlobalState().materials.map(m => [m.id, m.basePrice]));
+
     store.setState(s => {
       const materials = [...s.materials];
 
@@ -180,8 +183,11 @@ export default function TmfImportModal({ onClose }: Props) {
 
     saveStateToDb();
 
-    await bulkUpsertMaterials(getGlobalState().materials);
-    await loadCatalog();
+    const afterMaterials = getGlobalState().materials;
+    const changedMaterials = afterMaterials.filter(m =>
+      !beforeIds.has(m.id) || beforePrices.get(m.id) !== m.basePrice
+    );
+    await bulkUpsertMaterials(changedMaterials);
 
     setResult({ created, updated });
     setStep('done');

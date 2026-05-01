@@ -162,6 +162,8 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
       };
     });
 
+    const beforeIds = new Set(getGlobalState().materials.map(m => m.id));
+
     const res = store.importSkatBatch(
       { name: 'СКАТ', note: 'Производитель МДФ фасадов и декоративных элементов', materialTypeIds: [SKAT_TYPE_ID, SKAT_DECOR_TYPE_ID], existingId: existingMfr?.id },
       categories,
@@ -170,7 +172,9 @@ export default function SkatImportModal({ onClose }: { onClose: () => void }) {
 
     store.patchSkatMaterials(SKAT_TYPE_ID, SKAT_VENDOR_ID);
 
-    await bulkUpsertMaterials(getGlobalState().materials);
+    const afterMaterials = getGlobalState().materials;
+    const newMaterials = afterMaterials.filter(m => !beforeIds.has(m.id));
+    await bulkUpsertMaterials(newMaterials);
     await loadCatalog();
 
     setResult(res);
