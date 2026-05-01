@@ -59,12 +59,6 @@ export function useConfirmDialog() {
         </div>
         <div className="flex gap-2 pt-1">
           <button
-            onClick={handleCancel}
-            className="flex-1 py-2 px-4 text-sm border border-border rounded-lg text-[hsl(var(--text-muted))] hover:text-foreground hover:bg-[hsl(220,12%,16%)] transition-colors"
-          >
-            Отмена
-          </button>
-          <button
             onClick={handleConfirm}
             className={`flex-1 py-2 px-4 text-sm font-semibold rounded-lg transition-colors ${
               state.danger !== false
@@ -73,6 +67,12 @@ export function useConfirmDialog() {
             }`}
           >
             {state.confirmText ?? 'Удалить'}
+          </button>
+          <button
+            onClick={handleCancel}
+            className="flex-1 py-2 px-4 text-sm border border-border rounded-lg text-[hsl(var(--text-muted))] hover:text-foreground hover:bg-[hsl(220,12%,16%)] transition-colors"
+          >
+            Отмена
           </button>
         </div>
       </div>

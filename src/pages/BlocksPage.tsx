@@ -336,9 +336,11 @@ export default function BlocksPage() {
                 block={selected}
                 currency={currency}
                 onOpenSettings={() => setSettingsBlockId(selected.id)}
-                onDelete={() => {
-                  store.deleteSavedBlock(selected.id);
-                  setSelectedId(savedBlocks.find(b => b.id !== selected.id)?.id ?? null);
+                onDelete={async () => {
+                  if (await confirmDialog({ message: `Удалить блок «${selected.name}»? Все наборы и строки в нём будут потеряны.` })) {
+                    store.deleteSavedBlock(selected.id);
+                    setSelectedId(savedBlocks.find(b => b.id !== selected.id)?.id ?? null);
+                  }
                 }}
               />
             </div>

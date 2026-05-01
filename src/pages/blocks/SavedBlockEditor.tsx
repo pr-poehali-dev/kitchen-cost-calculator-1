@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useStore } from '@/store/useStore';
 import type { SavedBlock, CalcColumnKey, BlockAssembly } from '@/store/types';
 import Icon from '@/components/ui/icon';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { COLUMN_LABELS_SHORT, COLUMN_ALIGN, COLUMN_WIDTHS, fmt } from '../calc/constants';
 import SavedBlockRow from './SavedBlockRow';
 
@@ -25,7 +26,6 @@ function AssemblyEditor({ block, assembly, currency, visibleCols, gridCols, onDe
   const store = useStore();
   const [isEditing, setIsEditing] = useState(false);
   const [editName, setEditName] = useState(assembly.name);
-  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const assemblyTotal = assembly.rows.reduce((s, r) => s + r.qty * r.price, 0);
 
@@ -72,17 +72,16 @@ function AssemblyEditor({ block, assembly, currency, visibleCols, gridCols, onDe
             </button>
           )}
           {isEditing && (
-            confirmDelete ? (
-              <div className="flex items-center gap-1">
-                <span className="text-xs text-[hsl(var(--text-muted))]">Удалить?</span>
-                <button onClick={onDeleteAssembly} className="px-2 py-1 text-xs bg-destructive text-white rounded">Да</button>
-                <button onClick={() => setConfirmDelete(false)} className="px-2 py-1 text-xs border border-border rounded text-[hsl(var(--text-dim))]">Нет</button>
-              </div>
-            ) : (
-              <button onClick={() => setConfirmDelete(true)} className="text-[hsl(var(--text-muted))] hover:text-destructive transition-colors p-1">
-                <Icon name="Trash2" size={12} />
-              </button>
-            )
+            <button
+              onClick={async () => {
+                if (await confirmDialog({ message: `Удалить набор «${assembly.name}»? Все строки в нём будут потеряны.` })) {
+                  onDeleteAssembly();
+                }
+              }}
+              className="text-[hsl(var(--text-muted))] hover:text-destructive transition-colors p-1"
+            >
+              <Icon name="Trash2" size={12} />
+            </button>
           )}
         </div>
       </div>
