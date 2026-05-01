@@ -183,12 +183,21 @@ export interface Project {
 export interface CompanyInfo {
   name: string;
   inn?: string;
+  ogrn?: string;
+  kpp?: string;
+  city?: string;
   address?: string;
   phone?: string;
   email?: string;
   website?: string;
   director?: string;
+  directorPosition?: string;
   contractPrefix?: string;
+  // Банковские реквизиты
+  bank?: string;
+  bik?: string;
+  rs?: string;
+  ks?: string;
 }
 
 export interface Settings {
