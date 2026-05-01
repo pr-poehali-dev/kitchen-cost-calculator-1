@@ -245,7 +245,6 @@ export function useCatalog(): CatalogState {
   return _cache;
 }
 
-// ── Геттеры без хука (для синхронного доступа) ────────────────
-export function getCatalogSnapshot(): CatalogState {
-  return _cache;
-}
+export const catalogCache = {
+  get: (): CatalogState => _cache,
+};
