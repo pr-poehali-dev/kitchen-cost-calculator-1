@@ -316,7 +316,11 @@ export default function BlocksPage() {
                   <span className="text-xs text-[hsl(var(--text-muted))]">Нет проектов</span>
                 )}
                 <button
-                  onClick={() => store.deleteSavedBlock(selected.id)}
+                  onClick={() => {
+                    if (window.confirm(`Удалить блок «${selected.name}»? Все наборы и строки в нём будут потеряны.`)) {
+                      store.deleteSavedBlock(selected.id);
+                    }
+                  }}
                   className="p-1.5 text-[hsl(var(--text-muted))] hover:text-destructive transition-colors"
                   title="Удалить блок"
                 >

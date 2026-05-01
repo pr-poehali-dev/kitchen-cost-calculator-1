@@ -223,7 +223,12 @@ export default function SavedBlockRow({ block, rowId, visibleCols, gridCols, cur
         }
       })}
       <button
-        onClick={delRow}
+        onClick={() => {
+          const hasData = row?.name?.trim();
+          if (!hasData || window.confirm(`Удалить строку «${row?.name}»?`)) {
+            delRow();
+          }
+        }}
         className="opacity-0 group-hover:opacity-100 flex items-center justify-center text-[hsl(var(--text-muted))] hover:text-destructive transition-all"
       >
         <Icon name="Trash2" size={13} />
