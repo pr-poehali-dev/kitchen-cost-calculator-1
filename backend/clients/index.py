@@ -80,19 +80,33 @@ def row_to_client(row, cur):
 
 def _get_company(user_id) -> dict:
     """Читает реквизиты компании из app-state пользователя."""
+    if not user_id:
+        logger.warning('[_get_company] user_id is empty')
+        return {}
+    try:
+        uid = int(str(user_id))
+    except (ValueError, TypeError) as e:
+        logger.error(f'[_get_company] cannot parse user_id={user_id!r}: {e}')
+        return {}
     try:
         with get_db() as conn:
             cur = conn.cursor()
-            cur.execute('SELECT state FROM app_state WHERE user_id = %s', (user_id,))
+            cur.execute('SELECT state FROM app_state WHERE user_id = %s', (uid,))
             row = cur.fetchone()
             if not row:
-                cur.execute('SELECT state FROM app_state WHERE id = 1 AND user_id IS NULL')
+                # fallback: общий state (первая запись без user_id)
+                cur.execute('SELECT state FROM app_state WHERE user_id IS NULL LIMIT 1')
                 row = cur.fetchone()
         if not row:
+            logger.warning(f'[_get_company] no app_state found for uid={uid}')
             return {}
-        state = row[0] if isinstance(row[0], dict) else json.loads(row[0])
-        return state.get('settings', {}).get('company', {}) or {}
-    except Exception:
+        raw = row[0]
+        state = raw if isinstance(raw, dict) else json.loads(raw)
+        company = (state.get('settings') or {}).get('company') or {}
+        logger.info(f'[_get_company] uid={uid} → name={company.get("name", "<пусто>")}')
+        return company
+    except Exception as e:
+        logger.error(f'[_get_company] DB error uid={uid}: {e}')
         return {}
 
 
@@ -1394,12 +1408,13 @@ Email: {c.get("email") or "___________"}<br>
         delivery_date_str = _fmt_date(c.get('delivery_date') or '')
         dcost = float(c.get('delivery_cost') or 0)
         dcost_words = _num_to_words(dcost) if dcost else '___________'
+        style = _doc_style('Акт об оказании услуг (доставка)', contract_num)
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Акт об оказании услуг — {contract_num}</title>{style}</head><body><div class="page">
 <p class="no-indent" style="text-align:right">Приложение № 3 к договору на оказание услуг по доставке мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
 <h1>«Акт об оказании услуг»</h1>
 <div class="city-date"><span></span><span>от «____» ______________ 20____ г.</span></div>
 <p style="text-align:center">(ФОРМА)</p>
-<p class="no-indent">ООО «Интерьерные решения», в лице менеджера <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, <span class="ul" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, действующего на основании доверенности № <span class="ul" style="min-width:40px">&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», подписали настоящий Акт об оказании услуг о нижеследующем:</p>
+<p class="no-indent">{co_name}, в лице {co_dir_pos}а <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, действующего на основании {poa_str}, именуемый (ая) в дальнейшем «Исполнитель», и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», подписали настоящий Акт об оказании услуг о нижеследующем:</p>
 <p>1. В соответствии с договором на оказание услуг по доставке мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> года, Исполнитель оказал, а Заказчик принял следующие услуги:<br>Адрес доставки: <strong>{daddr}</strong><br>Этаж: {floor_}&nbsp;&nbsp;&nbsp;&nbsp;Лифт: {elevator}</p>
 <table><tr><th>Наименование (перечень) работ и услуг</th><th style="width:15%">Ед. измерения</th><th style="width:12%">Количество</th><th style="width:18%">Цена за ед. измерения в руб.</th><th style="width:18%">Стоимость в руб.</th></tr>
 <tr><td>Доставка мебели в территориальных границах г. Саратова и г. Энгельса</td><td style="text-align:center">1 услуга</td><td style="text-align:center">1</td><td style="text-align:right">0</td><td style="text-align:right">0</td></tr>
@@ -1424,8 +1439,8 @@ Email: {c.get("email") or "___________"}<br>
 <div style="height:20px"></div>
 <p>4. В случае наличия замечаний Заказчик, после подписания акта, в праве требовать устранения замечаний отраженных в данном акте.</p>
 <p>5. Настоящий акт подписан в 2 (двух) экземплярах по одному для каждой из Сторон.</p>
-<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
-<tr><td style="height:60px"></td><td>{fname}</td></tr>
+<table style="margin-top:20px"><tr><th style="width:50%">Исполнитель: {co_name.upper()}</th><th style="width:50%">Заказчик:</th></tr>
+<tr><td style="vertical-align:top;padding:8px">{co_requisites}{stamp_sig_html}</td><td>{fname}</td></tr>
 <tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
 </div></body></html>'''
 
@@ -1439,7 +1454,7 @@ Email: {c.get("email") or "___________"}<br>
 <h1>«Акт выполненных работ»</h1>
 <div class="city-date"><span></span><span>от «____» ______________ 20____ г.</span></div>
 <p style="text-align:center">(ФОРМА)</p>
-<p class="no-indent">{co_name}, в лице {co_dir_pos}а <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, <span class="ul" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, действующего на основании доверенности № <span class="ul" style="min-width:40px">&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul" style="min-width:80px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, именуемый в дальнейшем «Подрядчик» и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», подписали настоящий Акт об оказании услуг о нижеследующем:</p>
+<p class="no-indent">{co_name}, в лице {co_dir_pos}а <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик» и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», подписали настоящий Акт об оказании услуг о нижеследующем:</p>
 <p>1. Подрядчик в соответствии с договором на выполнение работ по монтажу и сборке мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> года выполнил для Заказчика следующие работы:<br>Адрес: <strong>{daddr}</strong></p>
 <table><tr><th>Наименование (перечень) работ и услуг</th><th style="width:15%">Ед. измерения</th><th style="width:12%">Количество</th><th style="width:18%">Цена за ед. измерения в руб.</th><th style="width:18%">Стоимость в руб.</th></tr>
 <tr><td>Сборка и монтаж мебели согласно договору бытового подряда на изготовление мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td style="text-align:center">1 услуга</td><td style="text-align:center">1</td><td style="text-align:right">0</td><td style="text-align:right">0</td></tr>
@@ -1497,7 +1512,7 @@ Email: {c.get("email") or "___________"}<br>
 <p style="margin-top:16px">*Исполнитель вправе однократно предоставить Заказчику скидку в размере стоимости доставки, равной 8000 руб., которая осуществляется в пределах территориальных границ г. Саратова и г. Энгельса. В случае повторной доставки, по причинам не зависящим от Исполнителя, но зависящим от Заказчика, ее стоимость будет определена согласно приложению №1.</p>
 <p>**Расчет стоимости доставки учитывает расстояние по километражу от склада Исполнителя по адресу: г. Саратов, ул. Усть-Курдюмская д. 3, до дома (подъезда) заказчика согласно п. 1.3 договора. Километраж определяется на основании сервиса Яндекс.Карты https://yandex.ru/maps/</p>
 <p>*** Размер скидки определяется Исполнителем индивидуально.</p>
-<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name.upper()}</th><th style="width:50%">Заказчик:</th></tr>
 <tr><td style="padding:6px">Менеджер</td><td>&nbsp;</td></tr>
 <tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
 <tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
