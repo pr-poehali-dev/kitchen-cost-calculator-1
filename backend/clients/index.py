@@ -144,7 +144,7 @@ def _co(company: dict, field: str, fallback: str = '___________') -> str:
 
 def _genitive_name(full_name: str) -> str:
     """Склоняет ФИО (Фамилия Имя Отчество) в родительный падеж.
-    Работает для типичных русских имён мужского и женского рода.
+    Охватывает типичные русские мужские и женские имена/фамилии/отчества.
     """
     if not full_name or not full_name.strip():
         return full_name
@@ -153,36 +153,61 @@ def _genitive_name(full_name: str) -> str:
     if not parts:
         return full_name
 
+    vowels = set('аеёиоуыэюяАЕЁИОУЫЭЮЯ')
+    consonants = set('бвгджзйклмнпрстфхцчшщБВГДЖЗЙКЛМНПРСТФХЦЧШЩ')
+
     def _word_genitive(word: str) -> str:
-        if not word:
+        if not word or len(word) < 2:
             return word
         w = word
         low = w.lower()
 
-        # Женские окончания
-        if low.endswith('ья'):   return w[:-2] + 'ьи'
-        if low.endswith('ия'):   return w[:-2] + 'ии'
-        if low.endswith('ая'):   return w[:-2] + 'ой'
-        if low.endswith('яя'):   return w[:-2] + 'ей'
-        if low.endswith('на') and len(w) > 4 and low[-3] not in 'аеёиоуыэюя':
-            return w[:-1] + 'ы'  # Татьяна → Татьяны, но не трогать «она»
-        if low.endswith('а') and low[-2] not in 'аеёиоуыэюя':
-            return w[:-1] + 'ы'
-        if low.endswith('я') and low[-2] not in 'аеёиоуыэюя':
-            return w[:-1] + 'и'
+        # ── Имена/отчества на -ий (Василий, Николаевич, Аркадий, Юрий)
+        # Василий → Василия, Юрий → Юрия
+        if low.endswith('ий'):
+            return w[:-2] + 'ия'
 
-        # Мужские окончания
-        if low.endswith('ий'):   return w[:-2] + 'ого'
-        if low.endswith('ой'):   return w[:-2] + 'ого'
-        if low.endswith('ый'):   return w[:-2] + 'ого'
-        if low.endswith('ич'):   return w + 'а'
-        if low.endswith('ец'):   return w[:-2] + 'ца'
-        if low.endswith('ь'):    return w[:-1] + 'я'
-        # Согласная в конце — добавляем «а»
-        consonants = 'бвгджзйклмнпрстфхцчшщ'
-        if low[-1] in consonants:
+        # ── Отчества на -ич (Ильич, Кузьмич)
+        if low.endswith('ич'):
             return w + 'а'
 
+        # ── Женские окончания на -ья, -ия, -ья
+        if low.endswith('ья'):
+            return w[:-2] + 'ьи'
+        if low.endswith('ия'):
+            return w[:-2] + 'ии'
+
+        # ── Имена/фамилии на -а (Наташа, Коваленко — не склоняем оканч. на -ко/-енко)
+        if low.endswith('енко') or low.endswith('enko'):
+            return w  # украинские фамилии не склоняются
+        if low.endswith('ко') or low.endswith('но') or low.endswith('го') or low.endswith('цо'):
+            return w  # несклоняемые окончания
+
+        # ── Женские: -а после согласной → -ы
+        if low.endswith('а') and len(w) >= 2 and w[-2] in consonants:
+            return w[:-1] + 'ы'
+        # ── Женские: -я после согласной → -и (Наталья → Натальи)
+        if low.endswith('я') and len(w) >= 2 and w[-2] in consonants:
+            return w[:-1] + 'и'
+        # ── Женские: -га/-ка/-ха → -ги/-ки/-хи
+        if low.endswith('га'):   return w[:-2] + 'ги'
+        if low.endswith('ка'):   return w[:-2] + 'ки'
+        if low.endswith('ха'):   return w[:-2] + 'хи'
+
+        # ── Мужские на -ь (Игорь → Игоря, Алтынбек — нет, Медведь → Медведя)
+        if low.endswith('ь'):
+            return w[:-1] + 'я'
+
+        # ── Мужские на -ец → -ца (Кузнецов — нет, это -ов; Борец → Борца)
+        if low.endswith('ец') and len(w) >= 4:
+            return w[:-2] + 'ца'
+
+        # ── Мужские фамилии/имена на согласную → +а
+        # Сазонов, Иванов, Петров, Александр, Виктор, Алексей
+        if w[-1] in consonants:
+            return w + 'а'
+
+        # ── Окончание на гласную — не склоняем (Гёте, Дали, Роллe)
         return w
 
     result = [_word_genitive(p) for p in parts]
