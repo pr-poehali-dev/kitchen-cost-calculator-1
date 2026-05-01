@@ -1,5 +1,4 @@
-import { useStore } from '@/store/useStore';
-import { useCatalog } from '@/hooks/useCatalog';
+import { useCatalog, updateMaterial } from '@/hooks/useCatalog';
 import type { MaterialCategory } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import SearchInput from '@/components/ui/search-input';
@@ -35,7 +34,6 @@ export default function MatFilterBar({
   selectedSize, totalFilteredCount,
   onSelectAll, onBulkArchive, onBulkDeleteRequest, onClearSelection,
 }: Props) {
-  const store = useStore();
   const catalog = useCatalog();
 
   return (
@@ -70,7 +68,7 @@ export default function MatFilterBar({
           <button
             onClick={() => {
               if (!confirm(`Восстановить все ${archivedCount} архивных материалов?`)) return;
-              catalog.materials.filter(m => m.archived).forEach(m => store.updateMaterial(m.id, { archived: false }));
+              catalog.materials.filter(m => m.archived).forEach(m => updateMaterial(m.id, { archived: false }));
             }}
             className="flex items-center gap-1.5 px-2.5 py-1 rounded text-xs text-[hsl(var(--text-muted))] hover:text-gold transition-colors ml-auto"
           >

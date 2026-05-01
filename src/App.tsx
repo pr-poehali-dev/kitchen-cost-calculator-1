@@ -75,16 +75,11 @@ export default function App() {
 
       // Загружаем каталог из БД; если пуст — синхронизируем из AppState
       try {
-        const res = await fetch(`${(await import('@/config/api')).API_URLS.catalog}/?action=all`, {
-          headers: { Authorization: `Bearer ${token}` },
-        });
-        const catalogData = await res.json();
-        const hasData = (catalogData.materials?.length || 0) > 0 ||
-                        (catalogData.manufacturers?.length || 0) > 0;
-        if (hasData) {
-          await loadCatalog();
-        } else {
-          const currentState = (await import('@/store/stateCore')).getGlobalState();
+        await loadCatalog();
+        const { getGlobalState } = await import('@/store/stateCore');
+        const catalogEmpty = (await import('@/hooks/useCatalog')).getCatalogCache().materials.length === 0;
+        if (catalogEmpty) {
+          const currentState = getGlobalState();
           await syncCatalogFromAppState(
             currentState.manufacturers,
             currentState.vendors,
@@ -92,7 +87,7 @@ export default function App() {
           );
         }
       } catch {
-        await loadCatalog();
+        // каталог недоступен — работаем без него
       }
 
       setStateLoading(false);

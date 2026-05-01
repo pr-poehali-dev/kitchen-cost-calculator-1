@@ -36,13 +36,16 @@ export function setCatalogToken(token: string) {
   _token = token;
 }
 
+export function getCatalogCache(): CatalogState {
+  return _cache;
+}
+
 function authHeaders(): Record<string, string> {
   return _token ? { Authorization: `Bearer ${_token}` } : {};
 }
 
 // ── Загрузка всего каталога ───────────────────────────────────
 export async function loadCatalog(): Promise<void> {
-  if (_cache.loading) return;
   setCache({ loading: true });
   try {
     const res = await fetch(`${API_URLS.catalog}/?action=all`, { headers: authHeaders() });

@@ -1,4 +1,5 @@
 import { useStore } from '@/store/useStore';
+import { deleteMaterial } from '@/hooks/useCatalog';
 import type { Material, Vendor } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { MaterialRow } from '../BaseShared';
@@ -117,7 +118,7 @@ export default function VendorAssortment({
                   if (catsUsed.length === 0) {
                     return mats.map(m => (
                       <MaterialRow key={m.id} material={m} currency={store.settings.currency}
-                        onEdit={() => onEditMaterial(m)} onDelete={() => store.deleteMaterial(m.id)} />
+                        onEdit={() => onEditMaterial(m)} onDelete={() => deleteMaterial(m.id)} />
                     ));
                   }
                   return (
@@ -133,7 +134,7 @@ export default function VendorAssortment({
                             </div>
                             {mats.filter(m => m.categoryId === cat.id).map(m => (
                               <MaterialRow key={m.id} material={m} currency={store.settings.currency}
-                                onEdit={() => onEditMaterial(m)} onDelete={() => store.deleteMaterial(m.id)} />
+                                onEdit={() => onEditMaterial(m)} onDelete={() => deleteMaterial(m.id)} />
                             ))}
                           </div>
                         );
@@ -146,7 +147,7 @@ export default function VendorAssortment({
                           </div>
                           {uncategorized.map(m => (
                             <MaterialRow key={m.id} material={m} currency={store.settings.currency}
-                              onEdit={() => onEditMaterial(m)} onDelete={() => store.deleteMaterial(m.id)} />
+                              onEdit={() => onEditMaterial(m)} onDelete={() => deleteMaterial(m.id)} />
                           ))}
                         </div>
                       )}

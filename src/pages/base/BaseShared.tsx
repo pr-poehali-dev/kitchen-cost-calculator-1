@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { Material } from '@/store/types';
 import Icon from '@/components/ui/icon';
-import { useStore } from '@/store/useStore';
+import { updateMaterial, duplicateMaterial } from '@/hooks/useCatalog';
 
 export const fmt = (n: number) => n.toLocaleString('ru-RU');
 
@@ -50,7 +50,6 @@ function getPriceAgeDays(priceUpdatedAt?: string): number | null {
 export function MaterialRow({ material, onEdit, onDelete }: {
   material: Material; onEdit: () => void; onDelete: () => void; currency?: string;
 }) {
-  const store = useStore();
   const [editingPrice, setEditingPrice] = useState(false);
   const [priceVal, setPriceVal] = useState('');
   const [showHistory, setShowHistory] = useState(false);
@@ -64,7 +63,7 @@ export function MaterialRow({ material, onEdit, onDelete }: {
   const commitPrice = () => {
     const v = parseFloat(priceVal);
     if (!isNaN(v) && v >= 0 && v !== material.basePrice) {
-      store.updateMaterial(material.id, { basePrice: v });
+      updateMaterial(material.id, { basePrice: v });
     }
     setEditingPrice(false);
   };
@@ -144,14 +143,14 @@ export function MaterialRow({ material, onEdit, onDelete }: {
         {/* Действия */}
         <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
           <button
-            onClick={() => store.updateMaterial(material.id, { archived: !material.archived })}
+            onClick={() => updateMaterial(material.id, { archived: !material.archived })}
             title={material.archived ? 'Восстановить' : 'Архивировать'}
             className={`w-6 h-6 flex items-center justify-center rounded transition-colors ${material.archived ? 'text-gold hover:text-foreground' : 'text-[hsl(var(--text-muted))] hover:text-amber-400'}`}
           >
             <Icon name={material.archived ? 'ArchiveRestore' : 'Archive'} size={11} />
           </button>
           <button
-            onClick={() => store.duplicateMaterial(material.id)}
+            onClick={() => duplicateMaterial(material.id)}
             title="Дублировать"
             className="w-6 h-6 flex items-center justify-center text-[hsl(var(--text-muted))] hover:text-foreground transition-colors rounded"
           >

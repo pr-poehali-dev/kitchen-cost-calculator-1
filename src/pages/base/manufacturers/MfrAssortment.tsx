@@ -1,4 +1,5 @@
 import { useStore } from '@/store/useStore';
+import { deleteMaterial } from '@/hooks/useCatalog';
 import type { Manufacturer, Material, MaterialType, MaterialCategory } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { MaterialRow } from '../BaseShared';
@@ -105,7 +106,7 @@ export default function MfrAssortment({
               {catMats.map(m => (
                 <MaterialRow key={m.id} material={m} currency={store.settings.currency}
                   onEdit={() => onEditMaterial(m)}
-                  onDelete={() => store.deleteMaterial(m.id)}
+                  onDelete={() => deleteMaterial(m.id)}
                 />
               ))}
             </div>
@@ -121,7 +122,7 @@ export default function MfrAssortment({
               {uncategorized.map(m => (
                 <MaterialRow key={m.id} material={m} currency={store.settings.currency}
                   onEdit={() => onEditMaterial(m)}
-                  onDelete={() => store.deleteMaterial(m.id)}
+                  onDelete={() => deleteMaterial(m.id)}
                 />
               ))}
             </div>
@@ -138,7 +139,7 @@ export default function MfrAssortment({
             {ungrouped.map(m => (
               <MaterialRow key={m.id} material={m} currency={store.settings.currency}
                 onEdit={() => onEditMaterial(m)}
-                onDelete={() => store.deleteMaterial(m.id)}
+                onDelete={() => deleteMaterial(m.id)}
               />
             ))}
           </div>
