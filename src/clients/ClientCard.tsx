@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import Icon from '@/components/ui/icon';
 import { toast } from 'sonner';
 import { useClient, useClients } from './useClients';
@@ -44,23 +44,8 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
   const [draft, setDraft] = useState<Client | null>(null);
   const [saved, setSaved] = useState(false);
   const [duplicating, setDuplicating] = useState(false);
-  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const current = draft ?? client;
-
-  // Автосохранение через 2с после последнего изменения
-  useEffect(() => {
-    if (!draft) return;
-    if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    autoSaveTimer.current = setTimeout(async () => {
-      autoSaveTimer.current = null;
-      const ok = await save(draft);
-      if (ok) { setSaved(true); setDraft(null); setTimeout(() => setSaved(false), 2000); }
-    }, 2000);
-    return () => {
-      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current);
-    };
-  }, [draft]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const onChange = (field: keyof Client, value: unknown) => {
     setDraft(prev => ({ ...(prev ?? client!), [field]: value } as Client));
@@ -69,7 +54,6 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
 
   const handleSave = async () => {
     if (!draft) return;
-    if (autoSaveTimer.current) { clearTimeout(autoSaveTimer.current); autoSaveTimer.current = null; }
     const ok = await save(draft);
     if (ok) { setSaved(true); setDraft(null); setTimeout(() => setSaved(false), 2000); }
   };
