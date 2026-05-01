@@ -1,6 +1,7 @@
 import type { ExpenseItem, ExpenseGroup } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import ExpenseRow from './ExpenseRow';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 const fmt = (n: number) => n.toLocaleString('ru-RU');
 
@@ -65,7 +66,7 @@ export default function ExpenseGroupBlock({
                   <Icon name="Pencil" size={12} />
                 </button>
                 <button
-                  onClick={() => { if (window.confirm(`Удалить группу «${group.name}» со всеми статьями?`)) onDeleteGroup(group.id); }}
+                  onClick={async () => { if (await confirmDialog({ message: `Удалить группу «${group.name}» со всеми статьями?` })) onDeleteGroup(group.id); }}
                   className="text-[hsl(var(--text-muted))] hover:text-destructive transition-colors p-1"
                 >
                   <Icon name="Trash2" size={12} />

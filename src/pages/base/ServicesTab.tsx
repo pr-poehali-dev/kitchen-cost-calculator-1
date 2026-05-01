@@ -4,6 +4,7 @@ import type { Service } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { fmt, Field, Modal } from './BaseShared';
 import SearchInput from '@/components/ui/search-input';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 export default function ServicesTab({ initialSearch = '' }: { initialSearch?: string }) {
   const store = useStore();
@@ -58,7 +59,7 @@ export default function ServicesTab({ initialSearch = '' }: { initialSearch?: st
               <span className="text-right font-mono">{fmt(sv.basePrice)} <span className="text-[hsl(var(--text-muted))] text-xs">/{sv.unit}</span></span>
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={() => setEditingService(sv)} className="text-[hsl(var(--text-muted))] hover:text-foreground"><Icon name="Pencil" size={12} /></button>
-                <button onClick={() => { if (window.confirm(`Удалить услугу «${sv.name}»?`)) store.deleteService(sv.id); }} className="text-[hsl(var(--text-muted))] hover:text-destructive"><Icon name="Trash2" size={12} /></button>
+                <button onClick={async () => { if (await confirmDialog({ message: `Удалить услугу «${sv.name}»?` })) store.deleteService(sv.id); }} className="text-[hsl(var(--text-muted))] hover:text-destructive"><Icon name="Trash2" size={12} /></button>
               </div>
             </div>
           ))}

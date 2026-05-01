@@ -5,6 +5,7 @@ import { useCatalog } from '@/hooks/useCatalog';
 import type { SavedBlock, CalcColumnKey } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { fmt } from '../calc/constants';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface Props {
   block: SavedBlock;
@@ -223,9 +224,9 @@ export default function SavedBlockRow({ block, rowId, visibleCols, gridCols, cur
         }
       })}
       <button
-        onClick={() => {
+        onClick={async () => {
           const hasData = row?.name?.trim();
-          if (!hasData || window.confirm(`Удалить строку «${row?.name}»?`)) {
+          if (!hasData || await confirmDialog({ message: `Удалить строку «${row?.name}»?` })) {
             delRow();
           }
         }}

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import type { ServiceBlock } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import ServiceRowComponent from './services/ServiceRowComponent';
@@ -177,8 +178,8 @@ function ServiceBlockCard({ block, projectId }: { block: ServiceBlock; projectId
             <Icon name="Copy" size={13} />
           </button>
           <button
-            onClick={() => {
-              if (window.confirm(`Удалить блок услуг «${block.name}»?`)) {
+            onClick={async () => {
+              if (await confirmDialog({ message: `Удалить блок услуг «${block.name}»?` })) {
                 store.deleteServiceBlock(projectId, block.id);
               }
             }}

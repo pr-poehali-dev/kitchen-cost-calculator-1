@@ -2,6 +2,7 @@ import { useState, useRef, useCallback } from 'react';
 import Icon from '@/components/ui/icon';
 import { toast } from 'sonner';
 import type { ClientPhoto } from './types';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface PendingFile {
   file: File;
@@ -241,7 +242,7 @@ export function TabPhotos({ clientId, photos, onUpload, onDelete }: {
                     onClick={() => setPreview(photo.url)}
                   />
                   <button
-                    onClick={() => { if (window.confirm('Удалить фото?')) onDelete(photo.id); }}
+                    onClick={async () => { if (await confirmDialog({ message: 'Удалить фото?' })) onDelete(photo.id); }}
                     className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/70 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-500/80"
                   >
                     <Icon name="X" size={11} className="text-white" />

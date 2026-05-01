@@ -2,6 +2,7 @@ import { useStore } from '@/store/useStore';
 import { useCatalog } from '@/hooks/useCatalog';
 import type { Manufacturer } from '@/store/types';
 import Icon from '@/components/ui/icon';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 interface Props {
   manufacturer: Manufacturer;
@@ -71,7 +72,7 @@ export default function MfrHeroCard({ manufacturer, mfrMaterialsCount, onEdit, o
                   <Icon name="Pencil" size={11} /> Изменить
                 </button>
                 <button
-                  onClick={() => { if (window.confirm(`Удалить производителя «${manufacturer.name}»?`)) onDelete(); }}
+                  onClick={async () => { if (await confirmDialog({ message: `Удалить производителя «${manufacturer.name}»?` })) onDelete(); }}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[hsl(220,12%,16%)] border border-border rounded-lg hover:border-destructive/50 hover:text-destructive text-[hsl(var(--text-muted))] transition-all">
                   <Icon name="Trash2" size={11} />
                 </button>

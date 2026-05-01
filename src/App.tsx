@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useConfirmDialog } from '@/components/ui/ConfirmDialog';
 import Layout from '@/components/Layout';
 import GlobalSearch from '@/components/GlobalSearch';
 import { AppLoadingSkeleton } from '@/components/Skeleton';
@@ -40,6 +41,7 @@ export default function App() {
 
   const { state, login, logout, getToken } = useAuth();
   const store = useStore();
+  const { Dialog: ConfirmDialogEl } = useConfirmDialog();
 
   // Push-уведомления
   usePushNotifications(searchClients);
@@ -108,9 +110,9 @@ export default function App() {
 
   const user = state.user;
   const token = getToken() || '';
-
   return (
     <>
+      {ConfirmDialogEl}
       <Layout
         active={section}
         onNav={s => { setSection(s); if (s !== 'clients') setOpenClientId(null); if (s !== 'base') setBaseSearch(null); }}

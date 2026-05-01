@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
   type DragEndEvent,
@@ -316,8 +317,8 @@ export default function BlocksPage() {
                   <span className="text-xs text-[hsl(var(--text-muted))]">Нет проектов</span>
                 )}
                 <button
-                  onClick={() => {
-                    if (window.confirm(`Удалить блок «${selected.name}»? Все наборы и строки в нём будут потеряны.`)) {
+                  onClick={async () => {
+                    if (await confirmDialog({ message: `Удалить блок «${selected.name}»? Все наборы и строки в нём будут потеряны.` })) {
                       store.deleteSavedBlock(selected.id);
                     }
                   }}

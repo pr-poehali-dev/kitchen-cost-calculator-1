@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import type { CalcBlock as CalcBlockType, CalcColumnKey } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { COLUMN_LABELS_SHORT, COLUMN_ALIGN, COLUMN_WIDTHS, fmt } from './constants';
@@ -250,8 +251,8 @@ export default function CalcBlock({
             <Icon name="SlidersHorizontal" size={13} />
           </button>
           <button
-            onClick={() => {
-              if (window.confirm(`Удалить блок «${block.name}»? Все строки в нём будут потеряны.`)) {
+            onClick={async () => {
+              if (await confirmDialog({ message: `Удалить блок «${block.name}»? Все строки в нём будут потеряны.` })) {
                 store.deleteBlock(projectId, block.id);
               }
             }}

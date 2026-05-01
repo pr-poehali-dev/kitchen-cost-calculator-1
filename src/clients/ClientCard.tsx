@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react';
 import Icon from '@/components/ui/icon';
 import { toast } from 'sonner';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import { useClient, useClients } from './useClients';
 import { CLIENT_STATUSES, clientFullName, emptyClient } from './types';
 import type { Client, ClientStatus } from './types';
@@ -58,9 +59,9 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
     if (ok) { setSaved(true); setDraft(null); setTimeout(() => setSaved(false), 2000); }
   };
 
-  const handleBack = () => {
+  const handleBack = async () => {
     if (draft) {
-      const confirmed = window.confirm('Есть несохранённые изменения. Уйти без сохранения?');
+      const confirmed = await confirmDialog({ message: 'Есть несохранённые изменения. Уйти без сохранения?' });
       if (!confirmed) return;
     }
     onBack();
@@ -73,7 +74,7 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
 
   const handleDuplicate = async () => {
     if (!current) return;
-    const confirmed = window.confirm(`Создать копию клиента «${clientFullName(current)}»?`);
+    const confirmed = await confirmDialog({ message: `Создать копию клиента «${clientFullName(current)}»?` });
     if (!confirmed) return;
     setDuplicating(true);
     const base = emptyClient();
@@ -225,8 +226,8 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
               </button>
             ) : (
               <button
-                onClick={() => {
-                  if (window.confirm(`Переместить «${clientFullName(current)}» в архив?`)) {
+                onClick={async () => {
+                  if (await confirmDialog({ message: `Переместить «${clientFullName(current)}» в архив?` })) {
                     handleStatusChange('archive');
                     onBack();
                   }

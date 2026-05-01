@@ -2,6 +2,7 @@ import { useStore } from '@/store/useStore';
 import { useCatalog } from '@/hooks/useCatalog';
 import type { Vendor, Material, MaterialType } from '@/store/types';
 import Icon from '@/components/ui/icon';
+import { confirmDialog } from '@/components/ui/ConfirmDialog';
 
 function ContactRow({ icon, value, href }: { icon: string; value: string; href?: string }) {
   const cls = 'flex items-center gap-1.5 text-sm text-[hsl(var(--text-dim))]';
@@ -96,7 +97,7 @@ export default function VendorHeroCard({
                   <Icon name="Pencil" size={11} /> Изменить
                 </button>
                 <button
-                  onClick={() => { if (window.confirm(`Удалить поставщика «${vendor.name}»?`)) onDeleteVendor(); }}
+                  onClick={async () => { if (await confirmDialog({ message: `Удалить поставщика «${vendor.name}»?` })) onDeleteVendor(); }}
                   className="flex items-center gap-1.5 px-3 py-1.5 text-xs bg-[hsl(220,12%,16%)] border border-border rounded-lg hover:border-destructive/50 hover:text-destructive text-[hsl(var(--text-muted))] transition-all">
                   <Icon name="Trash2" size={11} />
                 </button>
