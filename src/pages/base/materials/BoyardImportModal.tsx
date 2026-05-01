@@ -1,7 +1,5 @@
 import { useState } from 'react';
-import { useStore } from '@/store/useStore';
-import { getGlobalState } from '@/store/stateCore';
-import { useCatalog, bulkUpsertMaterials, loadCatalog } from '@/hooks/useCatalog';
+import { useCatalog, bulkUpsertMaterials, loadCatalog, addManufacturer, deleteMaterial } from '@/hooks/useCatalog';
 import Icon from '@/components/ui/icon';
 import { Modal } from '../BaseShared';
 import func2url from '../../../../backend/func2url.json';
@@ -36,7 +34,6 @@ interface PreviewGroup {
 }
 
 export default function BoyardImportModal({ onClose }: { onClose: () => void }) {
-  const store = useStore();
   const catalog = useCatalog();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -78,21 +75,23 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
   const handleImport = async () => {
     setImporting(true);
 
-    const allBoyardMfrs = catalog.manufacturers.filter(m => m.name.toLowerCase() === 'boyard');
-    const existingMfr = allBoyardMfrs.find(mfr =>
-      catalog.materials.some(mat => mat.manufacturerId === mfr.id && mat.article?.startsWith('boyard__group__'))
-    ) ?? allBoyardMfrs[0];
+    // Находим или создаём производителя BOYARD в каталоге
+    let mfrId: string;
+    const existingMfr = catalog.manufacturers.find(m => m.name.toLowerCase() === 'boyard' &&
+      catalog.materials.some(mat => mat.manufacturerId === m.id && mat.article?.startsWith('boyard__group__'))
+    ) ?? catalog.manufacturers.find(m => m.name.toLowerCase() === 'boyard');
 
-    // Уникальные категории
-    const categoryMap = new Map<string, string>(); // category → typeId
-    items.forEach(i => categoryMap.set(i.category, i.type_id));
-
-    const categories = Array.from(categoryMap.entries()).map(([cat, typeId]) => ({
-      key: cat,
-      name: cat,
-      typeIds: [typeId],
-      note: `BOYARD: ${cat}`,
-    }));
+    if (existingMfr) {
+      mfrId = existingMfr.id;
+    } else {
+      const newMfr = await addManufacturer({
+        name: 'BOYARD',
+        note: 'Производитель фурнитуры',
+        materialTypeIds: ['mt10', 'mt11', 'mt12'],
+        contact: '', phone: '', email: '', telegram: '', website: '',
+      });
+      mfrId = newMfr.id;
+    }
 
     // Группируем позиции по названию — одно название = один материал
     const grouped = new Map<string, BoyardItem[]>();
@@ -104,45 +103,40 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
         grouped.get(key)!.push(item);
       });
 
-    // Каждая группа → один материал с несколькими вариантами по артикулу
-    const materials = Array.from(grouped.entries()).map(([name, group]) => {
+    // Формируем массив материалов для прямой загрузки в каталог
+    const today = new Date().toISOString().slice(0, 10);
+    const materialsToUpsert = Array.from(grouped.entries()).map(([name, group]) => {
       const first = group[0];
       const gKey = boyardGroupKey(name);
+      const existingInCatalog = catalog.materials.find(m => m.article === gKey);
       return {
+        id: existingInCatalog?.id ?? `m${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
         name,
-        typeId: first.type_id,
+        manufacturerId: mfrId,
         vendorId: BOYARD_VENDOR_ID,
-        article: gKey,      // groupKey используется как article для матчинга
-        groupKey: gKey,
-        categoryKey: first.category,
-        unit: first.unit as 'шт',
+        typeId: first.type_id,
+        article: gKey,
+        unit: 'шт' as const,
+        basePrice: group[0].price_retail,
+        priceUpdatedAt: today,
+        priceHistory: existingInCatalog?.priceHistory ?? [],
         variants: group.map(item => ({
-          variantId: boyardVariantId(item.article),
-          article: item.article,       // оригинальный артикул из прайса
-          size: item.article,          // отображается как "размер" в карточке
+          id: boyardVariantId(item.article),
+          article: item.article,
+          size: item.article,
           params: 'розница',
           basePrice: item.price_retail,
         })),
       };
     });
 
-    const beforeIds = new Set(getGlobalState().materials.map(m => m.id));
+    const created = materialsToUpsert.filter(m => !catalog.materials.find(e => e.article === m.article)).length;
+    const updated = materialsToUpsert.length - created;
 
-    // Сначала удаляем старые материалы (article = "boyard__xxx", не "boyard__group__xxx")
-    store.deleteLegacyBoyardMaterials();
-
-    const res = store.importSkatBatch(
-      { name: 'BOYARD', note: 'Производитель фурнитуры', materialTypeIds: ['mt10', 'mt11', 'mt12'], existingId: existingMfr?.id },
-      categories,
-      materials
-    );
-
-    const afterMaterials = getGlobalState().materials;
-    const newMaterials = afterMaterials.filter(m => !beforeIds.has(m.id));
-    await bulkUpsertMaterials(newMaterials);
+    await bulkUpsertMaterials(materialsToUpsert as import('@/store/types').Material[]);
     await loadCatalog();
 
-    setResult(res);
+    setResult({ created, updated, skipped: 0 });
     setImporting(false);
     setStep('done');
   };
@@ -195,7 +189,10 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
                   Найдено {legacyCount} устаревших материалов BOYARD (старый формат)
                 </div>
                 <button
-                  onClick={() => store.deleteLegacyBoyardMaterials()}
+                  onClick={async () => {
+                    const toDelete = catalog.materials.filter(m => boyardMfrIds.has(m.manufacturerId) && !m.article?.startsWith('boyard__group__'));
+                    for (const m of toDelete) await deleteMaterial(m.id);
+                  }}
                   className="text-xs text-amber-400 hover:text-amber-300 underline shrink-0 transition-colors"
                 >
                   Удалить
