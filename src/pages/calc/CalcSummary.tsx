@@ -34,7 +34,7 @@ export default function CalcSummary({
   const groups = store.expenseGroups || [];
   const allExpenses = store.expenses;
 
-  type SummaryRow = { id: string; label: string; value: number; sign?: '+'; color?: string; indent?: boolean };
+  type SummaryRow = { id: string; label: string; value: number; sign?: '+' | '-'; color?: string; indent?: boolean };
   const rows: SummaryRow[] = [];
   const activeExp = allExpenses.filter(e => e.enabled !== false);
 
@@ -56,13 +56,13 @@ export default function CalcSummary({
     rows.push({ id: 'services', label: 'Услуги', value: totalServices });
   }
 
-  if (totals.totalMarkupAmount > 0) {
+  if (totals.totalMarkupAmount !== 0) {
     const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
     Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
       const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
       const pct = grpItems.reduce((s, e) => s + e.value, 0);
       const amt = Math.round(totals.base * pct / 100);
-      if (amt > 0) rows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? 'Надбавка на итог'} (${pct}%)`, value: amt, sign: '+', color: 'gold' });
+      if (amt !== 0) rows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? 'Надбавка на итог'} (${pct}%)`, value: Math.abs(amt), sign: amt > 0 ? '+' : undefined, color: amt > 0 ? 'gold' : 'red' });
     });
   }
 
@@ -139,12 +139,13 @@ export default function CalcSummary({
               className={`flex justify-between text-sm ${r.indent ? 'pl-4' : ''} ${addDivider && !isFirst ? 'border-t border-border pt-1.5' : ''} ${
                 r.color === 'gold' ? 'text-gold' :
                 r.color === 'blue' ? 'text-[hsl(200,60%,70%)]' :
+                r.color === 'red' ? 'text-[hsl(0,70%,60%)]' :
                 'text-[hsl(var(--text-dim))]'
               }`}
             >
               <span>{r.label}</span>
               <span className="font-mono shrink-0 ml-4">
-                {r.sign ? `+${fmt(r.value)}` : fmt(r.value)} {cur}
+                {r.sign === '+' ? `+${fmt(r.value)}` : r.sign === '-' ? `-${fmt(r.value)}` : fmt(r.value)} {cur}
               </span>
             </div>
           );

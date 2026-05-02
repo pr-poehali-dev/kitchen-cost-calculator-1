@@ -57,6 +57,8 @@ export default function ExpensesPage() {
   const projectBlocks = project?.blocks.map(b => ({ id: b.id, name: b.name })) || [];
   const groups: ExpenseGroup[] = store.expenseGroups || [];
   const totals = project ? store.calcProjectTotals(project) : null;
+  const totalPurchase = project ? project.blocks.reduce((sum, b) =>
+    sum + b.rows.reduce((s, r) => s + (r.basePrice ?? 0) * r.qty, 0), 0) : 0;
 
   const ungroupedExpenses = store.expenses.filter(e => !e.groupId);
 
@@ -198,6 +200,7 @@ export default function ExpensesPage() {
 
         <ExpenseSummary
           totals={totals}
+          totalPurchase={totalPurchase}
           currency={store.settings.currency}
           project={project ?? null}
           showRefreshBanner={showRefreshBanner}

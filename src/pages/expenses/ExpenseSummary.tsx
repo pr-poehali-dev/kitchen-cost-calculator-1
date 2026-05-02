@@ -16,6 +16,7 @@ interface Totals {
 
 interface Props {
   totals: Totals | null;
+  totalPurchase?: number;
   currency: string;
   project: Project | null;
   showRefreshBanner: boolean;
@@ -25,26 +26,27 @@ interface Props {
 }
 
 export default function ExpenseSummary({
-  totals, currency, project,
+  totals, totalPurchase, currency, project,
   showRefreshBanner, refreshDone,
   onApplyRefresh, onDismissBanner,
 }: Props) {
   // Сегменты для диаграммы
   const segments = totals && totals.grandTotal > 0 ? (() => {
     const total = totals.grandTotal;
+    const markupSum = totals.blockExtraTotal + totals.totalMarkupAmount;
     const items = [
       { label: 'Материалы', value: totals.rawMaterials, color: '#c8a96e' },
       { label: 'Услуги', value: totals.rawServices, color: '#3b82f6' },
-      { label: 'Надбавки', value: totals.blockExtraTotal + totals.totalMarkupAmount, color: '#8b5cf6' },
+      { label: markupSum >= 0 ? 'Надбавки' : 'Скидки/надбавки', value: markupSum, color: markupSum >= 0 ? '#8b5cf6' : '#ef4444' },
       { label: 'Накладные %', value: totals.percentAmount, color: '#06b6d4' },
       { label: 'Фиксированные', value: totals.fixedAmount, color: '#10b981' },
-    ].filter(s => s.value > 0);
+    ].filter(s => s.value !== 0);
 
     let offset = 0;
     return items.map(s => {
-      const pct = (s.value / total) * 100;
-      const seg = { ...s, pct, offset };
-      offset += pct;
+      const absPct = (Math.abs(s.value) / total) * 100;
+      const seg = { ...s, pct: absPct, offset };
+      offset += absPct;
       return seg;
     });
   })() : [];
@@ -139,10 +141,10 @@ export default function ExpenseSummary({
                   <span className="font-mono">+{fmt(totals.blockExtraTotal)} {currency}</span>
                 </div>
               )}
-              {totals.totalMarkupAmount > 0 && (
-                <div className="flex justify-between text-[hsl(var(--gold))]">
-                  <span>Надбавка на итог ({totals.totalMarkupPct}%)</span>
-                  <span className="font-mono">+{fmt(totals.totalMarkupAmount)} {currency}</span>
+              {totals.totalMarkupAmount !== 0 && (
+                <div className={`flex justify-between ${totals.totalMarkupAmount > 0 ? 'text-[hsl(var(--gold))]' : 'text-[hsl(0,70%,60%)]'}`}>
+                  <span>{totals.totalMarkupAmount > 0 ? 'Надбавка' : 'Скидка'} на итог ({totals.totalMarkupPct}%)</span>
+                  <span className="font-mono">{totals.totalMarkupAmount > 0 ? '+' : ''}{fmt(totals.totalMarkupAmount)} {currency}</span>
                 </div>
               )}
               {totals.percentAmount > 0 && (
@@ -162,9 +164,9 @@ export default function ExpenseSummary({
                   <span>Итого с расходами</span>
                   <span className="font-mono text-gold">{fmt(totals.grandTotal)} {currency}</span>
                 </div>
-                {totals.rawMaterials > 0 && totals.grandTotal > 0 && (
+                {totalPurchase != null && totalPurchase > 0 && totals.grandTotal > 0 && (
                   <div className="text-xs text-[hsl(var(--text-muted))] mt-1">
-                    Наценка к закупке: ×{(totals.grandTotal / totals.rawMaterials).toFixed(2)}
+                    Наценка к закупке: ×{(totals.grandTotal / totalPurchase).toFixed(2)}
                   </div>
                 )}
               </div>
