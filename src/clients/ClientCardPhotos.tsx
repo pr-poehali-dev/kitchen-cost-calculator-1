@@ -61,22 +61,23 @@ export function TabPhotos({ clientId, photos, onUpload, onDelete }: {
 
   const handleUploadAll = async () => {
     if (!pending.length) return;
+    const total = pending.length;
     setUploading(true);
-    setProgress({ done: 0, total: pending.length });
+    setProgress({ done: 0, total });
     let successCount = 0;
     for (let i = 0; i < pending.length; i++) {
       const ok = await onUpload(pending[i].file, category);
       if (ok) successCount++;
-      setProgress({ done: i + 1, total: pending.length });
+      setProgress({ done: i + 1, total });
     }
     pending.forEach(p => URL.revokeObjectURL(p.previewUrl));
     setPending([]);
     setUploading(false);
     setProgress(null);
-    if (successCount === pending.length) {
+    if (successCount === total) {
       toast.success(`Загружено ${successCount} фото`);
     } else {
-      toast.error(`Загружено ${successCount} из ${pending.length} фото`);
+      toast.error(`Загружено ${successCount} из ${total} фото`);
     }
   };
 
