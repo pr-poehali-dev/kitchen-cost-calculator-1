@@ -3,7 +3,7 @@ import Icon from '@/components/ui/icon';
 import type { Client } from './types';
 import { clientFullName } from './types';
 import { toast } from 'sonner';
-import { DOCS, DOC_GROUPS, apiFetch, API, getToken } from './documents/docTypes';
+import { DOCS, DOC_GROUPS, apiFetch, docBuilderFetch, DOC_API, getToken } from './documents/docTypes';
 import { DocCardWithStatus, getSentStatus, setSentStatus } from './documents/DocCardWithStatus';
 
 export default function TabDocuments({ client, hasDraft, onSave, saving }: {
@@ -31,7 +31,7 @@ export default function TabDocuments({ client, hasDraft, onSave, saving }: {
     try {
       if (hasDraft && onSave) await onSave();
       for (const doc of DOCS) {
-        const res = await apiFetch('doc_docx', client.id, doc.id);
+        const res = await docBuilderFetch('doc_docx', client.id, doc.id);
         const data = await res.json();
         if (data.data) {
           const binary = atob(data.data);
@@ -42,26 +42,21 @@ export default function TabDocuments({ client, hasDraft, onSave, saving }: {
           const a = document.createElement('a');
           a.href = blobUrl;
           a.download = `${doc.title} — ${clientName}.docx`;
-          document.body.appendChild(a);
-          a.click();
-          document.body.removeChild(a);
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
           setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-          await new Promise(r => setTimeout(r, 600));
+          await new Promise(r => setTimeout(r, 800));
         }
       }
       toast.success('Все документы скачаны');
-    } catch {
-      toast.error('Ошибка при скачивании');
-    } finally {
-      setDownloadingAll(false);
-    }
+    } catch { toast.error('Ошибка при скачивании'); }
+    finally { setDownloadingAll(false); }
   };
 
   const handleDownloadZip = async () => {
     setDownloadingZip(true);
     try {
       if (hasDraft && onSave) await onSave();
-      const res = await fetch(`${API}/?action=doc_zip&client_id=${client.id}`, {
+      const res = await fetch(`${DOC_API}/?action=doc_zip&client_id=${client.id}&doc=all`, {
         headers: { Authorization: `Bearer ${getToken()}` },
       });
       const data = await res.json();

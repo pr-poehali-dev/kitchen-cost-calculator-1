@@ -1,5 +1,6 @@
 import { API_URLS } from '@/config/api';
 export const API = API_URLS.clients;
+export const DOC_API = API_URLS.docBuilder;
 
 export function getToken() {
   return localStorage.getItem('kuhni_pro_token') || '';
@@ -15,6 +16,15 @@ export function apiUrl(action: string, clientId: string, doc: string) {
 
 export async function apiFetch(action: string, clientId: string, doc: string): Promise<Response> {
   return fetch(apiUrl(action, clientId, doc), { headers: authHeaders() });
+}
+
+// Новый doc-builder — только для DOCX и ZIP
+export function docBuilderUrl(action: string, clientId: string, doc: string) {
+  return `${DOC_API}/?action=${action}&client_id=${clientId}&doc=${doc}`;
+}
+
+export async function docBuilderFetch(action: string, clientId: string, doc: string): Promise<Response> {
+  return fetch(docBuilderUrl(action, clientId, doc), { headers: authHeaders() });
 }
 
 export type DocType =

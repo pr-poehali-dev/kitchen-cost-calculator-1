@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {
+      "name": "OPTIONS returns 200",
+      "method": "OPTIONS",
+      "path": "/",
+      "expectedStatus": 200
+    },
+    {
+      "name": "Without token returns 401",
+      "method": "GET",
+      "path": "/?action=doc_docx&client_id=test&doc=contract",
+      "expectedStatus": 401
+    }
+  ]
+}

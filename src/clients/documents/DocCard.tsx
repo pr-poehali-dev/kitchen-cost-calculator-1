@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import { toast } from 'sonner';
 import type { DocDef } from './docTypes';
-import { apiFetch } from './docTypes';
+import { apiFetch, docBuilderFetch } from './docTypes';
 
 function DocPreviewModal({ url, title, onClose }: { url: string; title: string; onClose: () => void }) {
   return (
@@ -83,7 +83,7 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
     setShowDownloadMenu(false);
     try {
       await ensureSaved();
-      const res = await apiFetch('doc_docx', clientId, doc.id);
+      const res = await docBuilderFetch('doc_docx', clientId, doc.id);
       const data = await res.json();
       if (data.data) {
         const binary = atob(data.data);
