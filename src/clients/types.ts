@@ -80,6 +80,16 @@ export interface Client {
   credit_bank: string;
   credit_prepaid: number;
   credit_balance: number;
+  // Технический проект
+  tech_korpus: string;
+  tech_fasad1: string;
+  tech_fasad2: string;
+  tech_stoleshniza: string;
+  tech_stenovaya: string;
+  tech_podsvetka_type: string;
+  tech_podsvetka_svet: string;
+  tech_frezerovka: string;
+  tech_image_url: string;
   // Профиль клиента
   source: string;
   tags: string[];
@@ -135,6 +145,10 @@ export function emptyClient(): Omit<Client, 'id' | 'created_at' | 'updated_at'> 
     reminder_date: '', reminder_note: '', comment: '',
     credit_contract_number: '', credit_contract_date: '', credit_bank: '',
     credit_prepaid: 0, credit_balance: 0,
+    tech_korpus: '', tech_fasad1: '', tech_fasad2: '',
+    tech_stoleshniza: '', tech_stenovaya: '',
+    tech_podsvetka_type: '', tech_podsvetka_svet: '',
+    tech_frezerovka: '', tech_image_url: '',
     source: '', tags: [], rating: null,
     property_type: '', property_area: '',
     has_children: false, has_pets: false,

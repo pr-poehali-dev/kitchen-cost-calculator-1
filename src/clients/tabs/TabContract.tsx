@@ -196,6 +196,63 @@ export function TabContract({ client, onChange }: { client: Client; onChange: (f
           </Field>
         </div>
       </Section>
+
+      {/* Технический проект */}
+      <Section title="Технический проект (Прил. №1)" icon="Ruler">
+        <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Корпус">
+              <input className={INPUT} value={client.tech_korpus || ''} onChange={e => onChange('tech_korpus', e.target.value)} placeholder="Lamarty Белый" />
+            </Field>
+            <Field label="Столешница">
+              <input className={INPUT} value={client.tech_stoleshniza || ''} onChange={e => onChange('tech_stoleshniza', e.target.value)} placeholder="Мрамор бланко 2347/Pt" />
+            </Field>
+            <Field label="Фасад 1">
+              <input className={INPUT} value={client.tech_fasad1 || ''} onChange={e => onChange('tech_fasad1', e.target.value)} placeholder="Акрил Лёд 5230" />
+            </Field>
+            <Field label="Стеновая панель">
+              <input className={INPUT} value={client.tech_stenovaya || ''} onChange={e => onChange('tech_stenovaya', e.target.value)} placeholder="Мрамор бланко 2347/Pt" />
+            </Field>
+            <Field label="Фасад 2">
+              <input className={INPUT} value={client.tech_fasad2 || ''} onChange={e => onChange('tech_fasad2', e.target.value)} placeholder="нет" />
+            </Field>
+            <div className="space-y-2">
+              <div className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider">Подсветка</div>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Тип">
+                  <select className={`${INPUT} text-sm`} value={client.tech_podsvetka_type || ''} onChange={e => onChange('tech_podsvetka_type', e.target.value)}>
+                    <option value="">—</option>
+                    <option>врезная</option>
+                    <option>накладная</option>
+                    <option>лента</option>
+                    <option>нет</option>
+                  </select>
+                </Field>
+                <Field label="Свет">
+                  <select className={`${INPUT} text-sm`} value={client.tech_podsvetka_svet || ''} onChange={e => onChange('tech_podsvetka_svet', e.target.value)}>
+                    <option value="">—</option>
+                    <option>нейтральный</option>
+                    <option>тёплый</option>
+                    <option>холодный</option>
+                    <option>RGB</option>
+                  </select>
+                </Field>
+              </div>
+            </div>
+          </div>
+          <Field label="Фрезеровка">
+            <input className={INPUT} value={client.tech_frezerovka || ''} onChange={e => onChange('tech_frezerovka', e.target.value)} placeholder="нет" />
+          </Field>
+          <Field label="Скрин проекта (URL изображения)">
+            <input className={INPUT} value={client.tech_image_url || ''} onChange={e => onChange('tech_image_url', e.target.value)} placeholder="https://..." />
+            {client.tech_image_url && (
+              <div className="mt-2 rounded-lg overflow-hidden border border-border max-h-40 flex items-center justify-center bg-black/20">
+                <img src={client.tech_image_url} alt="Проект" className="max-h-40 object-contain" />
+              </div>
+            )}
+          </Field>
+        </div>
+      </Section>
     </div>
   );
 }

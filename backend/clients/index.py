@@ -405,6 +405,8 @@ def handler(event: dict, context) -> dict:
                 designer, measurer, manager_name, project_ids, reminder_date, reminder_note, comment,
                 source, tags, rating, property_type, property_area, has_children, has_pets,
                 credit_contract_number, credit_contract_date, credit_bank, credit_prepaid, credit_balance,
+                tech_korpus, tech_fasad1, tech_fasad2, tech_stoleshniza, tech_stenovaya,
+                tech_podsvetka_type, tech_podsvetka_svet, tech_frezerovka, tech_image_url,
                 created_by, updated_by
             ) VALUES (
                 %s,%s,%s,%s,%s,%s,%s,%s,
@@ -419,6 +421,8 @@ def handler(event: dict, context) -> dict:
                 %s,%s,%s,%s,%s,%s,%s,
                 %s,%s,%s,%s,%s,%s,%s,
                 %s,%s,%s,%s,%s,
+                %s,%s,%s,%s,%s,
+                %s,%s,%s,%s,
                 %s,%s
             ) RETURNING id
         ''', (
@@ -445,6 +449,10 @@ def handler(event: dict, context) -> dict:
             bool(c.get('has_children', False)), bool(c.get('has_pets', False)),
             c.get('credit_contract_number', ''), c.get('credit_contract_date', '') or None,
             c.get('credit_bank', ''), c.get('credit_prepaid', 0), c.get('credit_balance', 0),
+            c.get('tech_korpus', ''), c.get('tech_fasad1', ''), c.get('tech_fasad2', ''),
+            c.get('tech_stoleshniza', ''), c.get('tech_stenovaya', ''),
+            c.get('tech_podsvetka_type', ''), c.get('tech_podsvetka_svet', ''),
+            c.get('tech_frezerovka', ''), c.get('tech_image_url', ''),
             payload.get('sub'), payload.get('sub'),
         ))
             new_id = cur.fetchone()[0]
@@ -483,6 +491,10 @@ def handler(event: dict, context) -> dict:
                     has_children=%s, has_pets=%s,
                     credit_contract_number=%s, credit_contract_date=%s, credit_bank=%s,
                     credit_prepaid=%s, credit_balance=%s,
+                    tech_korpus=%s, tech_fasad1=%s, tech_fasad2=%s,
+                    tech_stoleshniza=%s, tech_stenovaya=%s,
+                    tech_podsvetka_type=%s, tech_podsvetka_svet=%s,
+                    tech_frezerovka=%s, tech_image_url=%s,
                     updated_at=NOW(), updated_by=%s
                 WHERE id=%s
             ''', (
@@ -509,6 +521,10 @@ def handler(event: dict, context) -> dict:
                 bool(c.get('has_children', False)), bool(c.get('has_pets', False)),
                 c.get('credit_contract_number', ''), c.get('credit_contract_date', '') or None,
                 c.get('credit_bank', ''), c.get('credit_prepaid', 0), c.get('credit_balance', 0),
+                c.get('tech_korpus', ''), c.get('tech_fasad1', ''), c.get('tech_fasad2', ''),
+                c.get('tech_stoleshniza', ''), c.get('tech_stenovaya', ''),
+                c.get('tech_podsvetka_type', ''), c.get('tech_podsvetka_svet', ''),
+                c.get('tech_frezerovka', ''), c.get('tech_image_url', ''),
                 payload.get('sub'), cid,
             ))
             log_history(conn, cid, payload, 'updated', 'Данные клиента обновлены')
@@ -1224,39 +1240,78 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 </div></body></html>'''
 
     elif doc_type == 'tech':
-        style = _doc_style('Технический проект', contract_num)
-        return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Технический проект к договору №{contract_num}</title>{style}</head><body><div class="page">
-<p class="no-indent" style="text-align:right">Приложение № 1 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
+        tech_korpus        = str(c.get('tech_korpus') or '').strip() or '&nbsp;'
+        tech_fasad1        = str(c.get('tech_fasad1') or '').strip() or '&nbsp;'
+        tech_fasad2        = str(c.get('tech_fasad2') or '').strip() or '&nbsp;'
+        tech_stoleshniza   = str(c.get('tech_stoleshniza') or '').strip() or '&nbsp;'
+        tech_stenovaya     = str(c.get('tech_stenovaya') or '').strip() or '&nbsp;'
+        tech_podsvetka_type = str(c.get('tech_podsvetka_type') or '').strip() or '&nbsp;'
+        tech_podsvetka_svet = str(c.get('tech_podsvetka_svet') or '').strip() or '&nbsp;'
+        tech_frezerovka    = str(c.get('tech_frezerovka') or '').strip() or '&nbsp;'
+        tech_image_url     = str(c.get('tech_image_url') or '').strip()
+        if tech_image_url:
+            image_block = f'<img src="{tech_image_url}" style="max-width:100%;max-height:100%;object-fit:contain;display:block;margin:auto" alt="Проект" />'
+        else:
+            image_block = ''
+        tech_style = '''<style>
+@import url('https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap');
+@page{size:A4 landscape;margin:10mm 12mm 10mm 12mm;}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#2d2d2d;min-height:100vh}
+body{font-family:'PT Serif',Georgia,serif;font-size:10pt;line-height:1.4;color:#000;background:transparent}
+.page{width:297mm;min-height:210mm;margin:16px auto;padding:10mm 12mm;background:#fff;box-shadow:0 6px 32px rgba(0,0,0,.6);display:flex;flex-direction:column}
+@media screen and (min-width:1000px){.page{transform-origin:top center;transform:scale(1.05);margin-bottom:30px}}
+@media screen and (min-width:1300px){.page{transform:scale(1.15);margin-bottom:60px}}
+h1{font-size:12pt;text-align:center;font-weight:bold;margin:0 0 2px}
+table{width:100%;border-collapse:collapse;font-size:9.5pt}
+th,td{border:1px solid #000;padding:3px 6px;vertical-align:middle}
+th{font-weight:bold;text-align:left;background:#fff;font-size:9.5pt}
+.img-area{border:1px solid #000;flex:1;min-height:110mm;margin:6px 0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+p.disclaimer{font-style:italic;font-size:8.5pt;margin:4px 0;text-indent:0;line-height:1.35}
+.sig-table{width:100%;border-collapse:collapse;margin-top:4px}
+.sig-table th{border:1px solid #000;padding:3px 6px;font-weight:bold;text-align:left;font-size:9.5pt;width:50%}
+.sig-table td{border:1px solid #000;padding:3px 6px;font-size:9.5pt;width:50%}
+.ul{border-bottom:1px solid #000;display:inline-block;min-width:160px}
+@media print{
+  html{background:#fff}
+  body{margin:0}
+  .page{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}
+  @page{size:A4 landscape;margin:10mm 12mm 10mm 12mm;}
+}
+</style>'''
+        return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Технический проект к договору №{contract_num}</title>{tech_style}</head><body><div class="page">
+<p style="text-align:center;font-size:10pt;font-weight:bold;margin-bottom:1px">Приложение № 1 к договору бытового подряда на изготовление мебели № {contract_num}&nbsp;&nbsp;от&nbsp;&nbsp;{contract_date_full}</p>
 <h1>«Технический проект»</h1>
-<table style="margin-top:16px;font-size:10pt">
+<table style="margin-top:6px">
 <tr>
-  <td style="width:15%;font-weight:bold;border:1px solid #000;padding:4px 6px">Корпус:</td>
-  <td style="width:35%;border:1px solid #000;padding:4px 6px">&nbsp;</td>
-  <td style="width:15%;font-weight:bold;border:1px solid #000;padding:4px 6px">Столешница:</td>
-  <td style="width:35%;border:1px solid #000;padding:4px 6px">&nbsp;</td>
+  <th style="width:11%">Корпус:</th>
+  <td style="width:27%">{tech_korpus}</td>
+  <th style="width:13%">Столешница:</th>
+  <td style="width:49%">{tech_stoleshniza}</td>
 </tr>
 <tr>
-  <td style="font-weight:bold;border:1px solid #000;padding:4px 6px">Фасад 1:</td>
-  <td style="border:1px solid #000;padding:4px 6px">&nbsp;</td>
-  <td style="font-weight:bold;border:1px solid #000;padding:4px 6px">Стеновая панель:</td>
-  <td style="border:1px solid #000;padding:4px 6px">&nbsp;</td>
+  <th>Фасад 1:</th>
+  <td>{tech_fasad1}</td>
+  <th>Стеновая панель:</th>
+  <td>{tech_stenovaya}</td>
 </tr>
 <tr>
-  <td style="font-weight:bold;border:1px solid #000;padding:4px 6px">Фасад 2:</td>
-  <td style="border:1px solid #000;padding:4px 6px">&nbsp;</td>
-  <td style="font-weight:bold;border:1px solid #000;padding:4px 6px">Подсветка &nbsp; Тип:</td>
-  <td style="border:1px solid #000;padding:4px 6px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; Свет: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</td>
+  <th>Фасад 2:</th>
+  <td>{tech_fasad2}</td>
+  <th>Подсветка</th>
+  <td>Тип:&nbsp;&nbsp;{tech_podsvetka_type}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Свет:&nbsp;&nbsp;{tech_podsvetka_svet}</td>
 </tr>
 <tr>
-  <td style="font-weight:bold;border:1px solid #000;padding:4px 6px">Фрезеровка:</td>
-  <td colspan="3" style="border:1px solid #000;padding:4px 6px">&nbsp;</td>
+  <th>Фрезеровка:</th>
+  <td colspan="3">{tech_frezerovka}</td>
 </tr>
 </table>
-<div style="border:1px solid #000;min-height:150mm;margin-top:10px"></div>
-<p style="margin-top:20px;font-style:italic;text-indent:0">Подписывая Технический проект, Заказчик подтверждает, что ознакомлен с наименованием, качественными характеристиками, количеством, дизайном мебели и ему полностью понятны выполняемые Подрядчиком работы. Стороны согласовали, что мебель изготовлена специально для Заказчика по его индивидуальным параметрам. Приложение: бланк замера.</p>
-<table style="margin-top:16px"><tr><th style="width:50%">Подрядчик: {co_name.upper()}</th><th style="width:50%">Заказчик:</th></tr>
-<tr><td style="padding:6px">Менеджер</td><td>&nbsp;</td></tr>
-<tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<div class="img-area">{image_block}</div>
+<p class="disclaimer">Подписывая Технический проект, Заказчик подтверждает, что ознакомлен с наименованием, качественными характеристиками, количеством, дизайном мебели и ему полностью понятны выполняемые Подрядчиком работы. Стороны согласовали, что мебель изготовлена специально для Заказчика по его индивидуальным параметрам. Приложение: бланк замера.</p>
+<table class="sig-table">
+<tr><th>Подрядчик: {co_name.upper()}</th><th>Заказчик:&nbsp;&nbsp;{fname}</th></tr>
+<tr><td>Менеджер</td><td>&nbsp;</td></tr>
+<tr><td style="height:36px"><span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
 </table>
 </div></body></html>'''
 
