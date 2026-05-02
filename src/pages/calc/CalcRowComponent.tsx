@@ -46,6 +46,17 @@ export default function CalcRowComponent({
   const isNameEmpty = row.name.trim() === '';
   const rowTotal = isNameEmpty ? 0 : row.qty * row.price;
 
+  // Проверяем актуальность цены: если материал из базы, сравниваем с текущей наценкой
+  const expectedPrice = (() => {
+    if (!row.materialId || isNameEmpty) return null;
+    const mat = catalog.materials.find(m => m.id === row.materialId);
+    if (!mat) return null;
+    const variant = row.variantId ? (mat.variants || []).find(v => v.id === row.variantId) : null;
+    const bp = variant ? variant.basePrice : mat.basePrice;
+    return store.calcPriceWithMarkup(bp, 'materials');
+  })();
+  const isPriceStale = expectedPrice !== null && row.price !== expectedPrice;
+
   const filteredMaterials = catalog.materials.filter(m => {
     const typeOk = allowedTypeIds.length === 0 || allowedTypeIds.includes(m.typeId);
     const q = nameFilter.toLowerCase();
@@ -169,12 +180,21 @@ export default function CalcRowComponent({
             className="w-6 h-6 flex items-center justify-center rounded bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,22%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors text-xs">+</button>
         </div>
         {/* Цена */}
-        <div className="flex items-center gap-1 flex-1 min-w-0">
+        <div className="flex items-center gap-1 flex-1 min-w-0 relative group/mprice">
           <span className="text-[11px] text-[hsl(var(--text-muted))] shrink-0">₽</span>
           <input type="number" value={row.price || ''} onChange={e => store.updateRow(projectId, blockId, row.id, { price: parseFloat(e.target.value) || 0 })}
             placeholder="0"
-            className="bg-transparent text-sm font-mono text-foreground w-full outline-none border-b border-transparent focus:border-gold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-[hsl(var(--text-muted))]"
+            className={`bg-transparent text-sm font-mono w-full outline-none border-b border-transparent focus:border-gold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-[hsl(var(--text-muted))] ${isPriceStale ? 'text-[hsl(38,80%,60%)]' : 'text-foreground'}`}
           />
+          {isPriceStale && expectedPrice !== null && (
+            <button
+              title={`Обновить до ${fmt(expectedPrice)}`}
+              onClick={() => store.updateRow(projectId, blockId, row.id, { price: expectedPrice })}
+              className="opacity-0 group-hover/mprice:opacity-100 transition-opacity text-[hsl(38,80%,60%)] hover:text-gold shrink-0"
+            >
+              <Icon name="RefreshCw" size={11} />
+            </button>
+          )}
         </div>
         {/* Итог */}
         <div className={`text-sm font-mono font-semibold shrink-0 ${row.price > 0 && row.qty > 0 ? 'text-gold' : 'text-[hsl(var(--text-muted))]'}`}>
@@ -299,14 +319,23 @@ export default function CalcRowComponent({
             );
           case 'price':
             return (
-              <div key={col} className="text-right">
+              <div key={col} className="text-right relative group/price">
                 <input
                   type="number"
                   value={row.price || ''}
                   onChange={e => store.updateRow(projectId, blockId, row.id, { price: parseFloat(e.target.value) || 0 })}
                   placeholder="—"
-                  className="bg-transparent text-sm font-mono text-right text-foreground w-full outline-none border-b border-transparent focus:border-[hsl(var(--gold))] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-[hsl(var(--text-muted))]"
+                  className={`bg-transparent text-sm font-mono text-right w-full outline-none border-b border-transparent focus:border-[hsl(var(--gold))] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-[hsl(var(--text-muted))] ${isPriceStale ? 'text-[hsl(38,80%,60%)]' : 'text-foreground'}`}
                 />
+                {isPriceStale && expectedPrice !== null && (
+                  <button
+                    title={`Цена устарела. Обновить до ${fmt(expectedPrice)}?`}
+                    onClick={() => store.updateRow(projectId, blockId, row.id, { price: expectedPrice })}
+                    className="absolute -top-0.5 right-0 opacity-0 group-hover/price:opacity-100 transition-opacity text-[hsl(38,80%,60%)] hover:text-gold"
+                  >
+                    <Icon name="RefreshCw" size={11} />
+                  </button>
+                )}
               </div>
             );
           case 'total':

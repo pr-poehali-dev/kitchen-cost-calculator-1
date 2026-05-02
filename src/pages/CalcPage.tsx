@@ -156,6 +156,18 @@ export default function CalcPage() {
   const totalPurchase = project.blocks.reduce((sum, b) =>
     sum + b.rows.reduce((s, r) => s + (r.basePrice ?? 0) * r.qty, 0), 0);
 
+  // Проверяем есть ли строки с устаревшими ценами
+  const hasStalePrices = project.blocks.some(b =>
+    b.rows.some(r => {
+      if (!r.name.trim() || !r.materialId) return false;
+      const mat = store.materials.find(m => m.id === r.materialId);
+      if (!mat) return false;
+      const variant = r.variantId ? (mat.variants || []).find(v => v.id === r.variantId) : null;
+      const bp = variant ? variant.basePrice : mat.basePrice;
+      return r.price !== store.calcPriceWithMarkup(bp, 'materials');
+    })
+  );
+
   const handleFinishEditName = (blockId: string, blockName: string) => {
     store.updateBlock(project.id, blockId, { name: editingBlockName || blockName });
     setEditingBlockId(null);
@@ -230,15 +242,27 @@ export default function CalcPage() {
           <Icon name="Plus" size={14} /> Добавить блок материалов
         </button>
 
-        <div className="flex items-center justify-between px-4 py-3 bg-[hsl(220,14%,11%)] rounded border border-border">
-          <div className="text-sm text-[hsl(var(--text-dim))]">
-            <span className="font-medium text-foreground">Обновить розничные цены</span>
+        <div className={`flex items-center justify-between px-4 py-3 rounded border transition-colors ${
+          refreshed
+            ? 'bg-[hsl(140,40%,12%)] border-[hsl(140,40%,25%)]'
+            : hasStalePrices
+              ? 'bg-[hsl(38,60%,12%)] border-[hsl(38,60%,30%)]'
+              : 'bg-[hsl(220,14%,11%)] border-border'
+        }`}>
+          <div className="text-sm">
+            <span className={`font-medium ${hasStalePrices && !refreshed ? 'text-[hsl(38,80%,70%)]' : 'text-foreground'}`}>
+              {hasStalePrices && !refreshed ? '⚠ Розничные цены устарели' : 'Обновить розничные цены'}
+            </span>
             <span className="ml-2 text-xs text-[hsl(var(--text-muted))]">— пересчитать по текущим наценкам из Расходов</span>
           </div>
           <button
             onClick={handleRefreshPrices}
             className={`flex items-center gap-2 px-4 py-1.5 rounded text-sm font-medium transition-all shrink-0 ${
-              refreshed ? 'bg-[hsl(140,50%,35%)] text-white' : 'bg-[hsl(220,12%,20%)] text-foreground hover:bg-gold hover:text-[hsl(220,16%,8%)]'
+              refreshed
+                ? 'bg-[hsl(140,50%,35%)] text-white'
+                : hasStalePrices
+                  ? 'bg-gold text-[hsl(220,16%,8%)] hover:opacity-90'
+                  : 'bg-[hsl(220,12%,20%)] text-foreground hover:bg-gold hover:text-[hsl(220,16%,8%)]'
             }`}
           >
             <Icon name={refreshed ? 'Check' : 'RefreshCw'} size={14} />
