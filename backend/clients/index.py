@@ -730,6 +730,52 @@ def handler(event: dict, context) -> dict:
             'body': json.dumps({'data': b64}),
         }
 
+    # ── DOCUMENT: ZIP всех DOCX ───────────────────────────────────
+    if action == 'doc_zip':
+        cid = qs.get('client_id')
+        if not cid:
+            return err('Нет client_id')
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT * FROM clients WHERE id = %s', (cid,))
+            row = cur.fetchone()
+            if not row:
+                return err('Клиент не найден', 404)
+            cols = [d[0] for d in cur.description]
+            client = dict(zip(cols, row))
+            cur.execute("SELECT url FROM client_photos WHERE client_id = %s AND category = 'render' ORDER BY uploaded_at DESC LIMIT 1", (cid,))
+            photo_row = cur.fetchone()
+            if photo_row and not client.get('tech_image_url'):
+                client['tech_image_url'] = photo_row[0]
+        user_id = payload.get('sub') or payload.get('user_id') or payload.get('id')
+        company = _get_company(user_id)
+        manager_poa = _get_manager_poa(client.get('manager_name', ''))
+        if manager_poa.get('poa_number') or manager_poa.get('poa_date'):
+            company = {**company, 'poaNumber': manager_poa.get('poa_number', ''), 'poaDate': manager_poa.get('poa_date', '')}
+        import zipfile, io as _io
+        DOC_TYPES_ZIP = ['contract', 'tech', 'act', 'rules']
+        DOC_NAMES_ZIP = {
+            'contract': 'Договор бытового подряда',
+            'tech': 'Технический проект (Прил.1)',
+            'act': 'Акт выполненных работ (Прил.4)',
+            'rules': 'Правила эксплуатации (Прил.3)',
+        }
+        fname_client = _full_name(client).replace(' ', '_')[:30]
+        zip_buf = _io.BytesIO()
+        with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
+            for dt in DOC_TYPES_ZIP:
+                try:
+                    docx_bytes = _build_docx(client, dt, company)
+                    zf.writestr(f'{DOC_NAMES_ZIP[dt]} — {fname_client}.docx', docx_bytes)
+                except Exception:
+                    pass
+        zip_b64 = base64.b64encode(zip_buf.getvalue()).decode('utf-8')
+        return {
+            'statusCode': 200,
+            'headers': {**cors, 'Content-Type': 'application/json'},
+            'body': json.dumps({'data': zip_b64, 'filename': f'Документы — {fname_client}.zip'}),
+        }
+
     return err('Неизвестное действие', 404)
 
 
@@ -1943,10 +1989,39 @@ def _build_docx(c: dict, doc_type: str, company: dict = None) -> bytes:
         r = p.add_run(text); _set_font(r, 11)
         return p
 
+    def keep_together_para(text=''):
+        p = doc.add_paragraph(text)
+        p.paragraph_format.keep_with_next = True
+        p.paragraph_format.space_before = Pt(4)
+        p.paragraph_format.space_after = Pt(0)
+        return p
+
     def sig_table(left, right):
+        # Пустой параграф с keep_with_next чтобы таблица подписей не отрывалась
+        anchor = doc.add_paragraph()
+        anchor.paragraph_format.keep_with_next = True
+        anchor.paragraph_format.space_before = Pt(2)
+        anchor.paragraph_format.space_after = Pt(0)
         t = doc.add_table(rows=2, cols=2)
         t.style = 'Table Grid'
         t.alignment = WD_TABLE_ALIGNMENT.CENTER
+        # keep table together
+        from docx.oxml.ns import qn as _qn2
+        from docx.oxml import OxmlElement as _OE2
+        tbl_pr = t._tbl.tblPr
+        if tbl_pr is None:
+            tbl_pr = _OE2('w:tblPr'); t._tbl.insert(0, tbl_pr)
+        cant_split = _OE2('w:tblLook')
+        try:
+            for row in t.rows:
+                tr_pr = row._tr.trPr
+                if tr_pr is None:
+                    tr_pr = _OE2('w:trPr'); row._tr.insert(0, tr_pr)
+                cant = _OE2('w:cantSplit')
+                cant.set(_qn2('w:val'), '1')
+                tr_pr.append(cant)
+        except Exception:
+            pass
         for i, txt in enumerate([left[0], right[0]]):
             c2 = t.cell(0, i); c2.text = txt
             run = c2.paragraphs[0].runs[0]
@@ -2106,11 +2181,25 @@ def _build_docx(c: dict, doc_type: str, company: dict = None) -> bytes:
         p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         p.add_run(f'Приложение № 1 к договору бытового подряда\nна изготовление мебели от {contract_date_full}')
         h('«Технический проект»')
-        t = doc.add_table(rows=9, cols=2); t.style = 'Table Grid'
-        fields = ['Корпус:','Фасад 1:','Фасад 2:','Столешница:','Стеновая панель:','Подсветка:','Фрезеровка:','Примечание:']
-        for i, f in enumerate(fields):
-            t.cell(i, 0).text = f; t.cell(i, 0).paragraphs[0].runs[0].bold = True
-            t.cell(i, 1).text = ' '
+        # Заполняем таблицу реальными данными
+        podsv_type = str(c.get('tech_podsvetka_type') or '').strip()
+        podsv_svet = str(c.get('tech_podsvetka_svet') or '').strip()
+        podsv_val = ' / '.join(filter(None, [podsv_type, podsv_svet])) or ''
+        tech_rows = [
+            ('Корпус:', str(c.get('tech_korpus') or '').strip()),
+            ('Фасад 1:', str(c.get('tech_fasad1') or '').strip()),
+            ('Фасад 2:', str(c.get('tech_fasad2') or '').strip()),
+            ('Столешница:', str(c.get('tech_stoleshniza') or '').strip()),
+            ('Стеновая панель:', str(c.get('tech_stenovaya') or '').strip()),
+            ('Подсветка:', podsv_val),
+            ('Фрезеровка:', str(c.get('tech_frezerovka') or '').strip()),
+            ('Примечание:', ''),
+        ]
+        t = doc.add_table(rows=len(tech_rows), cols=2); t.style = 'Table Grid'
+        for i, (label, value) in enumerate(tech_rows):
+            t.cell(i, 0).text = label
+            t.cell(i, 0).paragraphs[0].runs[0].bold = True
+            t.cell(i, 1).text = value
         doc.add_paragraph('\n\n\n\n\n\n\n\n\n\n\n\nМесто для схемы / эскиза:')
         sig_table(
             ['Подрядчик', f'{co_name}\n\nМенеджер: ______________________________\nМ.П.'],

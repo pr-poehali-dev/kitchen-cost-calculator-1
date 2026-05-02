@@ -3,7 +3,7 @@ import Icon from '@/components/ui/icon';
 import type { Client } from './types';
 import { clientFullName } from './types';
 import { toast } from 'sonner';
-import { DOCS, DOC_GROUPS, apiFetch } from './documents/docTypes';
+import { DOCS, DOC_GROUPS, apiFetch, API, getToken } from './documents/docTypes';
 import { DocCardWithStatus, getSentStatus, setSentStatus } from './documents/DocCardWithStatus';
 
 export default function TabDocuments({ client, hasDraft, onSave, saving }: {
@@ -19,6 +19,7 @@ export default function TabDocuments({ client, hasDraft, onSave, saving }: {
     return m;
   });
   const [downloadingAll, setDownloadingAll] = useState(false);
+  const [downloadingZip, setDownloadingZip] = useState(false);
 
   const markSent = (docId: string, channel: string) => {
     setSentStatus(client.id, docId, channel);
@@ -56,6 +57,31 @@ export default function TabDocuments({ client, hasDraft, onSave, saving }: {
     }
   };
 
+  const handleDownloadZip = async () => {
+    setDownloadingZip(true);
+    try {
+      if (hasDraft && onSave) await onSave();
+      const res = await fetch(`${API}/?action=doc_zip&client_id=${client.id}`, {
+        headers: { Authorization: `Bearer ${getToken()}` },
+      });
+      const data = await res.json();
+      if (data.data) {
+        const binary = atob(data.data);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: 'application/zip' });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = data.filename || `Документы — ${clientName}.zip`;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+        toast.success('ZIP-архив скачан');
+      } else { toast.error('Ошибка генерации архива'); }
+    } catch { toast.error('Ошибка при скачивании'); }
+    finally { setDownloadingZip(false); }
+  };
+
   const hasData = client.contract_number || client.last_name;
 
   return (
@@ -77,21 +103,31 @@ export default function TabDocuments({ client, hasDraft, onSave, saving }: {
         </div>
       )}
 
-      {/* Кнопка скачать всё + подсказка */}
+      {/* Подсказка + кнопки скачать */}
       <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg p-4 flex items-center justify-between gap-4">
         <div className="space-y-1.5 text-xs text-[hsl(var(--text-muted))]">
           <div className="flex items-start gap-1.5"><span className="text-gold">•</span><span><strong className="text-white">Просмотр</strong> — открывает в браузере</span></div>
-          <div className="flex items-start gap-1.5"><span className="text-gold">•</span><span><strong className="text-white">Word/PDF</strong> — скачивает файл</span></div>
-          <div className="flex items-start gap-1.5"><span className="text-gold">•</span><span><strong className="text-white">Ссылка</strong> — клиент открывает на телефоне</span></div>
+          <div className="flex items-start gap-1.5"><span className="text-gold">•</span><span><strong className="text-white">Скачать</strong> — Word (.docx) или PDF</span></div>
+          <div className="flex items-start gap-1.5"><span className="text-gold">•</span><span><strong className="text-white">Отправить</strong> — ссылка клиенту на телефон</span></div>
         </div>
-        <button
-          onClick={handleDownloadAll}
-          disabled={downloadingAll}
-          className="flex items-center gap-2 px-4 py-2 border border-border rounded text-xs text-[hsl(var(--text-dim))] hover:text-gold hover:border-gold/50 transition-all shrink-0 disabled:opacity-60"
-        >
-          {downloadingAll ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="Download" size={13} />}
-          Скачать все (.docx)
-        </button>
+        <div className="flex flex-col gap-2 shrink-0">
+          <button
+            onClick={handleDownloadZip}
+            disabled={downloadingZip || downloadingAll}
+            className="flex items-center gap-2 px-4 py-2 border border-emerald-500/40 rounded text-xs text-emerald-400 hover:text-emerald-300 hover:border-emerald-500 transition-all disabled:opacity-60"
+          >
+            {downloadingZip ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="FolderArchive" size={13} />}
+            Скачать ZIP
+          </button>
+          <button
+            onClick={handleDownloadAll}
+            disabled={downloadingAll || downloadingZip}
+            className="flex items-center gap-2 px-4 py-2 border border-border rounded text-xs text-[hsl(var(--text-dim))] hover:text-gold hover:border-gold/50 transition-all disabled:opacity-60"
+          >
+            {downloadingAll ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="Download" size={13} />}
+            Скачать все (.docx)
+          </button>
+        </div>
       </div>
 
       {/* Группы документов */}
