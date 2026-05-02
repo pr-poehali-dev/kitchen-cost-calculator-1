@@ -2264,28 +2264,82 @@ def _build_docx(c: dict, doc_type: str, company: dict = None) -> bytes:
         # Заполняем таблицу реальными данными
         podsv_type = str(c.get('tech_podsvetka_type') or '').strip()
         podsv_svet = str(c.get('tech_podsvetka_svet') or '').strip()
-        podsv_val = ' / '.join(filter(None, [podsv_type, podsv_svet])) or ''
-        tech_rows = [
-            ('Корпус:', str(c.get('tech_korpus') or '').strip()),
-            ('Фасад 1:', str(c.get('tech_fasad1') or '').strip()),
-            ('Фасад 2:', str(c.get('tech_fasad2') or '').strip()),
-            ('Столешница:', str(c.get('tech_stoleshniza') or '').strip()),
-            ('Стеновая панель:', str(c.get('tech_stenovaya') or '').strip()),
-            ('Подсветка:', podsv_val),
-            ('Фрезеровка:', str(c.get('tech_frezerovka') or '').strip()),
-            ('Примечание:', ''),
-        ]
-        t = doc.add_table(rows=len(tech_rows), cols=2); t.style = 'Table Grid'
-        for i, (label, value) in enumerate(tech_rows):
-            t.cell(i, 0).text = label
-            t.cell(i, 0).paragraphs[0].runs[0].bold = True
-            t.cell(i, 1).text = value
-        p_space = doc.add_paragraph('Место для схемы / эскиза:')
-        p_space.paragraph_format.space_before = Mm(80)
-        p_space.paragraph_format.space_after = Pt(3)
+        podsv_val = f'Тип: {podsv_type}    Свет: {podsv_svet}' if (podsv_type or podsv_svet) else ''
+
+        # Таблица 4 колонки как в HTML (2 пары label+value в строке)
+        from docx.shared import Cm
+        t = doc.add_table(rows=4, cols=4)
+        t.style = 'Table Grid'
+        # Ширина колонок: label 25mm, value 60mm, label 30mm, value 60mm
+        widths = [Cm(3.0), Cm(7.5), Cm(3.8), Cm(11.2)]
+        for row in t.rows:
+            for i, w in enumerate(widths):
+                row.cells[i].width = w
+
+        def _tc(row_i, col_i, text, bold=False):
+            cell = t.cell(row_i, col_i)
+            p = cell.paragraphs[0]
+            r = p.add_run(text)
+            _set_font(r, 10, bold=bold)
+            p.paragraph_format.space_before = Pt(1)
+            p.paragraph_format.space_after = Pt(1)
+
+        _tc(0, 0, 'Корпус:', bold=True)
+        _tc(0, 1, str(c.get('tech_korpus') or '').strip())
+        _tc(0, 2, 'Столешница:', bold=True)
+        _tc(0, 3, str(c.get('tech_stoleshniza') or '').strip())
+
+        _tc(1, 0, 'Фасад 1:', bold=True)
+        _tc(1, 1, str(c.get('tech_fasad1') or '').strip())
+        _tc(1, 2, 'Стеновая панель:', bold=True)
+        _tc(1, 3, str(c.get('tech_stenovaya') or '').strip())
+
+        _tc(2, 0, 'Фасад 2:', bold=True)
+        _tc(2, 1, str(c.get('tech_fasad2') or '').strip())
+        _tc(2, 2, 'Подсветка', bold=True)
+        _tc(2, 3, podsv_val)
+
+        _tc(3, 0, 'Фрезеровка:', bold=True)
+        # Объединяем 3 ячейки для значения фрезеровки
+        cell_frez = t.cell(3, 1)
+        cell_frez.merge(t.cell(3, 2)).merge(t.cell(3, 3))
+        r_frez = cell_frez.paragraphs[0].add_run(str(c.get('tech_frezerovka') or '').strip())
+        _set_font(r_frez, 10)
+
+        # Место для фото/схемы — фиксированная высота блока
+        tech_image_url = str(c.get('tech_image_url') or '').strip()
+        if tech_image_url:
+            # Скачиваем и вставляем изображение
+            try:
+                import urllib.request, io as _io2
+                req = urllib.request.Request(tech_image_url, headers={'User-Agent': 'Mozilla/5.0'})
+                img_data = urllib.request.urlopen(req, timeout=10).read()
+                img_stream = _io2.BytesIO(img_data)
+                p_img = doc.add_paragraph()
+                p_img.paragraph_format.space_before = Pt(6)
+                p_img.paragraph_format.space_after = Pt(4)
+                from docx.shared import Inches
+                run_img = p_img.add_run()
+                run_img.add_picture(img_stream, width=Inches(8.5))
+            except Exception:
+                p_space = doc.add_paragraph('[ Место для схемы / эскиза ]')
+                p_space.paragraph_format.space_before = Pt(120)
+                p_space.paragraph_format.space_after = Pt(4)
+        else:
+            p_space = doc.add_paragraph('Место для схемы / эскиза:')
+            p_space.paragraph_format.space_before = Pt(120)
+            p_space.paragraph_format.space_after = Pt(4)
+
+        p_disc = doc.add_paragraph()
+        p_disc.paragraph_format.space_before = Pt(2)
+        p_disc.paragraph_format.space_after = Pt(2)
+        r_disc = p_disc.add_run('Подписывая Технический проект, Заказчик подтверждает, что ознакомлен с наименованием, качественными характеристиками, количеством, дизайном мебели и ему полностью понятны выполняемые Подрядчиком работы. Стороны согласовали, что мебель изготовлена специально для Заказчика по его индивидуальным параметрам.')
+        _set_font(r_disc, 9)
+        r_disc.italic = True
+
         sig_table(
-            ['Подрядчик', f'{co_name}\n\nМенеджер: ______________________________\nМ.П.'],
-            ['Заказчик', f'{fname}\n\nПодпись: ______________________________']
+            [f'Подрядчик: {co_name.upper()}', f'Менеджер\n\n______________________________\nМ.П.'],
+            [f'Заказчик:  {fname}', '\n\n______________________________']
         )
 
     elif doc_type == 'delivery':
