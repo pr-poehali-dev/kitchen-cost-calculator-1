@@ -654,6 +654,11 @@ def handler(event: dict, context) -> dict:
                 return err('Клиент не найден', 404)
             cols = [d[0] for d in cur.description]
             client = dict(zip(cols, row))
+            if doc_type == 'tech' and not client.get('tech_image_url'):
+                cur.execute("SELECT url FROM client_photos WHERE client_id = %s AND category = 'render' ORDER BY uploaded_at DESC LIMIT 1", (cid,))
+                photo_row = cur.fetchone()
+                if photo_row:
+                    client['tech_image_url'] = photo_row[0]
         user_id = payload.get('sub') or payload.get('user_id') or payload.get('id')
         company = _get_company(user_id)
         manager_poa = _get_manager_poa(client.get('manager_name', ''))
@@ -676,6 +681,11 @@ def handler(event: dict, context) -> dict:
                 return err('Клиент не найден', 404)
             cols = [d[0] for d in cur.description]
             client = dict(zip(cols, row))
+            if doc_type == 'tech' and not client.get('tech_image_url'):
+                cur.execute("SELECT url FROM client_photos WHERE client_id = %s AND category = 'render' ORDER BY uploaded_at DESC LIMIT 1", (cid,))
+                photo_row = cur.fetchone()
+                if photo_row:
+                    client['tech_image_url'] = photo_row[0]
         user_id = payload.get('sub') or payload.get('user_id') or payload.get('id')
         company = _get_company(user_id)
         manager_poa = _get_manager_poa(client.get('manager_name', ''))
@@ -702,6 +712,11 @@ def handler(event: dict, context) -> dict:
                 return err('Клиент не найден', 404)
             cols = [d[0] for d in cur.description]
             client = dict(zip(cols, row))
+            if doc_type == 'tech' and not client.get('tech_image_url'):
+                cur.execute("SELECT url FROM client_photos WHERE client_id = %s AND category = 'render' ORDER BY uploaded_at DESC LIMIT 1", (cid,))
+                photo_row = cur.fetchone()
+                if photo_row:
+                    client['tech_image_url'] = photo_row[0]
         user_id = payload.get('sub') or payload.get('user_id') or payload.get('id')
         company = _get_company(user_id)
         manager_poa = _get_manager_poa(client.get('manager_name', ''))
