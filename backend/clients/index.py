@@ -1287,27 +1287,33 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
     elif doc_type == 'act':
         total = float(c.get('total_amount') or 0)
         total_words = _num_to_words(total) if total else '___________'
+        products_list = _get_products(c)
         style = _doc_style('Акт выполненных работ', contract_num)
+        if products_list:
+            product_rows = ''.join(
+                f'<tr><td style="text-align:center">{i}</td><td>{p.get("name","Кухонный гарнитур")}</td><td style="text-align:center">шт.</td><td style="text-align:center">{p.get("qty",1)}</td><td style="text-align:right"></td></tr>'
+                for i, p in enumerate(products_list, 1)
+            )
+        else:
+            product_rows = f'<tr><td style="text-align:center">1</td><td>Кухонный гарнитур</td><td style="text-align:center">шт.</td><td style="text-align:center">1</td><td style="text-align:right">{total:,.0f}</td></tr>'
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Акт выполненных работ к договору №{contract_num}</title>{style}</head><body><div class="page">
-<p class="no-indent" style="text-align:right">Приложение № 4 к договору бытового подряда на изготовление мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
+<p class="no-indent" style="text-align:right">Приложение № 4 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
 <h1>«Акт выполненных работ»</h1>
-<div class="city-date"><span></span><span>от «____» ______________ 20____ г.</span></div>
-<p style="text-align:center">(ФОРМА)</p>
-<p class="no-indent">{co_name}, в лице {co_dir_pos}а <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик» и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», подписали настоящий Акт выполненных работ о нижеследующем:</p>
-<p class="no-indent">1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда на изготовление мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>:</p>
+<div class="city-date"><span>г. {co_city}</span><span>{contract_date_full}</span></div>
+<p class="no-indent">{co_name}, в лице {co_dir_pos}а <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик» и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», подписали настоящий Акт выполненных работ о нижеследующем:</p>
+<p class="no-indent">1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда № {contract_num} от {contract_date_full}:</p>
 <table><tr><th style="width:5%">№</th><th>Наименование мебели, включая ее элементы</th><th style="width:13%">Ед. измерения</th><th style="width:12%">Кол-во изделий</th><th style="width:18%">Стоимость в руб.</th></tr>
-<tr><td style="text-align:center">1</td><td>Кухонный гарнитур</td><td style="text-align:center">Шт.</td><td style="text-align:center">1</td><td style="text-align:center">(сумма прописью)</td></tr>
+{product_rows}
+<tr><td colspan="4" style="text-align:right;font-weight:bold">ИТОГО:</td><td style="text-align:right;font-weight:bold">{total:,.0f}</td></tr>
 </table>
-<p style="margin:20px 0 10px 0">&nbsp;</p>
+<p class="no-indent" style="text-align:center">({total_words})</p>
 <p class="no-indent">2. Комплектность, количество, вид, характеристики мебели соответствуют условиям договора. Визуальный осмотр мебели на предмет повреждений, царапин, сколов, трещин и других недостатков произведен Заказчиком. Фурнитура (петли, выдвижные механизмы, подъемные механизмы и т.д.) работает исправно. Заказчик претензий по объему, качеству, результату и срокам выполнения работ: <strong>не имеет / имеет</strong> (ненужное зачеркнуть).</p>
-<p style="margin:20px 0">&nbsp;</p>
-<p style="margin:20px 0">&nbsp;</p>
-<p style="margin:20px 0">&nbsp;</p>
-<p class="no-indent">3. В случае наличия замечаний Заказчик, после подписания акта, в праве требовать устранения замечаний отраженных в данном акте.</p>
+<p class="no-indent">3. В случае наличия замечаний Заказчик, после подписания акта, вправе требовать устранения замечаний, отражённых в данном акте.</p>
 <p class="no-indent">4. Настоящий акт подписан в 2 (двух) экземплярах по одному для каждой из Сторон.</p>
-<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name.upper()}</th><th style="width:50%">Заказчик:</th></tr>
-<tr><td style="height:60px"></td><td>{fname}</td></tr>
-<tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name.upper()}</th><th style="width:50%">Заказчик: {fname}</th></tr>
+<tr><td>Менеджер</td><td>Паспорт: {_passport_str(c)}<br>Тел.: {c.get("phone") or "___________"}</td></tr>
+<tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;</span></td></tr>
+<tr><td colspan="2" style="text-align:center;padding-top:6px">М.П.</td></tr></table>
 </div></body></html>'''
 
     elif doc_type == 'tech':
@@ -2046,6 +2052,9 @@ def _build_docx(c: dict, doc_type: str, company: dict = None) -> bytes:
             _set_font(c2.paragraphs[0].runs[0] if c2.paragraphs[0].runs else c2.paragraphs[0].add_run(txt), 11)
         return t
 
+    # manager_line доступен для всех типов документов
+    manager_line = (c.get('manager_name') or '').strip() or '_' * 30
+
     if doc_type == 'contract':
         manager = c.get('manager_name') or ''
         manager_line = manager if manager else '_' * 30
@@ -2454,6 +2463,113 @@ def _build_docx(c: dict, doc_type: str, company: dict = None) -> bytes:
             ['Исполнитель', f'{co_name}\n\nМенеджер: ______________________________\nМ.П.'],
             ['Заказчик', f'{fname}\nПаспорт: {_passport_str(c)}\nТелефон: {c.get("phone") or "___________"}\n\nПодпись: ______________________________']
         )
+
+    elif doc_type == 'delivery_calc':
+        dcost = float(c.get('delivery_cost') or 0)
+        p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p.add_run('Приложение № 1 к договору на оказание услуг по доставке мебели')
+        h('«Калькуляция на выполнение услуг по доставке мебели»')
+        t = doc.add_table(rows=1, cols=5); t.style = 'Table Grid'
+        for i, txt in enumerate(['Наименование работ и услуг', 'Ед. изм.', 'Кол-во', 'Цена, руб.', 'Стоимость, руб.']):
+            t.rows[0].cells[i].text = txt; t.rows[0].cells[i].paragraphs[0].runs[0].bold = True
+        rows_data = [
+            ('Доставка мебели в территориальных границах г. Саратова и г. Энгельса *', '1 услуга', '1', '8 000', '8 000'),
+            ('Доставка мебели за пределы территориальных границ г. Саратова и г. Энгельса **', '1 км', '', '70', '0'),
+        ]
+        for rd in rows_data:
+            r = t.add_row().cells
+            for i, v in enumerate(rd): r[i].text = v
+        summary_rows = [('', '', 'Сумма:', '', '8 000'), ('', '', 'Скидка ***:', '', '8 000'), ('', '', 'Сумма со скидкой:', '', '0')]
+        for rd in summary_rows:
+            r = t.add_row().cells
+            for i, v in enumerate(rd): r[i].text = v
+            r[2].paragraphs[0].runs[0].bold = (rd[2] == 'Сумма со скидкой:')
+        para('*Исполнитель вправе однократно предоставить Заказчику скидку в размере стоимости доставки, равной 8000 руб. В случае повторной доставки по причинам, зависящим от Заказчика, её стоимость определяется согласно приложению №1.')
+        para('**Расчёт стоимости учитывает расстояние по километражу от склада Исполнителя до дома Заказчика. Километраж определяется на основании сервиса Яндекс.Карты.')
+        para('*** Размер скидки определяется Исполнителем индивидуально.')
+        sig_table(['Подрядчик', f'{co_name}\n\nМенеджер: ______________________________\nМ.П.'], ['Заказчик', f'{fname}\n\nПодпись: ______________________________'])
+
+    elif doc_type == 'delivery_lift':
+        p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p.add_run('Приложение № 2 к договору на оказание услуг по доставке мебели')
+        h('«Прайс на выполнение услуг по подъёму и заносу мебели»*')
+        sec_title('Подъём мебели (полный комплект), при отсутствии лифта')
+        t = doc.add_table(rows=1, cols=4); t.style = 'Table Grid'
+        for i, txt in enumerate(['Наименование работ', 'Ед. изм.', 'Кол-во (Этаж)', 'Цена, руб.']):
+            t.rows[0].cells[i].text = txt; t.rows[0].cells[i].paragraphs[0].runs[0].bold = True
+        for rd in [('Квадратура корпуса до 20 кв.м', 'руб./этаж', '', '550'), ('Квадратура корпуса 20–25 кв.м', 'руб./этаж', '', '650'), ('Квадратура корпуса более 25 кв.м', 'руб./этаж', '', '750'), ('Перемещение вручную при невозможности подъезда', '1 м', '', '30')]:
+            r = t.add_row().cells
+            for i, v in enumerate(rd): r[i].text = v
+        para('1. Если подъём мебели можно осуществить полностью на лифте — подъём бесплатный.')
+        para('2. Занос мебели на первый этаж — бесплатный, при возможности парковки вплотную к подъезду.')
+        para('* Услуги могут быть рассчитаны по факту оказания, путём отражения в акте об оказании услуг.')
+        sig_table(['Подрядчик', f'{co_name}\n\nМенеджер: ______________________________\nМ.П.'], ['Заказчик', f'{fname}\n\nПодпись: ______________________________'])
+
+    elif doc_type == 'assembly_calc':
+        acost = float(c.get('assembly_cost') or 17500)
+        p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p.add_run('Приложение № 1 к договору на выполнение работ по монтажу и сборке мебели')
+        h('«Калькуляция на выполнение работ по сборке мебели»')
+        t = doc.add_table(rows=1, cols=5); t.style = 'Table Grid'
+        for i, txt in enumerate(['Наименование работ и услуг', 'Ед. изм.', 'Кол-во', 'Цена, руб.', 'Стоимость, руб.']):
+            t.rows[0].cells[i].text = txt; t.rows[0].cells[i].paragraphs[0].runs[0].bold = True
+        for rd in [(f'Сборка и монтаж мебели согласно договору бытового подряда № {contract_num} от {contract_date_full} *', 'работа', '1', f'{acost:,.0f}', f'{acost:,.0f}'), ('Выезд сборщика за пределы г. Саратова и г. Энгельса **', '1 км', '', '', '0')]:
+            r = t.add_row().cells
+            for i, v in enumerate(rd): r[i].text = v
+        for rd in [('', '', 'Сумма:', '', f'{acost:,.0f}'), ('', '', 'Скидка ***:', '', f'{acost:,.0f}'), ('', '', 'Сумма со скидкой:', '', '0')]:
+            r = t.add_row().cells
+            for i, v in enumerate(rd): r[i].text = v
+        para('* Стоимость сборки. В случае повторного выезда по причинам, зависящим от Заказчика, стоимость определяется по данной калькуляции.')
+        para('** Километраж от склада Подрядчика до места сборки. Определяется на основании Яндекс.Карты.')
+        para('*** Размер скидки определяется Подрядчиком индивидуально.')
+        sig_table(['Подрядчик', f'{co_name}\n\nМенеджер: ______________________________\nМ.П.'], ['Заказчик', f'{fname}\n\nПодпись: ______________________________'])
+
+    elif doc_type == 'assembly_extra':
+        p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p.add_run('Приложение № 2 к договору на выполнение работ по монтажу и сборке мебели')
+        h('«Прайс на дополнительные работы»*')
+        t = doc.add_table(rows=1, cols=4); t.style = 'Table Grid'
+        for i, txt in enumerate(['Наименование работ и услуг', 'Ед. изм.', 'Кол-во', 'Цена, руб.']):
+            t.rows[0].cells[i].text = txt; t.rows[0].cells[i].paragraphs[0].runs[0].bold = True
+        extra_items = [('Врезка мойки с герметизацией (без подвода воды)', 'шт.', '', '1 250'), ('Врезка варочной поверхности с герметизацией (без пуска газа)', 'шт.', '', '1 250'), ('Установка вытяжки без принудительного воздуховода', 'шт.', '', '1 500'), ('Установка духового шкафа', 'шт.', '', '750'), ('Установка встраиваемой СВЧ-печи', 'шт.', '', '650'), ('Установка встраиваемого холодильника', 'шт.', '', '2 400'), ('Установка посудомоечной машины (без подвода воды)', 'шт.', '', '1 500'), ('Установка светодиодной ленты', 'п.м.', '', '1 250'), ('Установка столешницы в подоконник', 'шт.', '', '3 000'), ('Установка ручек (куплены клиентом самостоятельно)', 'шт.', '', '70')]
+        for rd in extra_items:
+            r = t.add_row().cells
+            for i, v in enumerate(rd): r[i].text = v
+        para('Стоимость и порядок выполнения дополнительных работ, не включённых в данный прайс, обсуждаются Заказчиком и Подрядчиком индивидуально.')
+        para('* Работы могут быть рассчитаны по факту выполнения, путём отражения в акте выполненных работ.')
+        sig_table(['Подрядчик', f'{co_name}\n\nМенеджер: ______________________________\nМ.П.'], ['Заказчик', f'{fname}\n\nПодпись: ______________________________'])
+
+    elif doc_type == 'addendum':
+        p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.add_run('ДОПОЛНИТЕЛЬНОЕ СОГЛАШЕНИЕ').bold = True
+        h2(f'к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}')
+        doc.add_paragraph(f'г. {co_city}                                                          {contract_date_full}')
+        para(f'{co_name}, именуемый в дальнейшем «Подрядчик», и гр. {fname}, именуемый (ая) в дальнейшем «Заказчик», заключили настоящее дополнительное соглашение к Договору о нижеследующем:', indent=False)
+        sec_title('1. ПРЕДМЕТ СОГЛАШЕНИЯ')
+        para('1.1. Стороны договорились внести следующие изменения и/или дополнения в Договор:')
+        for _ in range(6):
+            p_blank = doc.add_paragraph('_' * 80)
+            p_blank.paragraph_format.space_after = Pt(4)
+        sec_title('2. ПРОЧИЕ УСЛОВИЯ')
+        para('2.1. Настоящее дополнительное соглашение является неотъемлемой частью Договора и вступает в силу с момента его подписания обеими Сторонами.')
+        para('2.2. В остальной части условия Договора остаются без изменений.')
+        para('2.3. Настоящее соглашение составлено в двух экземплярах, имеющих равную юридическую силу.')
+        sig_table(['Подрядчик', f'{co_name}\nОГРН: {co_ogrn}, ИНН: {co_inn}\n{co_address}\n\nМенеджер: {manager_line}\nПодпись: ______________________________\nМ.П.'], ['Заказчик', f'{fname}\nПаспорт: {_passport_str(c)}\nТел.: {c.get("phone") or "___________"}\n\nПодпись: ______________________________'])
+
+    elif doc_type == 'tech_spec':
+        p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+        p.add_run(f'Приложение к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}')
+        h('«Спецификация на поставку техники»')
+        t = doc.add_table(rows=1, cols=5); t.style = 'Table Grid'
+        for i, txt in enumerate(['Наименование', 'Ед. изм.', 'Кол-во', 'Цена, руб.', 'Стоимость, руб.']):
+            t.rows[0].cells[i].text = txt; t.rows[0].cells[i].paragraphs[0].runs[0].bold = True
+        for _ in range(8):
+            r = t.add_row().cells
+            r[1].text = 'шт.'
+        total_r = t.add_row().cells
+        total_r[3].text = 'ИТОГО:'; total_r[3].paragraphs[0].runs[0].bold = True
+        total_r[4].text = ''; total_r[4].paragraphs[0].runs[0].bold = True
+        sig_table(['Подрядчик', f'{co_name}\n\nМенеджер: ______________________________\nМ.П.'], ['Заказчик', f'{fname}\n\nПодпись: ______________________________'])
 
     buf = BytesIO()
     doc.save(buf)
