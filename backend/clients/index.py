@@ -722,7 +722,9 @@ def handler(event: dict, context) -> dict:
         manager_poa = _get_manager_poa(client.get('manager_name', ''))
         if manager_poa.get('poa_number') or manager_poa.get('poa_date'):
             company = {**company, 'poaNumber': manager_poa.get('poa_number', ''), 'poaDate': manager_poa.get('poa_date', '')}
+        logger.info(f'doc_docx: doc_type={doc_type} cid={cid} client_keys={list(client.keys())[:5]}')
         docx_bytes = _build_docx(client, doc_type, company)
+        logger.info(f'doc_docx: generated {len(docx_bytes)} bytes for {doc_type}')
         b64 = base64.b64encode(docx_bytes).decode('utf-8')
         return {
             'statusCode': 200,
