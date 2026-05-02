@@ -2016,40 +2016,42 @@ def _build_docx(c: dict, doc_type: str, company: dict = None) -> bytes:
         p.paragraph_format.space_after = Pt(0)
         return p
 
+    def _fill_cell(cell, text, bold=False, centered=False):
+        """Заполняет ячейку таблицы, разбивая текст по \n на отдельные параграфы."""
+        lines = text.split('\n')
+        # Первый параграф уже существует в ячейке
+        for idx, line in enumerate(lines):
+            if idx == 0:
+                p = cell.paragraphs[0]
+            else:
+                p = cell.add_paragraph()
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after = Pt(1)
+            p.paragraph_format.line_spacing = Pt(13)
+            if centered:
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = p.add_run(line)
+            _set_font(run, 11, bold=bold)
+
     def sig_table(left, right):
         # Пустой параграф с keep_with_next чтобы таблица подписей не отрывалась
         anchor = doc.add_paragraph()
         anchor.paragraph_format.keep_with_next = True
-        anchor.paragraph_format.space_before = Pt(2)
+        anchor.paragraph_format.space_before = Pt(4)
         anchor.paragraph_format.space_after = Pt(0)
+
         t = doc.add_table(rows=2, cols=2)
         t.style = 'Table Grid'
         t.alignment = WD_TABLE_ALIGNMENT.CENTER
-        # keep table together
-        from docx.oxml.ns import qn as _qn2
-        from docx.oxml import OxmlElement as _OE2
-        tbl_pr = t._tbl.tblPr
-        if tbl_pr is None:
-            tbl_pr = _OE2('w:tblPr'); t._tbl.insert(0, tbl_pr)
-        cant_split = _OE2('w:tblLook')
-        try:
-            for row in t.rows:
-                tr_pr = row._tr.trPr
-                if tr_pr is None:
-                    tr_pr = _OE2('w:trPr'); row._tr.insert(0, tr_pr)
-                cant = _OE2('w:cantSplit')
-                cant.set(_qn2('w:val'), '1')
-                tr_pr.append(cant)
-        except Exception:
-            pass
-        for i, txt in enumerate([left[0], right[0]]):
-            c2 = t.cell(0, i); c2.text = txt
-            run = c2.paragraphs[0].runs[0]
-            _set_font(run, 11, bold=True)
-            c2.paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
-        for i, txt in enumerate([left[1], right[1]]):
-            c2 = t.cell(1, i); c2.text = txt
-            _set_font(c2.paragraphs[0].runs[0] if c2.paragraphs[0].runs else c2.paragraphs[0].add_run(txt), 11)
+
+        # Заголовки (строка 0) — жирные, по центру
+        _fill_cell(t.cell(0, 0), left[0],  bold=True, centered=True)
+        _fill_cell(t.cell(0, 1), right[0], bold=True, centered=True)
+
+        # Данные (строка 1) — обычный шрифт, слева
+        _fill_cell(t.cell(1, 0), left[1])
+        _fill_cell(t.cell(1, 1), right[1])
+
         return t
 
     # manager_line доступен для всех типов документов
