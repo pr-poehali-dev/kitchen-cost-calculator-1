@@ -152,7 +152,7 @@ export default function CalcPage() {
   }
 
   const totals = store.calcProjectTotals(project);
-  const { rawMaterials: totalMaterials, rawServices: totalServices, base: baseTotal, grandTotal } = totals;
+  const { rawMaterials: totalMaterials, rawServices: totalServices, base: baseTotal, baseForOverhead, grandTotal } = totals;
   const totalPurchase = project.blocks.reduce((sum, b) =>
     sum + b.rows.reduce((s, r) => s + (r.basePrice ?? 0) * r.qty, 0), 0);
 
@@ -182,7 +182,7 @@ export default function CalcPage() {
         project={project}
         totalMaterials={totalMaterials}
         totalServices={totalServices}
-        total={baseTotal}
+        total={baseForOverhead}
         grandTotal={grandTotal}
         totalPurchase={totalPurchase}
         showProjects={showProjects}
@@ -277,7 +277,7 @@ export default function CalcPage() {
         <button
           onClick={handleUndo}
           title="Отменить последнее действие (Ctrl+Z)"
-          className="fixed bottom-6 right-6 z-40 flex items-center gap-2 px-3 py-2 bg-[hsl(220,14%,16%)] border border-border rounded-lg text-xs text-[hsl(var(--text-dim))] hover:text-foreground hover:border-gold/40 shadow-lg transition-all"
+          className="fixed bottom-6 left-1/2 -translate-x-1/2 z-40 flex items-center gap-2 px-3 py-2 bg-[hsl(220,14%,16%)] border border-border rounded-lg text-xs text-[hsl(var(--text-dim))] hover:text-foreground hover:border-gold/40 shadow-lg transition-all"
         >
           <Icon name="Undo2" size={13} />
           Отменить

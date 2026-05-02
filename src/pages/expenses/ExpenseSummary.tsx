@@ -142,7 +142,7 @@ export default function ExpenseSummary({
                 </div>
               )}
               {totals.totalMarkupAmount !== 0 && (
-                <div className={`flex justify-between ${totals.totalMarkupAmount > 0 ? 'text-[hsl(var(--gold))]' : 'text-[hsl(0,70%,60%)]'}`}>
+                <div className={`flex justify-between ${totals.totalMarkupAmount > 0 ? 'text-[hsl(var(--gold))]' : 'text-[hsl(140,60%,50%)]'}`}>
                   <span>{totals.totalMarkupAmount > 0 ? 'Надбавка' : 'Скидка'} на итог ({totals.totalMarkupPct}%)</span>
                   <span className="font-mono">{totals.totalMarkupAmount > 0 ? '+' : ''}{fmt(totals.totalMarkupAmount)} {currency}</span>
                 </div>

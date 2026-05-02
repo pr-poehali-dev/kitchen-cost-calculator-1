@@ -57,7 +57,7 @@ export function useStore() {
     const baseForOverhead = base + totalMarkupAmount + blockExtraTotal;
     const percentAmount = Math.round(activeExpenses.filter(e => e.type === 'percent').reduce((s, e) => s + baseForOverhead * e.value / 100, 0));
     const fixedAmount = activeExpenses.filter(e => e.type === 'fixed').reduce((s, e) => s + e.value, 0);
-    return { rawMaterials, rawServices, base, totalMarkupAmount, totalMarkupPct, percentAmount, fixedAmount, blockExtraTotal, blockExtras, grandTotal: baseForOverhead + percentAmount + fixedAmount, activeExpenses };
+    return { rawMaterials, rawServices, base, baseForOverhead, totalMarkupAmount, totalMarkupPct, percentAmount, fixedAmount, blockExtraTotal, blockExtras, grandTotal: baseForOverhead + percentAmount + fixedAmount, activeExpenses };
   };
 
   const getActiveProject = () => state.projects.find(p => p.id === state.activeProjectId) || null;

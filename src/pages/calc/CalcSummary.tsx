@@ -62,7 +62,11 @@ export default function CalcSummary({
       const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
       const pct = grpItems.reduce((s, e) => s + e.value, 0);
       const amt = Math.round(totals.base * pct / 100);
-      if (amt !== 0) rows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? 'Надбавка на итог'} (${pct}%)`, value: Math.abs(amt), sign: amt > 0 ? '+' : undefined, color: amt > 0 ? 'gold' : 'red' });
+      if (amt !== 0) {
+        const isDiscount = pct < 0;
+        const defaultLabel = isDiscount ? 'Скидка на итог' : 'Надбавка на итог';
+        rows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? defaultLabel} (${pct}%)`, value: Math.abs(amt), sign: amt > 0 ? '+' : '-', color: amt > 0 ? 'gold' : 'green' });
+      }
     });
   }
 
@@ -139,6 +143,7 @@ export default function CalcSummary({
               className={`flex justify-between text-sm ${r.indent ? 'pl-4' : ''} ${addDivider && !isFirst ? 'border-t border-border pt-1.5' : ''} ${
                 r.color === 'gold' ? 'text-gold' :
                 r.color === 'blue' ? 'text-[hsl(200,60%,70%)]' :
+                r.color === 'green' ? 'text-[hsl(140,60%,50%)]' :
                 r.color === 'red' ? 'text-[hsl(0,70%,60%)]' :
                 'text-[hsl(var(--text-dim))]'
               }`}
