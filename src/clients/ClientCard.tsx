@@ -332,7 +332,7 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
         <div className="px-3 py-4 sm:px-6 sm:py-6 max-w-3xl mx-auto">
           {tab === 'overview'   && <TabOverview client={current} onChange={onChange} onStatusChange={handleStatusChange} />}
           {tab === 'data'       && <TabData client={current} onChange={onChange} />}
-          {tab === 'contract'   && <TabContract client={current} onChange={onChange} />}
+          {tab === 'contract'   && <TabContract client={current} onChange={onChange} photos={photos} />}
           {tab === 'photos'     && <TabPhotos clientId={clientId} photos={photos} onUpload={uploadPhoto} onDelete={deletePhoto} />}
           {tab === 'documents'  && <TabDocuments client={current} hasDraft={!!draft} onSave={handleSave} saving={saving} />}
           {tab === 'history'    && <TabHistory history={history} />}

@@ -1,9 +1,9 @@
 import Icon from '@/components/ui/icon';
-import type { Client } from '../types';
+import type { Client, ClientPhoto } from '../types';
 import { INPUT, SELECT, TEXTAREA, Field, Section } from '../ClientCardShared';
 import { useStore } from '@/store/useStore';
 
-export function TabContract({ client, onChange }: { client: Client; onChange: (f: keyof Client, v: string | number | object) => void }) {
+export function TabContract({ client, onChange, photos = [] }: { client: Client; onChange: (f: keyof Client, v: string | number | object) => void; photos?: ClientPhoto[] }) {
   const store = useStore();
 
   const addProduct = () => {
@@ -243,14 +243,56 @@ export function TabContract({ client, onChange }: { client: Client; onChange: (f
           <Field label="Фрезеровка">
             <input className={INPUT} value={client.tech_frezerovka || ''} onChange={e => onChange('tech_frezerovka', e.target.value)} placeholder="нет" />
           </Field>
-          <Field label="Скрин проекта (URL изображения)">
-            <input className={INPUT} value={client.tech_image_url || ''} onChange={e => onChange('tech_image_url', e.target.value)} placeholder="https://..." />
-            {client.tech_image_url && (
-              <div className="mt-2 rounded-lg overflow-hidden border border-border max-h-40 flex items-center justify-center bg-black/20">
-                <img src={client.tech_image_url} alt="Проект" className="max-h-40 object-contain" />
-              </div>
-            )}
-          </Field>
+          {/* Фото для технического проекта */}
+          {(() => {
+            const renderPhotos = photos.filter(p => p.category === 'render' && p.url);
+            if (renderPhotos.length > 0) {
+              return (
+                <div className="space-y-2">
+                  <div className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider">Фото для технического проекта</div>
+                  <div className="grid grid-cols-3 gap-2">
+                    {renderPhotos.map(photo => {
+                      const selected = client.tech_image_url === photo.url;
+                      return (
+                        <button
+                          key={photo.id}
+                          type="button"
+                          onClick={() => onChange('tech_image_url', selected ? '' : photo.url)}
+                          className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-all ${selected ? 'border-gold' : 'border-transparent hover:border-[hsl(var(--text-muted))]'}`}
+                        >
+                          <img src={photo.url} alt={photo.name} className="w-full h-full object-cover" />
+                          {selected && (
+                            <div className="absolute inset-0 bg-gold/20 flex items-center justify-center">
+                              <div className="w-6 h-6 rounded-full bg-gold flex items-center justify-center">
+                                <Icon name="Check" size={13} className="text-[hsl(220,16%,8%)]" />
+                              </div>
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {client.tech_image_url && !renderPhotos.find(p => p.url === client.tech_image_url) && (
+                    <div className="rounded-lg overflow-hidden border border-border max-h-40 flex items-center justify-center bg-black/20">
+                      <img src={client.tech_image_url} alt="Проект" className="max-h-40 object-contain" />
+                    </div>
+                  )}
+                  <p className="text-xs text-[hsl(var(--text-muted))]">Нажми на фото чтобы выбрать его для документа. Добавить фото можно на вкладке «Фото».</p>
+                </div>
+              );
+            }
+            return (
+              <Field label="Фото для технического проекта">
+                <input className={INPUT} value={client.tech_image_url || ''} onChange={e => onChange('tech_image_url', e.target.value)} placeholder="https://..." />
+                {client.tech_image_url && (
+                  <div className="mt-2 rounded-lg overflow-hidden border border-border max-h-40 flex items-center justify-center bg-black/20">
+                    <img src={client.tech_image_url} alt="Проект" className="max-h-40 object-contain" />
+                  </div>
+                )}
+                <p className="text-xs text-[hsl(var(--text-muted))] mt-1">Загрузи фото в категорию «Рендер / проект» на вкладке «Фото» — они появятся здесь для выбора.</p>
+              </Field>
+            );
+          })()}
         </div>
       </Section>
     </div>
