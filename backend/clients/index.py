@@ -753,12 +753,22 @@ def handler(event: dict, context) -> dict:
         if manager_poa.get('poa_number') or manager_poa.get('poa_date'):
             company = {**company, 'poaNumber': manager_poa.get('poa_number', ''), 'poaDate': manager_poa.get('poa_date', '')}
         import zipfile, io as _io
-        DOC_TYPES_ZIP = ['contract', 'tech', 'act', 'rules']
+        DOC_TYPES_ZIP = ['contract', 'tech', 'act', 'rules', 'delivery', 'act_delivery', 'assembly', 'act_assembly', 'delivery_calc', 'delivery_lift', 'assembly_calc', 'assembly_extra', 'addendum', 'tech_spec']
         DOC_NAMES_ZIP = {
-            'contract': 'Договор бытового подряда',
-            'tech': 'Технический проект (Прил.1)',
-            'act': 'Акт выполненных работ (Прил.4)',
-            'rules': 'Правила эксплуатации (Прил.3)',
+            'contract':       '01. Договор бытового подряда',
+            'tech':           '02. Технический проект (Прил.1)',
+            'act':            '03. Акт выполненных работ (Прил.4)',
+            'rules':          '04. Правила эксплуатации (Прил.3)',
+            'delivery':       '05. Договор доставки',
+            'act_delivery':   '06. Акт приёма доставки',
+            'assembly':       '07. Договор монтажа',
+            'act_assembly':   '08. Акт приёма сборки',
+            'delivery_calc':  '09. Калькуляция доставки (Прил.1)',
+            'delivery_lift':  '10. Прайс подъём мебели (Прил.2)',
+            'assembly_calc':  '11. Калькуляция сборки (Прил.1)',
+            'assembly_extra': '12. Прайс доп. работ (Прил.2)',
+            'addendum':       '13. Дополнительное соглашение',
+            'tech_spec':      '14. Спецификация на технику',
         }
         fname_client = _full_name(client).replace(' ', '_')[:30]
         zip_buf = _io.BytesIO()
@@ -1234,8 +1244,8 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 <p class="no-indent">3. Правила эксплуатации корпусной мебели.</p>
 <p class="no-indent">4. Образец Акта выполненных работ</p>
 
-<p class="sec">11. РЕКВИЗИТЫ СТОРОН</p>
-<table>
+<p class="sec" style="page-break-before:avoid;page-break-after:avoid">11. РЕКВИЗИТЫ СТОРОН</p>
+<table style="page-break-inside:avoid;page-break-before:avoid">
 <tr><th style="width:50%">Подрядчик:</th><th style="width:50%">Заказчик:</th></tr>
 <tr>
 <td style="vertical-align:top;padding:10px 12px;font-size:10pt;line-height:1.7">
@@ -1320,23 +1330,25 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:#2d2d2d;min-height:100vh}
 body{font-family:'PT Serif',Georgia,serif;font-size:10pt;line-height:1.4;color:#000;background:transparent}
-.page{width:297mm;min-height:210mm;margin:16px auto;padding:10mm 12mm;background:#fff;box-shadow:0 6px 32px rgba(0,0,0,.6);display:flex;flex-direction:column}
+.page{width:297mm;margin:16px auto;padding:10mm 12mm;background:#fff;box-shadow:0 6px 32px rgba(0,0,0,.6)}
 @media screen and (min-width:1000px){.page{transform-origin:top center;transform:scale(1.05);margin-bottom:30px}}
 @media screen and (min-width:1300px){.page{transform:scale(1.15);margin-bottom:60px}}
 h1{font-size:12pt;text-align:center;font-weight:bold;margin:0 0 2px}
 table{width:100%;border-collapse:collapse;font-size:9.5pt}
 th,td{border:1px solid #000;padding:3px 6px;vertical-align:middle}
 th{font-weight:bold;text-align:left;background:#fff;font-size:9.5pt}
-.img-area{border:1px solid #000;flex:1;min-height:110mm;margin:6px 0;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.img-area{border:1px solid #000;height:105mm;margin:5px 0;display:flex;align-items:center;justify-content:center;overflow:hidden;page-break-inside:avoid}
+.img-area img{max-width:100%;max-height:103mm;object-fit:contain;display:block;margin:auto}
 p.disclaimer{font-style:italic;font-size:8.5pt;margin:4px 0;text-indent:0;line-height:1.35}
-.sig-table{width:100%;border-collapse:collapse;margin-top:4px}
+.sig-table{width:100%;border-collapse:collapse;margin-top:4px;page-break-inside:avoid}
 .sig-table th{border:1px solid #000;padding:3px 6px;font-weight:bold;text-align:left;font-size:9.5pt;width:50%}
 .sig-table td{border:1px solid #000;padding:3px 6px;font-size:9.5pt;width:50%}
 .ul{border-bottom:1px solid #000;display:inline-block;min-width:160px}
+.bottom-block{page-break-inside:avoid}
 @media print{
   html{background:#fff}
   body{margin:0}
-  .page{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}
+  .page{width:auto;margin:0;padding:0;box-shadow:none}
   @page{size:A4 landscape;margin:10mm 12mm 10mm 12mm;}
 }
 </style>'''
@@ -1368,12 +1380,14 @@ p.disclaimer{font-style:italic;font-size:8.5pt;margin:4px 0;text-indent:0;line-h
 </tr>
 </table>
 <div class="img-area">{image_block}</div>
+<div class="bottom-block">
 <p class="disclaimer">Подписывая Технический проект, Заказчик подтверждает, что ознакомлен с наименованием, качественными характеристиками, количеством, дизайном мебели и ему полностью понятны выполняемые Подрядчиком работы. Стороны согласовали, что мебель изготовлена специально для Заказчика по его индивидуальным параметрам. Приложение: бланк замера.</p>
 <table class="sig-table">
 <tr><th>Подрядчик: {co_name.upper()}</th><th>Заказчик:&nbsp;&nbsp;{fname}</th></tr>
 <tr><td>Менеджер</td><td>&nbsp;</td></tr>
 <tr><td style="height:36px"><span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
 </table>
+</div>
 </div></body></html>'''
 
     elif doc_type == 'delivery':
@@ -2200,7 +2214,9 @@ def _build_docx(c: dict, doc_type: str, company: dict = None) -> bytes:
             t.cell(i, 0).text = label
             t.cell(i, 0).paragraphs[0].runs[0].bold = True
             t.cell(i, 1).text = value
-        doc.add_paragraph('\n\n\n\n\n\n\n\n\n\n\n\nМесто для схемы / эскиза:')
+        p_space = doc.add_paragraph('Место для схемы / эскиза:')
+        p_space.paragraph_format.space_before = Mm(80)
+        p_space.paragraph_format.space_after = Pt(3)
         sig_table(
             ['Подрядчик', f'{co_name}\n\nМенеджер: ______________________________\nМ.П.'],
             ['Заказчик', f'{fname}\n\nПодпись: ______________________________']
