@@ -1334,36 +1334,36 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
             image_block = ''
         tech_style = '''<style>
 @import url('https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap');
-@page{size:A4 landscape;margin:10mm 12mm 10mm 12mm;}
+@page{size:A4 landscape;margin:5mm 5mm 5mm 5mm;}
 *{box-sizing:border-box;margin:0;padding:0}
 html{background:#2d2d2d;min-height:100vh}
-body{font-family:'PT Serif',Georgia,serif;font-size:10pt;line-height:1.4;color:#000;background:transparent}
-.page{width:297mm;margin:16px auto;padding:10mm 12mm;background:#fff;box-shadow:0 6px 32px rgba(0,0,0,.6)}
-@media screen and (min-width:1000px){.page{transform-origin:top center;transform:scale(1.05);margin-bottom:30px}}
-@media screen and (min-width:1300px){.page{transform:scale(1.15);margin-bottom:60px}}
-h1{font-size:12pt;text-align:center;font-weight:bold;margin:0 0 2px}
-table{width:100%;border-collapse:collapse;font-size:9.5pt}
-th,td{border:1px solid #000;padding:3px 6px;vertical-align:middle}
-th{font-weight:bold;text-align:left;background:#fff;font-size:9.5pt}
-.img-area{border:1px solid #000;height:105mm;margin:5px 0;display:flex;align-items:center;justify-content:center;overflow:hidden;page-break-inside:avoid}
-.img-area img{max-width:100%;max-height:103mm;object-fit:contain;display:block;margin:auto}
-p.disclaimer{font-style:italic;font-size:8.5pt;margin:4px 0;text-indent:0;line-height:1.35}
-.sig-table{width:100%;border-collapse:collapse;margin-top:4px;page-break-inside:avoid}
-.sig-table th{border:1px solid #000;padding:3px 6px;font-weight:bold;text-align:left;font-size:9.5pt;width:50%}
-.sig-table td{border:1px solid #000;padding:3px 6px;font-size:9.5pt;width:50%}
-.ul{border-bottom:1px solid #000;display:inline-block;min-width:160px}
+body{font-family:'PT Serif',Georgia,serif;font-size:8.5pt;line-height:1.25;color:#000;background:transparent}
+.page{width:297mm;margin:12px auto;padding:5mm 5mm;background:#fff;box-shadow:0 6px 32px rgba(0,0,0,.6)}
+@media screen and (min-width:1000px){.page{transform-origin:top center;transform:scale(1.05);margin-bottom:20px}}
+@media screen and (min-width:1300px){.page{transform:scale(1.15);margin-bottom:50px}}
+h1{font-size:10.5pt;text-align:center;font-weight:bold;margin:0 0 1px}
+table{width:100%;border-collapse:collapse;font-size:8pt}
+th,td{border:1px solid #000;padding:2px 4px;vertical-align:middle}
+th{font-weight:bold;text-align:left;background:#fff;font-size:8pt}
+.img-area{border:1px solid #000;height:128mm;margin:3px 0;display:flex;align-items:center;justify-content:center;overflow:hidden;page-break-inside:avoid}
+.img-area img{max-width:100%;max-height:126mm;object-fit:contain;display:block;margin:auto}
+p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-height:1.25}
+.sig-table{width:100%;border-collapse:collapse;margin-top:3px;page-break-inside:avoid}
+.sig-table th{border:1px solid #000;padding:2px 5px;font-weight:bold;text-align:left;font-size:8pt;width:50%}
+.sig-table td{border:1px solid #000;padding:4px 5px;font-size:8pt;width:50%}
+.ul{border-bottom:1px solid #000;display:inline-block;min-width:140px}
 .bottom-block{page-break-inside:avoid}
 @media print{
   html{background:#fff}
   body{margin:0}
   .page{width:auto;margin:0;padding:0;box-shadow:none}
-  @page{size:A4 landscape;margin:10mm 12mm 10mm 12mm;}
+  @page{size:A4 landscape;margin:5mm 5mm 5mm 5mm;}
 }
 </style>'''
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Технический проект к договору №{contract_num}</title>{tech_style}</head><body><div class="page">
-<p style="text-align:center;font-size:10pt;font-weight:bold;margin-bottom:1px">Приложение № 1 к договору бытового подряда на изготовление мебели № {contract_num}&nbsp;&nbsp;от&nbsp;&nbsp;{contract_date_full}</p>
+<p style="text-align:center;font-size:8.5pt;font-weight:bold;margin-bottom:0px">Приложение № 1 к договору бытового подряда на изготовление мебели № {contract_num}&nbsp;&nbsp;от&nbsp;&nbsp;{contract_date_full}</p>
 <h1>«Технический проект»</h1>
-<table style="margin-top:6px">
+<table style="margin-top:3px">
 <tr>
   <th style="width:11%">Корпус:</th>
   <td style="width:27%">{tech_korpus}</td>
@@ -2257,9 +2257,16 @@ def _build_docx(c: dict, doc_type: str, company: dict = None) -> bytes:
         )
 
     elif doc_type == 'tech':
+        # Минимальные поля для максимальной области фото
+        sec.page_width = Mm(297); sec.page_height = Mm(210)  # Альбомная A4
+        sec.left_margin = Mm(7); sec.right_margin = Mm(7)
+        sec.top_margin = Mm(6); sec.bottom_margin = Mm(6)
+
         p = doc.add_paragraph()
-        p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-        p.add_run(f'Приложение № 1 к договору бытового подряда\nна изготовление мебели от {contract_date_full}')
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r_hdr = p.add_run(f'Приложение № 1 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}')
+        _set_font(r_hdr, 9)
+        p.paragraph_format.space_after = Pt(0)
         h('«Технический проект»')
         # Заполняем таблицу реальными данными
         podsv_type = str(c.get('tech_podsvetka_type') or '').strip()
@@ -2316,18 +2323,18 @@ def _build_docx(c: dict, doc_type: str, company: dict = None) -> bytes:
                 img_data = urllib.request.urlopen(req, timeout=10).read()
                 img_stream = _io2.BytesIO(img_data)
                 p_img = doc.add_paragraph()
-                p_img.paragraph_format.space_before = Pt(6)
-                p_img.paragraph_format.space_after = Pt(4)
-                from docx.shared import Inches
+                p_img.paragraph_format.space_before = Pt(4)
+                p_img.paragraph_format.space_after = Pt(2)
                 run_img = p_img.add_run()
-                run_img.add_picture(img_stream, width=Inches(8.5))
+                # Альбомная A4 минус поля 7+7мм = 283мм ≈ 11.15 дюйма
+                run_img.add_picture(img_stream, width=Mm(283))
             except Exception:
                 p_space = doc.add_paragraph('[ Место для схемы / эскиза ]')
-                p_space.paragraph_format.space_before = Pt(120)
+                p_space.paragraph_format.space_before = Pt(180)
                 p_space.paragraph_format.space_after = Pt(4)
         else:
             p_space = doc.add_paragraph('Место для схемы / эскиза:')
-            p_space.paragraph_format.space_before = Pt(120)
+            p_space.paragraph_format.space_before = Pt(180)
             p_space.paragraph_format.space_after = Pt(4)
 
         p_disc = doc.add_paragraph()
