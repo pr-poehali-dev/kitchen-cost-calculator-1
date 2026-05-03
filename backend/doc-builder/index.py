@@ -789,44 +789,28 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
 
         if tech_img:
             try:
-                # urllib следует редиректам автоматически, но CDN может требовать opener
-                opener = urllib.request.build_opener(urllib.request.HTTPRedirectHandler())
-                req = urllib.request.Request(tech_img, headers={
-                    'User-Agent': 'Mozilla/5.0',
-                    'Accept': 'image/*,*/*',
-                })
-                img_bytes = opener.open(req, timeout=20).read()
-                logger.info(f'tech img loaded: {len(img_bytes)} bytes, first4={img_bytes[:4].hex()}, url={tech_img[:80]}')
+                from PIL import Image as _PILImage
+                req = urllib.request.Request(tech_img, headers={'User-Agent': 'Mozilla/5.0'})
+                img_bytes = urllib.request.urlopen(req, timeout=20).read()
+                logger.info(f'tech img loaded: {len(img_bytes)} bytes, url={tech_img[:80]}')
 
-                # Определяем пропорции чтобы вписать в IMG_W × IMG_H
-                def _img_size(data):
-                    if data[:8] == b'\x89PNG\r\n\x1a\n':
-                        w, h = _struct.unpack('>II', data[16:24])
-                        return w, h
-                    if data[:2] == b'\xff\xd8':
-                        i = 2
-                        while i + 4 < len(data):
-                            marker = data[i:i+2]
-                            if marker in (b'\xff\xc0', b'\xff\xc2'):
-                                h, w = _struct.unpack('>HH', data[i+5:i+9])
-                                return w, h
-                            length = _struct.unpack('>H', data[i+2:i+4])[0]
-                            i += 2 + length
-                    return None, None
+                # Определяем размеры через Pillow
+                pil_img = _PILImage.open(_io.BytesIO(img_bytes))
+                iw, ih = pil_img.size
+                logger.info(f'tech img PIL size: {iw}x{ih}')
 
-                iw, ih = _img_size(img_bytes)
-                logger.info(f'tech img size detected: {iw}x{ih}, IMG_W={IMG_W}, IMG_H={IMG_H}')
-                if iw and ih and iw > 0 and ih > 0:
-                    if (IMG_W / iw) * ih <= IMG_H:
+                if iw > 0 and ih > 0:
+                    projected_h = (IMG_W / iw) * ih
+                    if projected_h <= IMG_H:
                         add_kw = {'width': IMG_W}
                     else:
                         add_kw = {'height': IMG_H}
                 else:
                     add_kw = {'width': IMG_W}
 
-                logger.info(f'tech img add_picture with {add_kw}')
+                logger.info(f'tech img inserting with {add_kw}')
                 p_img_wrap.add_run().add_picture(_io.BytesIO(img_bytes), **add_kw)
-                logger.info('tech img inserted OK')
+                logger.info('tech img OK')
             except Exception as ex:
                 logger.warning(f'tech img FAILED: {ex}')
                 r_ph = p_img_wrap.add_run('\n\n\n\n\n[ Место для схемы / эскиза проекта ]\n\n\n\n\n')
@@ -1258,7 +1242,7 @@ def handler(event: dict, context) -> dict:
             client['manager_poa_date']   = poa.get('poa_date', '')
 
     if action == 'doc_docx':
-        logger.info(f'doc_docx: {doc_type} for client {cid}')
+        logger.info(f'doc_docx: {doc_type} for client {cid}, tech_img={str(client.get("tech_image_url",""))[:80]}')
         docx_bytes = build_docx(client, doc_type, company)
         logger.info(f'doc_docx: generated {len(docx_bytes)} bytes')
         return {
