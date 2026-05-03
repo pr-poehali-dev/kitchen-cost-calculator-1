@@ -1324,7 +1324,7 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 
 <div style="display:flex;justify-content:space-between;margin-top:20px">
   <div>
-    <p class="no-indent" style="font-weight:bold">Подрядчик: {co_name.upper()}</p>
+    <p class="no-indent" style="font-weight:bold">Подрядчик: {co_name}</p>
     <br><br>
     <span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
     <p class="no-indent" style="margin-top:4px">М.П.</p>
@@ -1414,7 +1414,7 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 <div class="bottom-block">
 <p class="disclaimer">Подписывая Технический проект, Заказчик подтверждает, что ознакомлен с наименованием, качественными характеристиками, количеством, дизайном мебели и ему полностью понятны выполняемые Подрядчиком работы. Стороны согласовали, что мебель изготовлена специально для Заказчика по его индивидуальным параметрам. Приложение: бланк замера.</p>
 <table class="sig-table">
-<tr><th style="width:42%">Подрядчик: {co_name.upper()}</th><th style="width:58%;text-align:right">Заказчик:&nbsp;&nbsp;{fname}</th></tr>
+<tr><th style="width:42%">Подрядчик: {co_name}</th><th style="width:58%;text-align:right">Заказчик:&nbsp;&nbsp;{fname}</th></tr>
 <tr><td style="height:36px"><span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td style="text-align:right"><span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
 </table>
 <p style="margin-top:4px;font-size:7.5pt;text-indent:0">М.П.</p>
@@ -1692,7 +1692,7 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 
 <div style="display:flex;justify-content:space-between;margin-top:30px">
 <div>
-<p class="no-indent" style="font-weight:bold">Подрядчик: {co_name.upper()}</p>
+<p class="no-indent" style="font-weight:bold">Подрядчик: {co_name}</p>
 <br><br>
 <span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
 <p class="no-indent" style="margin-top:4px">М.П.</p>
@@ -1743,7 +1743,7 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 <div style="height:20px"></div>
 <p>4. В случае наличия замечаний Заказчик, после подписания акта, в праве требовать устранения замечаний отраженных в данном акте.</p>
 <p>5. Настоящий акт подписан в 2 (двух) экземплярах по одному для каждой из Сторон.</p>
-<table style="margin-top:20px"><tr><th style="width:50%">Исполнитель: {co_name.upper()}</th><th style="width:50%">Заказчик:</th></tr>
+<table style="margin-top:20px"><tr><th style="width:50%">Исполнитель: {co_name}</th><th style="width:50%">Заказчик:</th></tr>
 <tr><td style="vertical-align:top;padding:8px">{co_requisites}{stamp_sig_html}</td><td>{fname}</td></tr>
 <tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
 </div></body></html>'''
@@ -1781,7 +1781,7 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 <div style="height:20px"></div>
 <p>4. В случае наличия замечаний Заказчик, после подписания акта, в праве требовать устранения замечаний отраженных в данном акте.</p>
 <p>5. Настоящий акт подписан в 2 (двух) экземплярах по одному для каждой из Сторон.</p>
-<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name.upper()}</th><th style="width:50%">Заказчик:</th></tr>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name}</th><th style="width:50%">Заказчик:</th></tr>
 <tr><td style="height:60px"></td><td>{fname}</td></tr>
 <tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
 </div></body></html>'''
@@ -1795,7 +1795,7 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 </style></head><body><div class="page">
 <p class="no-indent" style="text-align:right">Бланк замера помещения к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
 <div class="measure-area"></div>
-<table style="margin-top:16px"><tr><th style="width:50%">Подрядчик: {co_name.upper()}</th><th style="width:50%">Заказчик:</th></tr>
+<table style="margin-top:16px"><tr><th style="width:50%">Подрядчик: {co_name}</th><th style="width:50%">Заказчик:</th></tr>
 <tr><td style="padding:6px">Замерщик</td><td>&nbsp;</td></tr>
 <tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
 </table>
@@ -1816,7 +1816,7 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 <p style="margin-top:16px">*Исполнитель вправе однократно предоставить Заказчику скидку в размере стоимости доставки, равной 8000 руб., которая осуществляется в пределах территориальных границ г. Саратова и г. Энгельса. В случае повторной доставки, по причинам не зависящим от Исполнителя, но зависящим от Заказчика, ее стоимость будет определена согласно приложению №1.</p>
 <p>**Расчет стоимости доставки учитывает расстояние по километражу от склада Исполнителя по адресу: г. Саратов, ул. Усть-Курдюмская д. 3, до дома (подъезда) заказчика согласно п. 1.3 договора. Километраж определяется на основании сервиса Яндекс.Карты https://yandex.ru/maps/</p>
 <p>*** Размер скидки определяется Исполнителем индивидуально.</p>
-<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name.upper()}</th><th style="width:50%">Заказчик:</th></tr>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name}</th><th style="width:50%">Заказчик:</th></tr>
 <tr><td style="padding:6px">Менеджер</td><td>&nbsp;</td></tr>
 <tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
 <tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
@@ -1846,7 +1846,7 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 <p>2. Занос мебели на первый этаж – бесплатный, при условии возможности парковки автомашины вплотную к подъезду.</p>
 <p>3. При невозможности парковки автомашины в плотную (не далее чем на 10 метров) к подъезду (вход в частный дом и т.д.), сумма заноса рассчитывается по данному прайсу, в зависимости от расстояния на ситуации, если из-за погодных условий (снег, гололед, размытая грунтовая дорога и т.д.) или из-за заставленного автомобилями двора (включая аналогичные ситуации) нет возможности подъехать ко входу.</p>
 <p>* Услуги могут быть рассчитаны по факту оказания, путем отражения в акте об оказании услуг.</p>
-<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name.upper()}</th><th style="width:50%">Заказчик:</th></tr>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name}</th><th style="width:50%">Заказчик:</th></tr>
 <tr><td style="padding:6px">Менеджер</td><td>&nbsp;</td></tr>
 <tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
 <tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
@@ -1866,7 +1866,7 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 <p style="margin-top:16px">*Подрядчик вправе однократно предоставить Заказчику скидку в размере стоимости сборки, равной 17500 руб., которая осуществляется в пределах территориальных границ г. Саратова и г. Энгельса. В случае повторного выезда к месту сборки, по причинам не зависящим от Подрядчика, но зависящим от Заказчика, ее стоимость будет определена согласно приложению №1.</p>
 <p>**Расчет стоимости выезда сборщика учитывает расстояние по километражу от склада Подрядчика по адресу: г. Саратов, ул. Усть-Курдюмская д. 3, до дома (подъезда) заказчика согласно п. 1.2 договора. Километраж определяется на основании сервиса Яндекс.Карты https://yandex.ru/maps/</p>
 <p>*** Размер скидки определяется Подрядчиком индивидуально.</p>
-<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name.upper()}</th><th style="width:50%">Заказчик:</th></tr>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name}</th><th style="width:50%">Заказчик:</th></tr>
 <tr><td style="padding:6px">Менеджер</td><td>&nbsp;</td></tr>
 <tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
 <tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
@@ -1891,7 +1891,7 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 <tr><td colspan="4" style="text-align:right;font-weight:bold">Сумма:</td><td style="text-align:right;font-weight:bold">0</td></tr></table>
 <p style="margin-top:16px">Стоимость и порядок выполнения дополнительных работ не включенных в данный прайс - обсуждаются Заказчиком и Подрядчиком индивидуально.</p>
 <p>* Работы могут быть рассчитаны по факту выполнения, путем отражения в акте выполненных работ.</p>
-<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name.upper()}</th><th style="width:50%">Заказчик:</th></tr>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name}</th><th style="width:50%">Заказчик:</th></tr>
 <tr><td style="padding:6px">Менеджер</td><td>&nbsp;</td></tr>
 <tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
 <tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
@@ -1911,7 +1911,7 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 <tr><td></td><td style="text-align:center">шт.</td><td></td><td></td><td style="text-align:right">0</td></tr>
 <tr><td></td><td style="text-align:center">шт.</td><td></td><td></td><td style="text-align:right">0</td></tr>
 <tr><td colspan="4" style="text-align:right;font-weight:bold">Сумма:</td><td style="text-align:right;font-weight:bold">0</td></tr></table>
-<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name.upper()}</th><th style="width:50%">Заказчик:</th></tr>
+<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name}</th><th style="width:50%">Заказчик:</th></tr>
 <tr><td style="padding:6px">Менеджер</td><td>&nbsp;</td></tr>
 <tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
 <tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
@@ -1929,7 +1929,7 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 <p>2. Все другие условия договора, прямо не поименованные в настоящем дополнительном соглашении, считать неизменными и обязательными для исполнения Сторонами.</p>
 <p>3. Настоящее Дополнительное соглашение составлено в двух экземплярах, имеющих одинаковую юридическую силу, по одному для каждой из Сторон.</p>
 <p>4. Настоящее Дополнительное соглашение вступает в силу с даты его подписания, распространяется на отношения, возникшие с даты заключения договора и является неотъемлемой частью Договора бытового подряда на изготовление мебели <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span> от <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></p>
-<table style="margin-top:30px"><tr><th style="width:50%">Подрядчик: {co_name.upper()}</th><th style="width:50%">Заказчик:</th></tr>
+<table style="margin-top:30px"><tr><th style="width:50%">Подрядчик: {co_name}</th><th style="width:50%">Заказчик:</th></tr>
 <tr><td style="padding-top:8px">Менеджер</td><td>{fname}</td></tr>
 <tr><td style="height:60px"></td><td></td></tr>
 <tr><td colspan="2" style="text-align:center;padding-top:10px">М.П.</td></tr></table>
@@ -2282,7 +2282,7 @@ def _build_docx(c: dict, doc_type: str, company: dict = None) -> bytes:
         r_warn = p_warn.add_run('ВНИМАНИЕ! Подрядчик не несёт ответственность за последствия от несоблюдения установленных норм и правил по уходу и эксплуатации корпусной мебели.')
         r_warn.bold = True; r_warn.italic = True
         sig_table(
-            ['Подрядчик', f'{co_name.upper()}\n\nМенеджер: ______________________________\nМ.П.'],
+            ['Подрядчик', f'{co_name}\n\nМенеджер: ______________________________\nМ.П.'],
             ['Заказчик', f'{fname}\n\nПодпись: ______________________________']
         )
 
@@ -2375,7 +2375,7 @@ def _build_docx(c: dict, doc_type: str, company: dict = None) -> bytes:
         r_disc.italic = True
 
         sig_table(
-            [f'Подрядчик: {co_name.upper()}', f'Менеджер\n\n______________________________\nМ.П.'],
+            [f'Подрядчик: {co_name}', f'Менеджер\n\n______________________________\nМ.П.'],
             [f'Заказчик:  {fname}', '\n\n______________________________']
         )
 

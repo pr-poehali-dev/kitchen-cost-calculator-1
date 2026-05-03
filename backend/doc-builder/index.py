@@ -920,7 +920,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
             p.alignment = align
             font(p.add_run(text), size, bold)
 
-        _sc(0, 0, f'Подрядчик: {co_name.upper()}', bold=True)
+        _sc(0, 0, f'Подрядчик: {co_name}', bold=True)
         _sc(0, 1, f'Заказчик:  {fname}', bold=True, align=WD_ALIGN_PARAGRAPH.RIGHT)
         _sc(1, 0, '______________________________', size=9, sb=8)
         _sc(1, 1, '______________________________', size=9, sb=8, align=WD_ALIGN_PARAGRAPH.RIGHT)
@@ -1037,7 +1037,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
             tab.set(_sqn2('w:pos'), str(int(pos_cm * 567)))
             tabs.append(tab)
         _tab2(p_sig, 10)
-        font(p_sig.add_run(f'Подрядчик: {co_name.upper()}'), 9, bold=True)
+        font(p_sig.add_run(f'Подрядчик: {co_name}'), 9, bold=True)
         p_sig.add_run('\t')
         font(p_sig.add_run(f'Заказчик: {fname}'), 9, bold=True)
 
