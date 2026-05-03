@@ -815,7 +815,8 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
 
         p_img = ic.paragraphs[0]
         p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_img.paragraph_format.space_before = Pt(0)
+        # Отступ сверху чтобы картинка была по центру ячейки
+        p_img.paragraph_format.space_before = Mm(15)
         p_img.paragraph_format.space_after  = Pt(0)
 
         print(f'[TECH] tech_img={tech_img[:80] if tech_img else "EMPTY"}')
