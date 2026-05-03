@@ -799,12 +799,19 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
                 iw, ih = pil_img.size
                 logger.info(f'tech img PIL size: {iw}x{ih}')
 
+                IMG_MIN_H = Mm(60)  # минимальная высота картинки
+
                 if iw > 0 and ih > 0:
-                    projected_h = (IMG_W / iw) * ih
-                    if projected_h <= IMG_H:
-                        add_kw = {'width': IMG_W}
-                    else:
+                    projected_h = int((IMG_W / iw) * ih)
+                    logger.info(f'projected_h={projected_h} IMG_H={IMG_H} IMG_MIN_H={IMG_MIN_H}')
+                    if projected_h > IMG_H:
+                        # Картинка слишком высокая — ограничиваем по высоте
                         add_kw = {'height': IMG_H}
+                    elif projected_h < IMG_MIN_H:
+                        # Картинка слишком плоская — тянем по высоте до минимума
+                        add_kw = {'height': IMG_MIN_H}
+                    else:
+                        add_kw = {'width': IMG_W}
                 else:
                     add_kw = {'width': IMG_W}
 
