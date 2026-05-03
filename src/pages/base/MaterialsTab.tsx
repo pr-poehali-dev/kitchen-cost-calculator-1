@@ -60,12 +60,10 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
     [store.settings.materialCategories]
   );
 
-  const typeFiltered = useMemo(() =>
-    matTypeFilter === 'all'
-      ? catalog.materials
-      : catalog.materials.filter(m => m.typeId === matTypeFilter),
-    [catalog.materials, matTypeFilter]
-  );
+  const typeFiltered = useMemo(() => {
+    const mats = catalog.materials ?? [];
+    return matTypeFilter === 'all' ? mats : mats.filter(m => m.typeId === matTypeFilter);
+  }, [catalog.materials, matTypeFilter]);
 
   const catFiltered = useMemo(() =>
     catFilter === 'all'
