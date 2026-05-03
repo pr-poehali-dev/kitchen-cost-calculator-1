@@ -1297,17 +1297,17 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
             )
         else:
             product_rows = f'<tr><td style="text-align:center">1</td><td>Кухонный гарнитур</td><td style="text-align:center">шт.</td><td style="text-align:center">1</td><td style="text-align:right">{total:,.0f}</td></tr>'
+        manager_name = (c.get('manager_name') or '').strip()
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Акт выполненных работ к договору №{contract_num}</title>{style}</head><body><div class="page">
-<p class="no-indent" style="text-align:right">Приложение № 4 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
+<p class="no-indent" style="text-align:center;font-size:8.5pt">Приложение № 4 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
 <h1>«Акт выполненных работ»</h1>
-<div class="city-date"><span>г. {co_city}</span><span>{contract_date_full}</span></div>
-<p class="no-indent">{co_name}, в лице {co_dir_pos}а <span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик» и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», подписали настоящий Акт выполненных работ о нижеследующем:</p>
+<p class="center" style="margin-bottom:6px">от «____» ________________ 20____ г.</p>
+<p class="no-indent">{co_name}, в лице менеджера <strong>{manager_name}</strong>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик» и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», подписали настоящий Акт выполненных работ о нижеследующем:</p>
 <p class="no-indent">1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда № {contract_num} от {contract_date_full}:</p>
 <table><tr><th style="width:5%">№</th><th>Наименование мебели, включая ее элементы</th><th style="width:13%">Ед. измерения</th><th style="width:12%">Кол-во изделий</th><th style="width:18%">Стоимость в руб.</th></tr>
 {product_rows}
-<tr><td colspan="4" style="text-align:right;font-weight:bold">ИТОГО:</td><td style="text-align:right;font-weight:bold">{total:,.0f}</td></tr>
+<tr><td colspan="4" style="text-align:right;font-weight:bold">ИТОГО:</td><td style="text-align:right;font-weight:bold">{total:,.0f} ({total_words})</td></tr>
 </table>
-<p class="no-indent" style="text-align:center">({total_words})</p>
 <p class="no-indent">2. Комплектность, количество, вид, характеристики мебели соответствуют условиям договора. Визуальный осмотр мебели на предмет повреждений, царапин, сколов, трещин и других недостатков произведен Заказчиком. Фурнитура (петли, выдвижные механизмы, подъемные механизмы и т.д.) работает исправно. Заказчик претензий по объему, качеству, результату и срокам выполнения работ: <strong>не имеет / имеет</strong> (ненужное зачеркнуть).</p>
 
 <div style="margin:12px 0">
