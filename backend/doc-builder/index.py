@@ -700,13 +700,15 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
     # ТЕХНИЧЕСКИЙ ПРОЕКТ
     # ══════════════════════════════════════════════════════════════════════════
     elif doc_type == 'tech':
-        # ── Альбомная страница, поля: левое 20мм (подшивка), остальные 5мм
-        sec.page_width   = Mm(297); sec.page_height  = Mm(210)
-        sec.left_margin  = Mm(20);  sec.right_margin  = Mm(5)
-        sec.top_margin   = Mm(5);   sec.bottom_margin = Mm(5)
+        # ── Альбомная страница A4: ширина=297, высота=210
+        from docx.enum.section import WD_ORIENT
+        sec.orientation   = WD_ORIENT.LANDSCAPE
+        sec.page_width    = Mm(297); sec.page_height   = Mm(210)
+        sec.left_margin   = Mm(5);   sec.right_margin  = Mm(5)
+        sec.top_margin    = Mm(5);   sec.bottom_margin = Mm(5)
 
-        # Доступная ширина контента: 297 - 20 - 5 = 272мм
-        CONTENT_W = Mm(272)
+        # Доступная ширина контента: 297 - 5 - 5 = 287мм
+        CONTENT_W = Mm(287)
 
         # ── Заголовок
         p_hdr = doc.add_paragraph()
@@ -738,7 +740,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         # Итого 272мм: 25 + 86 + 35 + 86 + 20 (подсветка доп)
         tbl = doc.add_table(rows=4, cols=6)
         tbl.style = 'Table Grid'
-        col_w = [Cm(2.5), Cm(8.6), Cm(3.5), Cm(8.6), Cm(1.8), Cm(7.8)]
+        col_w = [Cm(2.5), Cm(9.3), Cm(3.5), Cm(9.3), Cm(1.8), Cm(8.3)]
         for row in tbl.rows:
             for ci, w in enumerate(col_w):
                 row.cells[ci].width = w
@@ -783,32 +785,27 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
 
         tech_img = str(c.get('tech_image_url') or '').strip()
 
-        # Доступная высота = 210 - 5(top) - 5(bottom) - ~25(заголовок+таблица) - ~25(дисклеймер+подписи) = ~150мм
-        IMG_H_MM = 120   # мм — высота ячейки с картинкой
-        IMG_W = CONTENT_W        # 272мм в EMU
+        # 210 - 5 - 5(поля) - ~20(заголовок) - ~22(таблица хар-к) - ~22(дисклеймер+подписи) = ~136мм
+        IMG_H_MM = 130
+        IMG_W = CONTENT_W
         IMG_H = Mm(IMG_H_MM)
 
-        # Таблица 1×1 с фиксированной высотой строки
+        # Таблица 1×1 — контейнер для картинки
         it = doc.add_table(rows=1, cols=1)
         it.style = 'Table Grid'
         ic = it.cell(0, 0)
         ic.width = IMG_W
 
-        # Фиксируем высоту строки: twips = мм * 56.69
+        # Минимальная высота строки (atLeast — растянется если картинка больше)
         _tr = it.rows[0]._tr
         _trPr = _tr.get_or_add_trPr()
         _trH = _OxmlEl('w:trHeight')
         _trH.set(_qn('w:val'), str(int(IMG_H_MM * 56.69)))
-        _trH.set(_qn('w:hRule'), 'exact')
+        _trH.set(_qn('w:hRule'), 'atLeast')
         _trPr.append(_trH)
 
-        # Вертикальное выравнивание по центру ячейки
-        _tcPr = ic._tc.get_or_add_tcPr()
-        _vAlign = _OxmlEl('w:vAlign')
-        _vAlign.set(_qn('w:val'), 'center')
-        _tcPr.append(_vAlign)
-
         # Убираем внутренние отступы ячейки
+        _tcPr = ic._tc.get_or_add_tcPr()
         _tcMar = _OxmlEl('w:tcMar')
         for _s in ('top', 'left', 'bottom', 'right'):
             _m = _OxmlEl(f'w:{_s}')
