@@ -738,13 +738,24 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         # ── Таблица характеристик: 3 строки × 4 колонки + строка фрезеровки
         # Ширины колонок: метка | значение | метка | значение
         # Итого 272мм: 25 + 86 + 35 + 86 + 20 (подсветка доп)
+        from docx.oxml.ns import qn as _qn
+        from docx.oxml import OxmlElement as _OxmlEl
+
         tbl = doc.add_table(rows=4, cols=6)
         tbl.style = 'Table Grid'
-        # Отключаем autofit — без этого Word игнорирует ширины колонок
         tbl.autofit = False
         tbl.allow_autofit = False
-        # Итого 26.3cm = 263мм (меньше CONTENT_W с учётом отступов ячеек таблицы)
-        col_w = [Cm(2.2), Cm(7.3), Cm(3.2), Cm(7.3), Cm(1.6), Cm(4.7)]
+
+        # Убираем отступы ячеек таблицы чтобы ширины были точными
+        _tblCellMar = _OxmlEl('w:tblCellMar')
+        for _s in ('top', 'left', 'bottom', 'right'):
+            _m = _OxmlEl(f'w:{_s}')
+            _m.set(_qn('w:w'), '0'); _m.set(_qn('w:type'), 'dxa')
+            _tblCellMar.append(_m)
+        tbl._tbl.tblPr.append(_tblCellMar)
+
+        # Ширины колонок: сумма = CONTENT_W = 283мм
+        col_w = [Mm(22), Mm(74), Mm(33), Mm(74), Mm(17), Mm(63)]
         for row in tbl.rows:
             for ci, w in enumerate(col_w):
                 row.cells[ci].width = w
@@ -880,7 +891,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         sig.autofit = False
         sig.allow_autofit = False
         for row in sig.rows:
-            row.cells[0].width = Mm(100)
+            row.cells[0].width = Mm(120)
             row.cells[1].width = Mm(163)
         _sb = _sEl('w:tblBorders')
         for _side in ('top','left','bottom','right','insideH','insideV'):
@@ -899,6 +910,12 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         _sc(1, 0, '______________________________', size=9, sb=8)
         _sc(1, 1, '______________________________', size=9, sb=8, align=WD_ALIGN_PARAGRAPH.RIGHT)
         _sc(2, 0, 'М.П.', sb=1)
+
+        # Убираем лишний параграф который Word добавляет после таблицы
+        p_last = doc.add_paragraph()
+        p_last.paragraph_format.space_before = Pt(0)
+        p_last.paragraph_format.space_after  = Pt(0)
+        p_last.paragraph_format.line_spacing = Pt(1)
 
     # ══════════════════════════════════════════════════════════════════════════
     # ПРАВИЛА ЭКСПЛУАТАЦИИ
