@@ -663,7 +663,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         if passport_date_dept: right_body += f'\nДата выдачи: {passport_date_dept}'
         right_body += f'\n\nАдрес прописки:\n{reg_addr or "___________"}'
         right_body += f'\n\nТелефон: {c.get("phone") or "___________"}'
-        right_body += '\n\n\n\n\n\n_________________________\n(подпись)'
+        right_body += '\n\n\n\n\n\n\n\n_________________________\n(подпись)'
         sig_table('Подрядчик:', left_body, 'Заказчик:', right_body)
 
     # ══════════════════════════════════════════════════════════════════════════
