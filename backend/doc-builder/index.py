@@ -775,26 +775,45 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         p_frez.paragraph_format.space_before = Pt(1); p_frez.paragraph_format.space_after = Pt(1)
         r_frez = p_frez.add_run(frezerovka); font(r_frez, 9)
 
-        # ── Изображение проекта — через таблицу-обёртку с фиксированной высотой
+        # ── Изображение проекта — через таблицу-обёртку
         import urllib.request, io as _io
-        tech_img = str(c.get('tech_image_url') or '').strip()
-        IMG_W = CONTENT_W          # 272мм в EMU
-        IMG_H = Mm(120)            # максимальная высота
+        from docx.oxml.ns import qn as _qn
+        from docx.oxml import OxmlElement as _OxmlEl
 
-        # Таблица 1×1 — даёт стабильный контейнер для картинки в Word
+        tech_img = str(c.get('tech_image_url') or '').strip()
+
+        # Высота зоны картинки: страница 210мм - поля 5+5мм - заголовок ~15мм - таблица ~25мм - дисклеймер ~20мм - подписи ~20мм
+        IMG_H = Mm(110)
+        IMG_W = CONTENT_W  # 272мм
+
+        # Таблица 1×1 без границ — стабильный контейнер
         img_tbl = doc.add_table(rows=1, cols=1)
         img_tbl.style = 'Table Grid'
+
+        # Убираем все границы таблицы
+        tblPr = img_tbl._tbl.get_or_add_tblPr()
+        tblBorders = _OxmlEl('w:tblBorders')
+        for side in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
+            b = _OxmlEl(f'w:{side}')
+            b.set(_qn('w:val'), 'none')
+            tblBorders.append(b)
+        tblPr.append(tblBorders)
+
         img_cell = img_tbl.cell(0, 0)
         img_cell.width = IMG_W
 
-        # Фиксируем высоту строки через XML
-        from docx.oxml.ns import qn as _qn
-        from docx.oxml import OxmlElement as _OxmlEl
+        # Вертикальное выравнивание по центру
+        tcPr = img_cell._tc.get_or_add_tcPr()
+        vAlign = _OxmlEl('w:vAlign')
+        vAlign.set(_qn('w:val'), 'center')
+        tcPr.append(vAlign)
+
+        # Фиксированная высота строки (twips = EMU / 914.4)
         tr = img_tbl.rows[0]._tr
         trPr = tr.get_or_add_trPr()
         trHeight = _OxmlEl('w:trHeight')
-        trHeight.set(_qn('w:val'), str(int(Mm(120) / 914)))  # EMU→twips: /914
-        trHeight.set(_qn('w:hRule'), 'exact')
+        trHeight.set(_qn('w:val'), str(int(IMG_H / 914.4)))
+        trHeight.set(_qn('w:hRule'), 'atLeast')
         trPr.append(trHeight)
 
         p_img = img_cell.paragraphs[0]
