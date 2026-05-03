@@ -304,8 +304,8 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
     sec.top_margin  = Mm(15);  sec.bottom_margin = Mm(15)
 
     # Базовый размер шрифта — зависит от типа документа
-    # Договор должен уместиться на 5 листов А4
-    _base_pt = 9.5 if doc_type == 'contract' else 11
+    # Договор должен уместиться на 6 листов А4
+    _base_pt = 10.5 if doc_type == 'contract' else 11
 
     style = doc.styles['Normal']
     style.font.name = 'Times New Roman'
