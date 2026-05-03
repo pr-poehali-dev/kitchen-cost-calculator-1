@@ -815,7 +815,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
 
         # 20 пустых строк перед картинкой чтобы она была по центру ячейки
         from docx.oxml.ns import qn as _qn2
-        for _ in range(20):
+        for _ in range(35):
             pe = ic.add_paragraph()
             pe.paragraph_format.space_before = Pt(0)
             pe.paragraph_format.space_after  = Pt(0)
