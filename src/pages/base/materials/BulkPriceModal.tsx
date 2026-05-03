@@ -3,12 +3,12 @@ import { updateMaterial, loadCatalog } from '@/hooks/useCatalog';
 import type { Material } from '@/store/types';
 import { fmt, Modal } from '../BaseShared';
 
-export default function BulkPriceModal({ materials, onClose }: { materials: Material[]; onClose: () => void }) {
+export default function BulkPriceModal({ materials = [], onClose }: { materials: Material[]; onClose: () => void }) {
   const [prices, setPrices] = useState<Record<string, string>>(
-    () => Object.fromEntries(materials.map(m => [m.id, m.basePrice > 0 ? String(m.basePrice) : '']))
+    () => Object.fromEntries((materials ?? []).map(m => [m.id, m.basePrice > 0 ? String(m.basePrice) : '']))
   );
 
-  const changed = materials.filter(m => {
+  const changed = (materials ?? []).filter(m => {
     const val = parseFloat(prices[m.id] || '0');
     return val !== m.basePrice && !isNaN(val);
   });
@@ -34,7 +34,7 @@ export default function BulkPriceModal({ materials, onClose }: { materials: Mate
             style={{ gridTemplateColumns: '1fr 60px 120px' }}>
             <span>Материал</span><span className="text-center">Толщ.</span><span className="text-right">Цена, ₽/м²</span>
           </div>
-          {materials.map(m => (
+          {(materials ?? []).map(m => (
             <div key={m.id}
               className="grid items-center px-3 py-1.5 border-b border-[hsl(220,12%,17%)] last:border-0"
               style={{ gridTemplateColumns: '1fr 60px 120px' }}
