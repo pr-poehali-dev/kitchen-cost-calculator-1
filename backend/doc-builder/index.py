@@ -813,9 +813,16 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
             _tcMar.append(_m)
         _tcPr.append(_tcMar)
 
-        p_img = ic.paragraphs[0]
+        # 20 пустых строк перед картинкой чтобы она была по центру ячейки
+        from docx.oxml.ns import qn as _qn2
+        for _ in range(20):
+            pe = ic.add_paragraph()
+            pe.paragraph_format.space_before = Pt(0)
+            pe.paragraph_format.space_after  = Pt(0)
+            pe.paragraph_format.line_spacing = Pt(12)
+
+        p_img = ic.add_paragraph()
         p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        # Отступ сверху чтобы картинка была по центру ячейки
         p_img.paragraph_format.space_before = Pt(0)
         p_img.paragraph_format.space_after  = Pt(0)
 
@@ -834,8 +841,11 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
                 pil_img.convert('RGB').save(buf, format='JPEG', quality=90)
                 buf.seek(0)
 
-                # Всегда вставляем по ширине — ячейка фиксирована, картинка масштабируется
-                add_kw = {'width': IMG_W}
+                if iw > 0 and ih > 0:
+                    projected_h = int((IMG_W / iw) * ih)
+                    add_kw = {'width': IMG_W} if projected_h <= IMG_H else {'height': IMG_H}
+                else:
+                    add_kw = {'width': IMG_W}
 
                 print(f'[TECH] add_picture kw={add_kw}')
                 p_img.add_run().add_picture(buf, **add_kw)
