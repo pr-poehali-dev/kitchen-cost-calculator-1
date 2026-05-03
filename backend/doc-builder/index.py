@@ -818,15 +818,16 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         p_img.paragraph_format.space_before = Pt(0)
         p_img.paragraph_format.space_after  = Pt(0)
 
+        print(f'[TECH] tech_img={tech_img[:80] if tech_img else "EMPTY"}')
         if tech_img:
             try:
                 req = urllib.request.Request(tech_img, headers={'User-Agent': 'Mozilla/5.0'})
                 img_bytes = urllib.request.urlopen(req, timeout=20).read()
-                logger.info(f'tech img bytes={len(img_bytes)}')
+                print(f'[TECH] loaded {len(img_bytes)} bytes')
 
                 pil_img = _PILImage.open(_io.BytesIO(img_bytes))
                 iw, ih = pil_img.size
-                logger.info(f'tech img WxH={iw}x{ih}')
+                print(f'[TECH] size {iw}x{ih}')
 
                 buf = _io.BytesIO()
                 pil_img.convert('RGB').save(buf, format='JPEG', quality=90)
@@ -838,14 +839,14 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
                 else:
                     add_kw = {'width': IMG_W}
 
-                logger.info(f'tech img kw={add_kw}')
+                print(f'[TECH] add_picture kw={add_kw}')
                 p_img.add_run().add_picture(buf, **add_kw)
-                logger.info('tech img OK')
+                print('[TECH] OK')
             except Exception as ex:
-                logger.info(f'tech img FAILED: {ex}\n{_tb.format_exc()}')
+                print(f'[TECH] FAILED: {ex}\n{_tb.format_exc()}')
                 font(p_img.add_run(f'[ ОШИБКА: {ex} ]'), 8)
         else:
-            font(p_img.add_run('[ Место для схемы / эскиза проекта ]'), 10)
+            font(p_img.add_run('[ нет фото ]'), 10)
 
         # ── Дисклеймер
         p_disc = doc.add_paragraph()
