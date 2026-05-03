@@ -948,7 +948,7 @@ h2{{font-size:10pt;text-align:center;font-weight:normal;margin:0 0 10px}}
 p{{margin:0 0 1px;text-align:justify;text-indent:1.27cm;line-height:1.2;orphans:3;widows:3}}
 p.no-indent{{text-indent:0}}
 p.center{{text-align:center;text-indent:0}}
-.sec{{font-weight:bold;margin:5px 0 1px;text-indent:0;font-size:9pt;page-break-after:avoid}}
+.sec{{font-weight:bold;margin:12px 0 4px;text-indent:0;font-size:9pt;text-align:center;page-break-after:avoid}}
 .sec-block{{page-break-inside:avoid}}
 table{{width:100%;border-collapse:collapse;margin:8px 0;font-size:10pt;page-break-inside:avoid}}
 th,td{{border:1px solid #000;padding:5px 8px}}
