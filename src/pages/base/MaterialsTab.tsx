@@ -74,10 +74,10 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
 
   const filteredMaterials = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const list = catFiltered.filter(m => showArchived ? m.archived : !m.archived);
+    const list = (Array.isArray(catFiltered) ? catFiltered : []).filter(m => showArchived ? m.archived : !m.archived);
     if (!q) return list;
     return list.filter(m =>
-      m.name.toLowerCase().includes(q) ||
+      (m.name || '').toLowerCase().includes(q) ||
       (m.article || '').toLowerCase().includes(q) ||
       (m.color || '').toLowerCase().includes(q)
     );
@@ -90,7 +90,7 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
 
   const staleCount = useMemo(() => {
     const now = Date.now();
-    return catalog.materials.filter(m => {
+    return (catalog.materials ?? []).filter(m => {
       if (!m.priceUpdatedAt || m.archived) return false;
       return Math.floor((now - new Date(m.priceUpdatedAt).getTime()) / 86400000) >= 30;
     }).length;
