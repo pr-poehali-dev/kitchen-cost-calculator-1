@@ -698,7 +698,9 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         p_date.paragraph_format.space_before = Pt(0); p_date.paragraph_format.space_after = Pt(6)
         font(p_date.add_run('от «____» ________________ 20____ г.'), _base_pt)
 
-        para(f'{co_name}, в лице менеджера {manager_line}, действующего на основании доверенности № {mgr_poa_num} от {mgr_poa_date}, именуемый в дальнейшем «Подрядчик», и гр. {fname}, именуемый (ая) в дальнейшем «Заказчик», подписали настоящий Акт выполненных работ о нижеследующем:', indent=False)
+        manager_gen_act = genitive_name(manager) if manager else '_' * 30
+        fname_gen_act = full_name_genitive(c)
+        para(f'{co_name}, в лице менеджера {manager_gen_act}, действующего на основании доверенности № {mgr_poa_num} от {mgr_poa_date}, именуемый в дальнейшем «Подрядчик», и гр. {fname_gen_act}, именуемый (ая) в дальнейшем «Заказчик», подписали настоящий Акт выполненных работ о нижеследующем:', indent=False)
 
         p1 = doc.add_paragraph(); p1.paragraph_format.space_before = Pt(6); p1.paragraph_format.space_after = Pt(2)
         font(p1.add_run(f'1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда № {contract_num} от {contract_date}:'), _base_pt)

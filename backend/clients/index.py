@@ -1298,11 +1298,13 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
         else:
             product_rows = f'<tr><td style="text-align:center">1</td><td>Кухонный гарнитур</td><td style="text-align:center">шт.</td><td style="text-align:center">1</td><td style="text-align:right">{total:,.0f}</td></tr>'
         manager_name = (c.get('manager_name') or '').strip()
+        manager_gen = _genitive_name(manager_name) if manager_name else '<span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>'
+        fname_gen_act = _genitive_name(fname) if fname else fname
         return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Акт выполненных работ к договору №{contract_num}</title>{style}</head><body><div class="page">
 <p class="no-indent" style="text-align:center;font-size:8.5pt">Приложение № 4 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
 <h1>«Акт выполненных работ»</h1>
 <p class="center" style="margin-bottom:6px">от «____» ________________ 20____ г.</p>
-<p class="no-indent" style="margin-top:16px">{co_name}, в лице менеджера <strong>{manager_name}</strong>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик» и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», подписали настоящий Акт выполненных работ о нижеследующем:</p>
+<p class="no-indent" style="margin-top:16px">{co_name}, в лице менеджера <strong>{manager_gen}</strong>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик» и гр. <strong>{fname_gen_act}</strong>, именуемый (ая) в дальнейшем «Заказчик», подписали настоящий Акт выполненных работ о нижеследующем:</p>
 <p class="no-indent" style="margin-top:16px">1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда № {contract_num} от {contract_date_full}:</p>
 <table><tr><th style="width:5%">№</th><th>Наименование мебели, включая ее элементы</th><th style="width:13%">Ед. измерения</th><th style="width:12%">Кол-во изделий</th><th style="width:18%">Стоимость в руб.</th></tr>
 {product_rows}
