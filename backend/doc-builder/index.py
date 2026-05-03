@@ -702,7 +702,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         fname_gen_act = full_name_genitive(c)
         para(f'{co_name}, в лице менеджера {manager_gen_act}, действующего на основании доверенности № {mgr_poa_num} от {mgr_poa_date}, именуемый в дальнейшем «Подрядчик», и гр. {fname_gen_act}, именуемый (ая) в дальнейшем «Заказчик», подписали настоящий Акт выполненных работ о нижеследующем:', indent=False)
 
-        p1 = doc.add_paragraph(); p1.paragraph_format.space_before = Pt(6); p1.paragraph_format.space_after = Pt(2)
+        p1 = doc.add_paragraph(); p1.paragraph_format.space_before = Pt(10); p1.paragraph_format.space_after = Pt(2)
         font(p1.add_run(f'1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда № {contract_num} от {contract_date}:'), _base_pt)
 
         if products:
@@ -712,7 +712,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         rows.append(('', '', '', 'ИТОГО:', f'{int(total):,} ({total_words})'.replace(',', ' ')))
         simple_table(['№','Наименование мебели, включая ее элементы','Ед. изм.','Кол-во изделий','Стоимость в руб.'], rows, [1,7,2,2,3])
 
-        p2 = doc.add_paragraph(); p2.paragraph_format.space_before = Pt(6); p2.paragraph_format.space_after = Pt(2)
+        p2 = doc.add_paragraph(); p2.paragraph_format.space_before = Pt(10); p2.paragraph_format.space_after = Pt(4)
         r2 = p2.add_run('2. Комплектность, количество, вид, характеристики мебели соответствуют условиям договора. Визуальный осмотр мебели на предмет повреждений, царапин, сколов, трещин и других недостатков произведен Заказчиком. Фурнитура (петли, выдвижные механизмы, подъемные механизмы и т.д.) работает исправно. Заказчик претензий по объему, качеству, результату и срокам выполнения работ: ')
         font(r2, _base_pt)
         r2b = p2.add_run('не имеет / имеет'); font(r2b, _base_pt, bold=True)
@@ -720,18 +720,24 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         p2.paragraph_format.first_line_indent = None
 
         # 6 линий для записей замечаний
+        from docx.oxml.ns import qn as _aqn; from docx.oxml import OxmlElement as _aEl
         for _ in range(6):
             pl = doc.add_paragraph()
-            pl.paragraph_format.space_before = Pt(6)
+            pl.paragraph_format.space_before = Pt(14)
             pl.paragraph_format.space_after  = Pt(0)
-            from docx.oxml.ns import qn as _aqn; from docx.oxml import OxmlElement as _aEl
+            pl.paragraph_format.line_spacing = Pt(14)
             pBdr = _aEl('w:pBdr'); bot = _aEl('w:bottom')
-            bot.set(_aqn('w:val'), 'single'); bot.set(_aqn('w:sz'), '6'); bot.set(_aqn('w:space'), '1'); bot.set(_aqn('w:color'), '000000')
+            bot.set(_aqn('w:val'), 'single'); bot.set(_aqn('w:sz'), '4'); bot.set(_aqn('w:space'), '1'); bot.set(_aqn('w:color'), '000000')
             pBdr.append(bot)
             pl._p.get_or_add_pPr().append(pBdr)
+            font(pl.add_run(' '), _base_pt)
 
-        para('3. В случае наличия замечаний Заказчик, после подписания акта, вправе требовать устранения замечаний, отражённых в данном акте.', indent=False)
-        para('4. Настоящий акт подписан в 2 (двух) экземплярах по одному для каждой из Сторон.', indent=False)
+        p3 = doc.add_paragraph(); p3.paragraph_format.space_before = Pt(10); p3.paragraph_format.space_after = Pt(2)
+        font(p3.add_run('3. В случае наличия замечаний Заказчик, после подписания акта, вправе требовать устранения замечаний, отражённых в данном акте.'), _base_pt)
+        p3.paragraph_format.first_line_indent = None
+        p4 = doc.add_paragraph(); p4.paragraph_format.space_before = Pt(2); p4.paragraph_format.space_after = Pt(2)
+        font(p4.add_run('4. Настоящий акт подписан в 2 (двух) экземплярах по одному для каждой из Сторон.'), _base_pt)
+        p4.paragraph_format.first_line_indent = None
 
         # Подписи без таблицы
         from docx.oxml.ns import qn as _sqn2; from docx.oxml import OxmlElement as _sEl2
