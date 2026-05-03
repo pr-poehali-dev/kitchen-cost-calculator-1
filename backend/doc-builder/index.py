@@ -791,13 +791,12 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         img_tbl.style = 'Table Grid'
 
         # Убираем все границы таблицы
-        tblPr = img_tbl._tbl.get_or_add_tblPr()
         tblBorders = _OxmlEl('w:tblBorders')
         for side in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
             b = _OxmlEl(f'w:{side}')
             b.set(_qn('w:val'), 'none')
             tblBorders.append(b)
-        tblPr.append(tblBorders)
+        img_tbl._tbl.tblPr.append(tblBorders)
 
         img_cell = img_tbl.cell(0, 0)
         img_cell.width = IMG_W
