@@ -938,12 +938,9 @@ def _doc_style(title='', contract_num=''):
 *{{box-sizing:border-box;margin:0;padding:0}}
 html{{background:#2d2d2d;min-height:100vh}}
 body{{font-family:'PT Serif',Georgia,serif;font-size:11pt;line-height:1.6;color:#000;background:transparent}}
-.page{{width:210mm;min-height:297mm;margin:16px auto;padding:20mm 20mm 20mm 25mm;background:#fff;box-shadow:0 6px 32px rgba(0,0,0,.6)}}
-@media screen and (min-width:900px){{
-  .page{{transform-origin:top center;transform:scale(1.1);margin-bottom:60px}}
-}}
-@media screen and (min-width:1200px){{
-  .page{{transform:scale(1.25);margin-bottom:120px}}
+.page{{width:210mm;min-height:297mm;margin:8px auto;padding:20mm 20mm 20mm 25mm;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)}}
+@media screen and (max-width:900px){{
+  .page{{width:100%;min-height:auto;padding:12mm 8mm 12mm 10mm;font-size:10pt}}
 }}
 h1{{font-size:13pt;text-align:center;font-weight:bold;margin:0 0 3px;text-transform:uppercase;letter-spacing:.1em}}
 h2{{font-size:11pt;text-align:center;font-weight:normal;margin:0 0 14px}}
@@ -1045,6 +1042,7 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 ОГРН:&nbsp;{co_ogrn}{f' &nbsp;|&nbsp; КПП:&nbsp;{co_kpp}' if co_kpp else ''} &nbsp;|&nbsp; ИНН:&nbsp;{co_inn}<br>
 {co_address}{f'<br>Тел.: {co_phone}' if co_phone else ''}{bank_block}'''
     fname = _full_name(c)
+    fname_gen = _genitive_name(fname) if fname and fname != '___________' else '___________'
     total = float(c.get('total_amount') or 0)
     total_words = _num_to_words(total)
     contract_num = c.get('contract_number') or '___'
@@ -1080,9 +1078,10 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
     if custom:
         pay_html = f'<p>{custom}</p>'
     elif ptype == '100% предоплата':
+        full_pre = prepaid if prepaid > 0 else total
         pay_html = (
             f'<p>3.2.1. Предварительная оплата производится при заключении Договора в размере '
-            f'{_fmt_money(prepaid)} ({_num_to_words(prepaid)}) рублей.</p>'
+            f'{_fmt_money(full_pre)} ({_num_to_words(full_pre)}) рублей.</p>'
             f'<p>3.2.2. Окончательный платёж не предусмотрен. Стоимость работ оплачена полностью при заключении Договора.</p>'
         )
     elif ptype == 'Кредит/рассрочка банка':
@@ -1113,7 +1112,7 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 <h1>ДОГОВОР</h1>
 <h2>бытового подряда на изготовление мебели</h2>
 <div class="city-date"><span>г. {co_city}</span><span>№ {contract_num} от {contract_date_full}</span></div>
-<p class="no-indent">{co_name}, в лице менеджера <strong>{manager_genitive}</strong>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик», и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», заключили настоящий Договор о нижеследующем:</p>
+<p class="no-indent">{co_name}, в лице менеджера <strong>{manager_genitive}</strong>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик», и гр. <strong>{fname_gen}</strong>, именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, с одной стороны, отдельно именуемые – «Сторона», а совместно именуемые – «Стороны», заключили настоящий Договор о нижеследующем:</p>
 
 <p class="sec">1. ПРЕДМЕТ ДОГОВОРА</p>
 <p>1.1. Подрядчик обязуется выполнить работу по изготовлению мебели и передать результат работы Заказчику (мебель передается в разобранном виде), а Заказчик обязуется принять и оплатить результат работ.</p>
