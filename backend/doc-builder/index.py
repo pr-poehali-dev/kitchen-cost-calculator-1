@@ -798,6 +798,15 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
             tblBorders.append(b)
         img_tbl._tbl.tblPr.append(tblBorders)
 
+        # Убираем внутренние отступы ячейки
+        tblCellMar = _OxmlEl('w:tblCellMar')
+        for side in ('top', 'left', 'bottom', 'right'):
+            m = _OxmlEl(f'w:{side}')
+            m.set(_qn('w:w'), '0')
+            m.set(_qn('w:type'), 'dxa')
+            tblCellMar.append(m)
+        img_tbl._tbl.tblPr.append(tblCellMar)
+
         img_cell = img_tbl.cell(0, 0)
         img_cell.width = IMG_W
 
@@ -806,14 +815,6 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         vAlign = _OxmlEl('w:vAlign')
         vAlign.set(_qn('w:val'), 'center')
         tcPr.append(vAlign)
-
-        # Фиксированная высота строки (twips = EMU / 914.4)
-        tr = img_tbl.rows[0]._tr
-        trPr = tr.get_or_add_trPr()
-        trHeight = _OxmlEl('w:trHeight')
-        trHeight.set(_qn('w:val'), str(int(IMG_H / 914.4)))
-        trHeight.set(_qn('w:hRule'), 'atLeast')
-        trPr.append(trHeight)
 
         p_img = img_cell.paragraphs[0]
         p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -833,7 +834,8 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
 
                 if iw > 0 and ih > 0:
                     projected_h = int((IMG_W / iw) * ih)
-                    add_kw = {'height': IMG_H} if projected_h > IMG_H else {'width': IMG_W}
+                    # Если по ширине влезает — тянем по ширине, иначе ограничиваем высоту
+                    add_kw = {'width': IMG_W} if projected_h <= IMG_H else {'height': IMG_H}
                 else:
                     add_kw = {'width': IMG_W}
 
