@@ -789,8 +789,14 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
 
         if tech_img:
             try:
-                req = urllib.request.Request(tech_img, headers={'User-Agent': 'Mozilla/5.0'})
-                img_bytes = urllib.request.urlopen(req, timeout=20).read()
+                # urllib следует редиректам автоматически, но CDN может требовать opener
+                opener = urllib.request.build_opener(urllib.request.HTTPRedirectHandler())
+                req = urllib.request.Request(tech_img, headers={
+                    'User-Agent': 'Mozilla/5.0',
+                    'Accept': 'image/*,*/*',
+                })
+                img_bytes = opener.open(req, timeout=20).read()
+                logger.info(f'tech img loaded: {len(img_bytes)} bytes, first4={img_bytes[:4].hex()}, url={tech_img[:80]}')
 
                 # Определяем пропорции чтобы вписать в IMG_W × IMG_H
                 def _img_size(data):
@@ -809,18 +815,20 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
                     return None, None
 
                 iw, ih = _img_size(img_bytes)
+                logger.info(f'tech img size detected: {iw}x{ih}, IMG_W={IMG_W}, IMG_H={IMG_H}')
                 if iw and ih and iw > 0 and ih > 0:
-                    # Вписываем по ширине или высоте — только один параметр
                     if (IMG_W / iw) * ih <= IMG_H:
-                        add_kw = {'width': IMG_W}   # ограничено по ширине
+                        add_kw = {'width': IMG_W}
                     else:
-                        add_kw = {'height': IMG_H}  # ограничено по высоте
+                        add_kw = {'height': IMG_H}
                 else:
                     add_kw = {'width': IMG_W}
 
+                logger.info(f'tech img add_picture with {add_kw}')
                 p_img_wrap.add_run().add_picture(_io.BytesIO(img_bytes), **add_kw)
+                logger.info('tech img inserted OK')
             except Exception as ex:
-                logger.warning(f'tech img failed: {ex}')
+                logger.warning(f'tech img FAILED: {ex}')
                 r_ph = p_img_wrap.add_run('\n\n\n\n\n[ Место для схемы / эскиза проекта ]\n\n\n\n\n')
                 font(r_ph, 10)
         else:
