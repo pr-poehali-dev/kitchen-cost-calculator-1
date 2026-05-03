@@ -775,94 +775,57 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         p_frez.paragraph_format.space_before = Pt(1); p_frez.paragraph_format.space_after = Pt(1)
         r_frez = p_frez.add_run(frezerovka); font(r_frez, 9)
 
-        # ── Изображение проекта — занимает максимум места
+        # ── Изображение проекта — напрямую в параграф, без таблицы-обёртки
+        import urllib.request, io as _io, struct as _struct
         tech_img = str(c.get('tech_image_url') or '').strip()
-        # Доступная высота для картинки: 210 - 5(top) - 5(bot) - ~18(заголовок) - ~20(таблица) - ~18(дисклеймер+подписи) = ~144мм
-        IMG_H = Mm(133)
-        IMG_W = CONTENT_W  # на всю ширину
+        # Максимальные размеры: ширина = весь контент, высота = остаток страницы
+        IMG_W = CONTENT_W
+        IMG_H = Mm(120)  # консервативно, оставляем место для дисклеймера и подписей
+
+        p_img_wrap = doc.add_paragraph()
+        p_img_wrap.paragraph_format.space_before = Pt(2)
+        p_img_wrap.paragraph_format.space_after  = Pt(2)
+        p_img_wrap.alignment = WD_ALIGN_PARAGRAPH.CENTER
 
         if tech_img:
             try:
-                import urllib.request, io as _io
                 req = urllib.request.Request(tech_img, headers={'User-Agent': 'Mozilla/5.0'})
                 img_bytes = urllib.request.urlopen(req, timeout=20).read()
 
-                # Определяем реальные размеры картинки чтобы вписать с сохранением пропорций
-                try:
-                    import struct, zlib
-                    def _img_size(data):
-                        if data[:8] == b'\x89PNG\r\n\x1a\n':
-                            w, h = struct.unpack('>II', data[16:24])
-                            return w, h
-                        if data[:2] == b'\xff\xd8':
-                            i = 2
-                            while i < len(data):
-                                marker = data[i:i+2]
-                                if marker in (b'\xff\xc0', b'\xff\xc2'):
-                                    h, w = struct.unpack('>HH', data[i+5:i+9])
-                                    return w, h
-                                length = struct.unpack('>H', data[i+2:i+4])[0]
-                                i += 2 + length
-                        return None, None
-                    iw, ih = _img_size(img_bytes)
-                    if iw and ih:
-                        ratio = iw / ih
-                        if IMG_W / ratio <= IMG_H:
-                            add_kw = {'width': IMG_W}
-                        else:
-                            add_kw = {'height': IMG_H}
-                    else:
-                        add_kw = {'width': IMG_W}
-                except Exception:
+                # Определяем пропорции чтобы вписать в IMG_W × IMG_H
+                def _img_size(data):
+                    if data[:8] == b'\x89PNG\r\n\x1a\n':
+                        w, h = _struct.unpack('>II', data[16:24])
+                        return w, h
+                    if data[:2] == b'\xff\xd8':
+                        i = 2
+                        while i + 4 < len(data):
+                            marker = data[i:i+2]
+                            if marker in (b'\xff\xc0', b'\xff\xc2'):
+                                h, w = _struct.unpack('>HH', data[i+5:i+9])
+                                return w, h
+                            length = _struct.unpack('>H', data[i+2:i+4])[0]
+                            i += 2 + length
+                    return None, None
+
+                iw, ih = _img_size(img_bytes)
+                if iw and ih and iw > 0 and ih > 0:
+                    # Вписываем в прямоугольник IMG_W × IMG_H сохраняя пропорции
+                    scale_w = IMG_W / iw
+                    scale_h = IMG_H / ih
+                    scale = min(scale_w, scale_h)
+                    add_kw = {'width': int(iw * scale), 'height': int(ih * scale)}
+                else:
                     add_kw = {'width': IMG_W}
 
-                # Таблица 1×1 для рамки вокруг изображения — без лишних параграфов
-                from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
-                from docx.oxml.ns import qn as _tqn
-                from docx.oxml import OxmlElement as _tEl
-                tbl_img = doc.add_table(rows=1, cols=1)
-                tbl_img.style = 'Table Grid'
-                # Задаём минимальную высоту строки = IMG_H
-                tr = tbl_img.rows[0]._tr
-                trPr = tr.get_or_add_trPr()
-                trHeight = _tEl('w:trHeight')
-                # IMG_H в EMU → в твипах: 1 twip = 914400/72/20 EMU = 635 EMU; IMG_H в Mm → мм*56.7 твипов
-                _img_h_mm = 133  # мм
-                trHeight.set(_tqn('w:val'), str(int(_img_h_mm * 56.7)))
-                trHeight.set(_tqn('w:hRule'), 'atLeast')
-                trPr.append(trHeight)
-
-                cell_img = tbl_img.cell(0, 0)
-                cell_img.width = IMG_W
-                cell_img.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
-                p_img = cell_img.paragraphs[0]
-                p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                p_img.paragraph_format.space_before = Pt(1)
-                p_img.paragraph_format.space_after  = Pt(1)
-                p_img.add_run().add_picture(_io.BytesIO(img_bytes), **add_kw)
-
+                p_img_wrap.add_run().add_picture(_io.BytesIO(img_bytes), **add_kw)
             except Exception as ex:
                 logger.warning(f'tech img failed: {ex}')
-                # Пустая рамка-заглушка
-                tbl_img = doc.add_table(rows=1, cols=1)
-                tbl_img.style = 'Table Grid'
-                cell_img = tbl_img.cell(0, 0)
-                cell_img.width = IMG_W
-                p_ph = cell_img.paragraphs[0]
-                p_ph.paragraph_format.space_before = Pt(55)
-                p_ph.paragraph_format.space_after  = Pt(55)
-                p_ph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                r_ph = p_ph.add_run('[ Место для схемы / эскиза проекта ]'); font(r_ph, 10)
+                r_ph = p_img_wrap.add_run('\n\n\n\n\n[ Место для схемы / эскиза проекта ]\n\n\n\n\n')
+                font(r_ph, 10)
         else:
-            tbl_img = doc.add_table(rows=1, cols=1)
-            tbl_img.style = 'Table Grid'
-            cell_img = tbl_img.cell(0, 0)
-            cell_img.width = IMG_W
-            p_ph = cell_img.paragraphs[0]
-            p_ph.paragraph_format.space_before = Pt(55)
-            p_ph.paragraph_format.space_after  = Pt(55)
-            p_ph.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            r_ph = p_ph.add_run('[ Место для схемы / эскиза проекта ]'); font(r_ph, 10)
+            r_ph = p_img_wrap.add_run('\n\n\n\n\n[ Место для схемы / эскиза проекта ]\n\n\n\n\n')
+            font(r_ph, 10)
 
         # ── Дисклеймер
         p_disc = doc.add_paragraph()
@@ -876,13 +839,43 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         )
         font(r_disc, 8); r_disc.italic = True
 
-        # ── Таблица подписей
-        sig_table(
-            f'Подрядчик: {co_name.upper()}',
-            f'Менеджер\n\n______________________________\nМ.П.',
-            f'Заказчик:  {fname}',
-            '\n\n______________________________'
-        )
+        # ── Подписи — простые строки, без таблицы
+        # Строка с именами
+        p_names = doc.add_paragraph()
+        p_names.paragraph_format.space_before = Pt(3)
+        p_names.paragraph_format.space_after  = Pt(0)
+        from docx.oxml.ns import qn as _sqn
+        from docx.oxml import OxmlElement as _sEl
+        def _add_tab(para, pos_cm):
+            pPr = para._p.get_or_add_pPr()
+            tabs = pPr.find(_sqn('w:tabs'))
+            if tabs is None:
+                tabs = _sEl('w:tabs'); pPr.append(tabs)
+            tab = _sEl('w:tab')
+            tab.set(_sqn('w:val'), 'left')
+            tab.set(_sqn('w:pos'), str(int(pos_cm * 567)))
+            tabs.append(tab)
+        _add_tab(p_names, 13.5)
+        r_n1 = p_names.add_run(f'Подрядчик: {co_name.upper()}'); font(r_n1, 8, bold=True)
+        p_names.add_run('\t')
+        r_n2 = p_names.add_run(f'Заказчик:  {fname}'); font(r_n2, 8, bold=True)
+
+        # Строка с линиями
+        p_lines = doc.add_paragraph()
+        p_lines.paragraph_format.space_before = Pt(8)
+        p_lines.paragraph_format.space_after  = Pt(0)
+        _add_tab(p_lines, 13.5)
+        r_l1 = p_lines.add_run('______________________________'); font(r_l1, 9)
+        p_lines.add_run('\t')
+        r_l2 = p_lines.add_run('______________________________'); font(r_l2, 9)
+
+        # Строка с подписями
+        p_lbls = doc.add_paragraph()
+        p_lbls.paragraph_format.space_before = Pt(1)
+        p_lbls.paragraph_format.space_after  = Pt(0)
+        _add_tab(p_lbls, 13.5)
+        r_lb1 = p_lbls.add_run('М.П.'); font(r_lb1, 8)
+        p_lbls.add_run('\t')
 
     # ══════════════════════════════════════════════════════════════════════════
     # ПРАВИЛА ЭКСПЛУАТАЦИИ
