@@ -937,7 +937,7 @@ def _doc_style(title='', contract_num=''):
 }}
 *{{box-sizing:border-box;margin:0;padding:0}}
 html{{background:#2d2d2d;min-height:100vh}}
-body{{font-family:'PT Serif',Georgia,serif;font-size:9pt;line-height:1.0;color:#000;background:transparent}}
+body{{font-family:'PT Serif',Georgia,serif;font-size:9.5pt;line-height:1.0;color:#000;background:transparent}}
 .page{{width:210mm;min-height:297mm;margin:8px auto;padding:8mm 8mm 8mm 13mm;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)}}
 @media screen and (max-width:900px){{
   .page{{width:100%;min-height:auto;padding:12mm 8mm 12mm 10mm;font-size:10pt}}
