@@ -812,9 +812,11 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
                 p_img_wrap.add_run().add_picture(_io.BytesIO(img_bytes), **add_kw)
                 logger.info('tech img OK')
             except Exception as ex:
-                logger.warning(f'tech img FAILED: {ex}')
-                r_ph = p_img_wrap.add_run('\n\n\n\n\n[ Место для схемы / эскиза проекта ]\n\n\n\n\n')
-                font(r_ph, 10)
+                import traceback
+                tb = traceback.format_exc()
+                logger.warning(f'tech img FAILED: {ex}\n{tb}')
+                r_ph = p_img_wrap.add_run(f'[ ОШИБКА ЗАГРУЗКИ ФОТО: {ex} ]')
+                font(r_ph, 8)
         else:
             r_ph = p_img_wrap.add_run('\n\n\n\n\n[ Место для схемы / эскиза проекта ]\n\n\n\n\n')
             font(r_ph, 10)
