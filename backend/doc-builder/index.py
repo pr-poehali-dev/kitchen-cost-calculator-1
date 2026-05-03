@@ -707,8 +707,8 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         sec.left_margin   = Mm(5);   sec.right_margin  = Mm(5)
         sec.top_margin    = Mm(5);   sec.bottom_margin = Mm(5)
 
-        # Доступная ширина контента: 297 - 5 - 5 = 287мм
-        CONTENT_W = Mm(287)
+        # Доступная ширина: 297 - 5 - 5 = 287мм, минус отступы ячеек ~4мм = 283мм
+        CONTENT_W = Mm(283)
 
         # ── Заголовок
         p_hdr = doc.add_paragraph()
@@ -743,8 +743,8 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         # Отключаем autofit — без этого Word игнорирует ширины колонок
         tbl.autofit = False
         tbl.allow_autofit = False
-        # Итого ~267мм (чуть меньше CONTENT_W с учётом отступов ячеек)
-        col_w = [Cm(2.3), Cm(7.5), Cm(3.3), Cm(7.5), Cm(1.7), Cm(4.4)]
+        # Итого 26.3cm = 263мм (меньше CONTENT_W с учётом отступов ячеек таблицы)
+        col_w = [Cm(2.2), Cm(7.3), Cm(3.2), Cm(7.3), Cm(1.6), Cm(4.7)]
         for row in tbl.rows:
             for ci, w in enumerate(col_w):
                 row.cells[ci].width = w
@@ -819,7 +819,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
 
         # 20 пустых строк перед картинкой чтобы она была по центру ячейки
         from docx.oxml.ns import qn as _qn2
-        for _ in range(30):
+        for _ in range(25):
             pe = ic.add_paragraph()
             pe.paragraph_format.space_before = Pt(0)
             pe.paragraph_format.space_after  = Pt(0)
@@ -881,7 +881,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         sig.allow_autofit = False
         for row in sig.rows:
             row.cells[0].width = Mm(100)
-            row.cells[1].width = Mm(167)
+            row.cells[1].width = Mm(163)
         _sb = _sEl('w:tblBorders')
         for _side in ('top','left','bottom','right','insideH','insideV'):
             _e = _sEl(f'w:{_side}'); _e.set(_sqn('w:val'),'none'); _sb.append(_e)
