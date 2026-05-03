@@ -775,18 +775,51 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         p_frez.paragraph_format.space_before = Pt(1); p_frez.paragraph_format.space_after = Pt(1)
         r_frez = p_frez.add_run(frezerovka); font(r_frez, 9)
 
-        # ── Изображение проекта
+        # ── Изображение проекта в таблице с фиксированной высотой строки
         import urllib.request, io as _io, traceback as _tb
         from PIL import Image as _PILImage
+        from docx.oxml.ns import qn as _qn
+        from docx.oxml import OxmlElement as _OxmlEl
 
         tech_img = str(c.get('tech_image_url') or '').strip()
-        IMG_W = CONTENT_W   # 272мм в EMU
-        IMG_H = Mm(140)     # макс высота — занять максимум пространства
 
-        p_img = doc.add_paragraph()
+        # Доступная высота = 210 - 5(top) - 5(bottom) - ~25(заголовок+таблица) - ~25(дисклеймер+подписи) = ~150мм
+        IMG_H_MM = 120   # мм — высота ячейки с картинкой
+        IMG_W = CONTENT_W        # 272мм в EMU
+        IMG_H = Mm(IMG_H_MM)
+
+        # Таблица 1×1 с фиксированной высотой строки
+        it = doc.add_table(rows=1, cols=1)
+        it.style = 'Table Grid'
+        ic = it.cell(0, 0)
+        ic.width = IMG_W
+
+        # Фиксируем высоту строки: twips = мм * 56.69
+        _tr = it.rows[0]._tr
+        _trPr = _tr.get_or_add_trPr()
+        _trH = _OxmlEl('w:trHeight')
+        _trH.set(_qn('w:val'), str(int(IMG_H_MM * 56.69)))
+        _trH.set(_qn('w:hRule'), 'exact')
+        _trPr.append(_trH)
+
+        # Вертикальное выравнивание по центру ячейки
+        _tcPr = ic._tc.get_or_add_tcPr()
+        _vAlign = _OxmlEl('w:vAlign')
+        _vAlign.set(_qn('w:val'), 'center')
+        _tcPr.append(_vAlign)
+
+        # Убираем внутренние отступы ячейки
+        _tcMar = _OxmlEl('w:tcMar')
+        for _s in ('top', 'left', 'bottom', 'right'):
+            _m = _OxmlEl(f'w:{_s}')
+            _m.set(_qn('w:w'), '0'); _m.set(_qn('w:type'), 'dxa')
+            _tcMar.append(_m)
+        _tcPr.append(_tcMar)
+
+        p_img = ic.paragraphs[0]
         p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_img.paragraph_format.space_before = Pt(4)
-        p_img.paragraph_format.space_after  = Pt(4)
+        p_img.paragraph_format.space_before = Pt(0)
+        p_img.paragraph_format.space_after  = Pt(0)
 
         if tech_img:
             try:
@@ -798,7 +831,6 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
                 iw, ih = pil_img.size
                 logger.info(f'tech img WxH={iw}x{ih}')
 
-                # Конвертируем в RGB JPEG чтобы избежать проблем с форматом
                 buf = _io.BytesIO()
                 pil_img.convert('RGB').save(buf, format='JPEG', quality=90)
                 buf.seek(0)
@@ -809,7 +841,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
                 else:
                     add_kw = {'width': IMG_W}
 
-                logger.info(f'tech img add_picture kw={add_kw}')
+                logger.info(f'tech img kw={add_kw}')
                 p_img.add_run().add_picture(buf, **add_kw)
                 logger.info('tech img OK')
             except Exception as ex:
