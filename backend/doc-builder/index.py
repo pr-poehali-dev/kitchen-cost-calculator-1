@@ -313,7 +313,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
 
     # Базовый размер шрифта — зависит от типа документа
     # Договор должен уместиться на 6 листов А4
-    _base_pt = 10.0 if doc_type == 'contract' else 11
+    _base_pt = 10.0 if doc_type in ('contract', 'rules') else 11
 
     style = doc.styles['Normal']
     style.font.name = 'Times New Roman'
@@ -997,12 +997,37 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         r_w = p_warn.add_run('ВНИМАНИЕ! Подрядчик не несет ответственность за последствия от несоблюдения установленных норм и правил по уходу и эксплуатации корпусной мебели.')
         font(r_w, 9, bold=True); r_w.italic = True
 
-        sig_table(
-            f'Подрядчик: {co_name.upper()}',
-            f'______________________________\nМ.П.',
-            f'Заказчик: {fname}',
-            '______________________________'
-        )
+        # Подписи без рамки
+        from docx.oxml.ns import qn as _sqn2
+        from docx.oxml import OxmlElement as _sEl2
+        p_sig = doc.add_paragraph()
+        p_sig.paragraph_format.space_before = Pt(10)
+        p_sig.paragraph_format.space_after  = Pt(0)
+        def _tab2(para, pos_cm):
+            pPr = para._p.get_or_add_pPr()
+            tabs = pPr.find(_sqn2('w:tabs'))
+            if tabs is None:
+                tabs = _sEl2('w:tabs'); pPr.append(tabs)
+            tab = _sEl2('w:tab')
+            tab.set(_sqn2('w:val'), 'left')
+            tab.set(_sqn2('w:pos'), str(int(pos_cm * 567)))
+            tabs.append(tab)
+        _tab2(p_sig, 10)
+        font(p_sig.add_run(f'Подрядчик: {co_name.upper()}'), 9, bold=True)
+        p_sig.add_run('\t')
+        font(p_sig.add_run(f'Заказчик: {fname}'), 9, bold=True)
+
+        p_lines2 = doc.add_paragraph()
+        p_lines2.paragraph_format.space_before = Pt(12)
+        p_lines2.paragraph_format.space_after  = Pt(0)
+        _tab2(p_lines2, 10)
+        font(p_lines2.add_run('______________________________'), 9)
+        p_lines2.add_run('\t')
+        font(p_lines2.add_run('______________________________'), 9)
+
+        p_mp = doc.add_paragraph()
+        p_mp.paragraph_format.space_before = Pt(1)
+        font(p_mp.add_run('М.П.'), 9)
 
     # ══════════════════════════════════════════════════════════════════════════
     # ДОГОВОР ДОСТАВКИ
