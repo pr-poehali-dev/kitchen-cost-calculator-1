@@ -65,14 +65,12 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
     return matTypeFilter === 'all' ? mats : mats.filter(m => m.typeId === matTypeFilter);
   }, [catalog.materials, matTypeFilter]);
 
-  const catFiltered = useMemo(() =>
-    catFilter === 'all'
-      ? typeFiltered
-      : catFilter === 'none'
-        ? typeFiltered.filter(m => !m.categoryId)
-        : typeFiltered.filter(m => m.categoryId === catFilter),
-    [typeFiltered, catFilter]
-  );
+  const catFiltered = useMemo(() => {
+    const list = Array.isArray(typeFiltered) ? typeFiltered : [];
+    if (catFilter === 'all') return list;
+    if (catFilter === 'none') return list.filter(m => !m.categoryId);
+    return list.filter(m => m.categoryId === catFilter);
+  }, [typeFiltered, catFilter]);
 
   const filteredMaterials = useMemo(() => {
     const q = search.trim().toLowerCase();
