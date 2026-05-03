@@ -30,8 +30,13 @@ def get_db():
     finally:
         conn.close()
 
+def _serialize(obj):
+    if hasattr(obj, 'isoformat'):
+        return obj.isoformat()
+    raise TypeError(f'Not serializable: {type(obj)}')
+
 def ok(data, status=200):
-    return {'statusCode': status, 'headers': {**CORS, 'Content-Type': 'application/json'}, 'body': json.dumps(data, ensure_ascii=False)}
+    return {'statusCode': status, 'headers': {**CORS, 'Content-Type': 'application/json'}, 'body': json.dumps(data, ensure_ascii=False, default=_serialize)}
 
 def err(msg, status=400):
     return {'statusCode': status, 'headers': {**CORS, 'Content-Type': 'application/json'}, 'body': json.dumps({'error': msg}, ensure_ascii=False)}
