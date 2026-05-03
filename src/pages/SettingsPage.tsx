@@ -5,6 +5,7 @@ import SettingsCompanySection from './settings/SettingsCompanySection';
 import SettingsCatalogSection from './settings/SettingsCatalogSection';
 import SettingsAppSection from './settings/SettingsAppSection';
 import SettingsBackupSection from './settings/SettingsBackupSection';
+import SettingsDocTemplates from './settings/SettingsDocTemplates';
 
 export default function SettingsPage() {
   const store = useStore();
@@ -49,6 +50,7 @@ export default function SettingsPage() {
 
       <div className="flex-1 overflow-auto scrollbar-thin p-4 md:p-6 space-y-5 max-w-3xl">
         <SettingsCompanySection />
+        <SettingsDocTemplates />
         <SettingsCatalogSection />
         <SettingsAppSection />
         <SettingsBackupSection onExportBackup={handleExportBackup} />
