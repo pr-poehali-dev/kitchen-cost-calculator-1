@@ -919,7 +919,7 @@ def _doc_style(title='', contract_num=''):
 @import url('https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap');
 @page{{
   size:A4 portrait;
-  margin:10mm 10mm 10mm 15mm;
+  margin:8mm 8mm 8mm 13mm;
   @top-center{{
     content:"{header_content}";
     font-family:'PT Serif',Georgia,serif;
@@ -937,18 +937,18 @@ def _doc_style(title='', contract_num=''):
 }}
 *{{box-sizing:border-box;margin:0;padding:0}}
 html{{background:#2d2d2d;min-height:100vh}}
-body{{font-family:'PT Serif',Georgia,serif;font-size:9pt;line-height:1.2;color:#000;background:transparent}}
-.page{{width:210mm;min-height:297mm;margin:8px auto;padding:10mm 10mm 10mm 15mm;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)}}
+body{{font-family:'PT Serif',Georgia,serif;font-size:8.5pt;line-height:1.15;color:#000;background:transparent}}
+.page{{width:210mm;min-height:297mm;margin:8px auto;padding:8mm 8mm 8mm 13mm;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)}}
 @media screen and (max-width:900px){{
   .page{{width:100%;min-height:auto;padding:12mm 8mm 12mm 10mm;font-size:10pt}}
 }}
 h1{{font-size:12pt;text-align:center;font-weight:bold;margin:0 0 3px;text-transform:uppercase;letter-spacing:.1em}}
 h2{{font-size:10pt;text-align:center;font-weight:normal;margin:0 0 10px}}
 .city-date{{display:flex;justify-content:space-between;margin:8px 0 10px;font-size:10pt}}
-p{{margin:0 0 2px;text-align:justify;text-indent:1.27cm;line-height:1.2;orphans:3;widows:3}}
+p{{margin:0 0 1px;text-align:justify;text-indent:1.27cm;line-height:1.15;orphans:3;widows:3}}
 p.no-indent{{text-indent:0}}
 p.center{{text-align:center;text-indent:0}}
-.sec{{font-weight:bold;margin:7px 0 2px;text-indent:0;font-size:9.5pt;page-break-after:avoid}}
+.sec{{font-weight:bold;margin:5px 0 1px;text-indent:0;font-size:9pt;page-break-after:avoid}}
 .sec-block{{page-break-inside:avoid}}
 table{{width:100%;border-collapse:collapse;margin:8px 0;font-size:10pt;page-break-inside:avoid}}
 th,td{{border:1px solid #000;padding:5px 8px}}
@@ -968,7 +968,7 @@ a{{color:#000;text-decoration:none}}
   html{{background:#fff}}
   body{{margin:0;font-size:10pt}}
   .page{{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}}
-  @page{{size:A4 portrait;margin:10mm 10mm 10mm 15mm}}
+  @page{{size:A4 portrait;margin:8mm 8mm 8mm 13mm}}
   a{{color:#000;text-decoration:none}}
 }}
 </style>'''
