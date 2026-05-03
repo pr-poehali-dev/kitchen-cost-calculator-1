@@ -1598,7 +1598,8 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 
     elif doc_type == 'rules':
         style = _doc_style('Правила эксплуатации', contract_num)
-        return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Правила эксплуатации мебели</title>{style}</head><body><div class="page">
+        rules_extra = '<style>body{font-size:8pt!important;line-height:1.1!important}p{margin:0!important;line-height:1.1!important}.sec{margin:8px 0 2px!important}</style>'
+        return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Правила эксплуатации мебели</title>{style}{rules_extra}</head><body><div class="page">
 <p class="no-indent" style="text-align:center;font-size:8.5pt">Приложение № 3 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
 <h1>«Правила эксплуатации корпусной мебели»</h1>
 
