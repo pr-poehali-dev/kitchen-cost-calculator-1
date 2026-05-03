@@ -740,7 +740,10 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         # Итого 272мм: 25 + 86 + 35 + 86 + 20 (подсветка доп)
         tbl = doc.add_table(rows=4, cols=6)
         tbl.style = 'Table Grid'
-        # Итого 28.7cm = 287мм = CONTENT_W
+        # Отключаем autofit — без этого Word игнорирует ширины колонок
+        tbl.autofit = False
+        tbl.allow_autofit = False
+        # Итого 28.7cm = 287мм = CONTENT_W: 2.5+8.0+3.5+8.0+1.8+4.9
         col_w = [Cm(2.5), Cm(8.0), Cm(3.5), Cm(8.0), Cm(1.8), Cm(4.9)]
         for row in tbl.rows:
             for ci, w in enumerate(col_w):
@@ -869,43 +872,32 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         )
         font(r_disc, 8); r_disc.italic = True
 
-        # ── Подписи — простые строки, без таблицы
-        # Строка с именами
-        p_names = doc.add_paragraph()
-        p_names.paragraph_format.space_before = Pt(3)
-        p_names.paragraph_format.space_after  = Pt(0)
+        # ── Подписи через таблицу 2 колонки (надёжнее чем табуляция)
         from docx.oxml.ns import qn as _sqn
         from docx.oxml import OxmlElement as _sEl
-        def _add_tab(para, pos_cm):
-            pPr = para._p.get_or_add_pPr()
-            tabs = pPr.find(_sqn('w:tabs'))
-            if tabs is None:
-                tabs = _sEl('w:tabs'); pPr.append(tabs)
-            tab = _sEl('w:tab')
-            tab.set(_sqn('w:val'), 'left')
-            tab.set(_sqn('w:pos'), str(int(pos_cm * 567)))
-            tabs.append(tab)
-        _add_tab(p_names, 17.0)
-        r_n1 = p_names.add_run(f'Подрядчик: {co_name.upper()}'); font(r_n1, 8, bold=True)
-        p_names.add_run('\t')
-        r_n2 = p_names.add_run(f'Заказчик:  {fname}'); font(r_n2, 8, bold=True)
+        sig = doc.add_table(rows=3, cols=2)
+        sig.style = 'Table Grid'
+        sig.autofit = False
+        sig.allow_autofit = False
+        for row in sig.rows:
+            row.cells[0].width = Mm(115)
+            row.cells[1].width = Mm(172)
+        _sb = _sEl('w:tblBorders')
+        for _side in ('top','left','bottom','right','insideH','insideV'):
+            _e = _sEl(f'w:{_side}'); _e.set(_sqn('w:val'),'none'); _sb.append(_e)
+        sig._tbl.tblPr.append(_sb)
 
-        # Строка с линиями
-        p_lines = doc.add_paragraph()
-        p_lines.paragraph_format.space_before = Pt(8)
-        p_lines.paragraph_format.space_after  = Pt(0)
-        _add_tab(p_lines, 17.0)
-        r_l1 = p_lines.add_run('______________________________'); font(r_l1, 9)
-        p_lines.add_run('\t')
-        r_l2 = p_lines.add_run('______________________________'); font(r_l2, 9)
+        def _sc(row, col, text, bold=False, size=8, sb=3):
+            p = sig.cell(row, col).paragraphs[0]
+            p.paragraph_format.space_before = Pt(sb)
+            p.paragraph_format.space_after  = Pt(0)
+            font(p.add_run(text), size, bold)
 
-        # Строка с подписями
-        p_lbls = doc.add_paragraph()
-        p_lbls.paragraph_format.space_before = Pt(1)
-        p_lbls.paragraph_format.space_after  = Pt(0)
-        _add_tab(p_lbls, 13.5)
-        r_lb1 = p_lbls.add_run('М.П.'); font(r_lb1, 8)
-        p_lbls.add_run('\t')
+        _sc(0, 0, f'Подрядчик: {co_name.upper()}', bold=True)
+        _sc(0, 1, f'Заказчик:  {fname}', bold=True)
+        _sc(1, 0, '______________________________', size=9, sb=8)
+        _sc(1, 1, '______________________________', size=9, sb=8)
+        _sc(2, 0, 'М.П.', sb=1)
 
     # ══════════════════════════════════════════════════════════════════════════
     # ПРАВИЛА ЭКСПЛУАТАЦИИ
