@@ -1,5 +1,5 @@
 import { useCatalog, updateMaterial } from '@/hooks/useCatalog';
-import type { MaterialCategory, Manufacturer } from '@/store/types';
+import type { MaterialCategory, Manufacturer, Vendor } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import SearchInput from '@/components/ui/search-input';
 
@@ -11,6 +11,10 @@ interface Props {
   mfrFilter: string;
   onMfrFilterChange: (v: string) => void;
   visibleManufacturers: Manufacturer[];
+  vendorFilter: string;
+  onVendorFilterChange: (v: string) => void;
+  visibleVendors: Vendor[];
+  hasNoVendor: boolean;
   showArchived: boolean;
   onShowArchivedChange: (v: boolean) => void;
   staleCount: number;
@@ -31,6 +35,7 @@ export default function MatFilterBar({
   search, onSearchChange,
   catFilter, onCatFilterChange,
   mfrFilter, onMfrFilterChange, visibleManufacturers,
+  vendorFilter, onVendorFilterChange, visibleVendors, hasNoVendor,
   showArchived, onShowArchivedChange,
   staleCount, archivedCount,
   visibleCategories, hasNoCat,
@@ -104,6 +109,21 @@ export default function MatFilterBar({
           </select>
         )}
 
+        {/* Фильтр по поставщику */}
+        {(visibleVendors.length > 0 || hasNoVendor) && (
+          <select
+            value={vendorFilter}
+            onChange={e => onVendorFilterChange(e.target.value)}
+            className={`bg-[hsl(220,12%,14%)] border rounded px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors cursor-pointer ${vendorFilter !== 'all' ? 'border-gold/60 text-gold' : 'border-border'}`}
+          >
+            <option value="all">Все поставщики</option>
+            {visibleVendors.map(v => (
+              <option key={v.id} value={v.id}>{v.name}</option>
+            ))}
+            {hasNoVendor && <option value="none">Без поставщика</option>}
+          </select>
+        )}
+
         {/* Фильтр по категории */}
         {(visibleCategories.length > 0 || hasNoCat) && (
           <select
@@ -120,9 +140,9 @@ export default function MatFilterBar({
         )}
 
         {/* Сброс активных фильтров */}
-        {(mfrFilter !== 'all' || catFilter !== 'all') && (
+        {(mfrFilter !== 'all' || vendorFilter !== 'all' || catFilter !== 'all') && (
           <button
-            onClick={() => { onMfrFilterChange('all'); onCatFilterChange('all'); }}
+            onClick={() => { onMfrFilterChange('all'); onVendorFilterChange('all'); onCatFilterChange('all'); }}
             className="text-xs text-[hsl(var(--text-muted))] hover:text-foreground transition-colors flex items-center gap-1"
           >
             <Icon name="X" size={12} /> Сбросить

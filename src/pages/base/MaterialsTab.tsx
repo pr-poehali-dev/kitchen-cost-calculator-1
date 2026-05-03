@@ -48,6 +48,7 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
   // Состояние фильтров
   const [catFilter, setCatFilter] = useState<string>('all');
   const [mfrFilter, setMfrFilter] = useState<string>('all');
+  const [vendorFilter, setVendorFilter] = useState<string>('all');
   const [search, setSearch] = useState(initialSearch);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -78,22 +79,33 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
     return catFiltered.filter(m => m.manufacturerId === mfrFilter);
   }, [catFiltered, mfrFilter]);
 
-  // Производители, присутствующие в текущей typeFiltered (для дропдауна)
+  const vendorFiltered = useMemo(() => {
+    if (vendorFilter === 'all') return mfrFiltered;
+    if (vendorFilter === 'none') return mfrFiltered.filter(m => !m.vendorId);
+    return mfrFiltered.filter(m => m.vendorId === vendorFilter);
+  }, [mfrFiltered, vendorFilter]);
+
   const visibleManufacturers = useMemo(() => {
     const ids = new Set((Array.isArray(catFiltered) ? catFiltered : []).map(m => m.manufacturerId));
     return (catalog.manufacturers ?? []).filter(m => ids.has(m.id));
   }, [catFiltered, catalog.manufacturers]);
 
+  const visibleVendors = useMemo(() => {
+    const ids = new Set((Array.isArray(mfrFiltered) ? mfrFiltered : []).map(m => m.vendorId).filter(Boolean));
+    const hasNone = mfrFiltered.some(m => !m.vendorId);
+    return { vendors: (catalog.vendors ?? []).filter(v => ids.has(v.id)), hasNone };
+  }, [mfrFiltered, catalog.vendors]);
+
   const filteredMaterials = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const list = (Array.isArray(mfrFiltered) ? mfrFiltered : []).filter(m => showArchived ? m.archived : !m.archived);
+    const list = (Array.isArray(vendorFiltered) ? vendorFiltered : []).filter(m => showArchived ? m.archived : !m.archived);
     if (!q) return list;
     return list.filter(m =>
       (m.name || '').toLowerCase().includes(q) ||
       (m.article || '').toLowerCase().includes(q) ||
       (m.color || '').toLowerCase().includes(q)
     );
-  }, [mfrFiltered, search, showArchived]);
+  }, [vendorFiltered, search, showArchived]);
 
   // Сбрасываем выделение при смене фильтра
   useEffect(() => {
@@ -203,8 +215,12 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
           catFilter={catFilter}
           onCatFilterChange={setCatFilter}
           mfrFilter={mfrFilter}
-          onMfrFilterChange={v => { setMfrFilter(v); setSelected(new Set()); }}
+          onMfrFilterChange={v => { setMfrFilter(v); setVendorFilter('all'); setSelected(new Set()); }}
           visibleManufacturers={visibleManufacturers}
+          vendorFilter={vendorFilter}
+          onVendorFilterChange={v => { setVendorFilter(v); setSelected(new Set()); }}
+          visibleVendors={visibleVendors.vendors}
+          hasNoVendor={visibleVendors.hasNone}
           showArchived={showArchived}
           onShowArchivedChange={setShowArchived}
           staleCount={staleCount}
