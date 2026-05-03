@@ -317,7 +317,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
 
     # Базовый размер шрифта — зависит от типа документа
     # Договор должен уместиться на 6 листов А4
-    _base_pt = 10.0 if doc_type in ('contract', 'rules') else 11
+    _base_pt = 10.0 if doc_type == 'contract' else (9.5 if doc_type == 'rules' else 11)
 
     style = doc.styles['Normal']
     style.font.name = 'Times New Roman'
@@ -928,8 +928,8 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         def section_c(text):
             p = doc.add_paragraph()
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            p.paragraph_format.space_before = Pt(8)
-            p.paragraph_format.space_after  = Pt(2)
+            p.paragraph_format.space_before = Pt(5)
+            p.paragraph_format.space_after  = Pt(1)
             r = p.add_run(text); font(r, bold=True)
             p.paragraph_format.keep_with_next = True
             return p
