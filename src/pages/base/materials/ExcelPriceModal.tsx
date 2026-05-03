@@ -28,7 +28,13 @@ function norm(s: string) {
 // Попытка найти числовую цену в строке
 function parsePrice(v: unknown): number {
   if (v === null || v === undefined || v === '') return 0;
-  const n = parseFloat(String(v).replace(/[^\d.,]/g, '').replace(',', '.'));
+  // Убираем пробелы (разделитель тысяч), неразрывные пробелы и прочие нечисловые символы кроме . и ,
+  const cleaned = String(v)
+    .replace(/\u00A0|\u2009|\u202F/g, '')  // неразрывные пробелы
+    .replace(/\s/g, '')                      // обычные пробелы (разделитель тысяч)
+    .replace(/[^\d.,]/g, '')                 // всё кроме цифр, точки, запятой
+    .replace(',', '.');                      // запятая → точка
+  const n = parseFloat(cleaned);
   return isNaN(n) ? 0 : n;
 }
 
