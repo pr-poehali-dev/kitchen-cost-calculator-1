@@ -63,6 +63,59 @@ def fmt_date_full(d):
 def full_name(c):
     return ' '.join(filter(None, [c.get('last_name',''), c.get('first_name',''), c.get('middle_name','')])).strip() or '___________'
 
+def genitive_name(full_name_str: str) -> str:
+    """Склоняет ФИО (Фамилия Имя Отчество) в родительный падеж."""
+    if not full_name_str or not full_name_str.strip():
+        return full_name_str
+    parts = full_name_str.strip().split()
+    if not parts:
+        return full_name_str
+    consonants = set('бвгджзйклмнпрстфхцчшщБВГДЖЗЙКЛМНПРСТФХЦЧШЩ')
+
+    def _word_gen(word):
+        if not word or len(word) < 2:
+            return word
+        low = word.lower()
+        if low.endswith('ий'): return word[:-2] + 'ия'
+        if low.endswith('ия'): return word[:-2] + 'ии'
+        if low.endswith('ья'): return word[:-2] + 'ьи'
+        if low.endswith('ич'): return word + 'а'
+        if low.endswith('енко') or low.endswith('ко') or low.endswith('но') or low.endswith('го'): return word
+        if low.endswith('а') and len(word) >= 2 and word[-2] in consonants: return word[:-1] + 'ы'
+        if low.endswith('я') and len(word) >= 2 and word[-2] in consonants: return word[:-1] + 'и'
+        if low.endswith('ь'): return word[:-1] + 'я'
+        if low.endswith('ец') and len(word) >= 4: return word[:-2] + 'ца'
+        if word[-1] in consonants: return word + 'а'
+        return word
+
+    return ' '.join(_word_gen(p) for p in parts)
+
+def get_manager_poa(manager_name: str) -> dict:
+    """Запрашивает из БД данные доверенности менеджера по его имени."""
+    if not manager_name or not manager_name.strip():
+        return {}
+    try:
+        schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+        name = manager_name.strip()
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                f'''SELECT full_name, poa_number, poa_date FROM {schema}.users
+                   WHERE LOWER(full_name) = LOWER(%s) OR LOWER(login) = LOWER(%s)
+                   LIMIT 1''',
+                (name, name)
+            )
+            row = cur.fetchone()
+        if not row:
+            return {}
+        return {
+            'full_name': row[0] or '',
+            'poa_number': str(row[1]) if row[1] else '',
+            'poa_date': str(row[2])[:10] if row[2] else '',
+        }
+    except Exception:
+        return {}
+
 def full_name_genitive(c):
     """ФИО в родительном падеже (для «гр. Иванова Петра Сергеевича»)."""
     ln = (c.get('last_name') or '').strip()
@@ -226,6 +279,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
     ptype          = c.get('payment_type','100% предоплата')
     manager        = (c.get('manager_name') or '').strip()
     manager_line   = manager or ('_' * 30)
+    manager_gen    = genitive_name(manager) if manager else ('_' * 30)
     daddr          = delivery_addr(c)
     delivery_date  = fmt_date(c.get('delivery_date') or '')
     delivery_cost  = float(c.get('delivery_cost') or 0)
@@ -249,81 +303,85 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
     sec.left_margin = Mm(20);  sec.right_margin  = Mm(15)
     sec.top_margin  = Mm(15);  sec.bottom_margin = Mm(15)
 
+    # Базовый размер шрифта — зависит от типа документа
+    # Договор должен уместиться на 5 листов А4
+    _base_pt = 9.5 if doc_type == 'contract' else 11
+
     style = doc.styles['Normal']
     style.font.name = 'Times New Roman'
-    style.font.size = Pt(11)
-    style.paragraph_format.line_spacing = Pt(14)
+    style.font.size = Pt(_base_pt)
+    style.paragraph_format.line_spacing = Pt(_base_pt * 1.25)
     style.paragraph_format.space_after  = Pt(0)
     style.paragraph_format.alignment    = WD_ALIGN_PARAGRAPH.JUSTIFY
 
     # ── Вспомогательные функции ───────────────────────────────────────────────
-    def font(run, size=11, bold=False):
+    def font(run, size=None, bold=False):
         run.font.name = 'Times New Roman'
-        run.font.size = Pt(size)
+        run.font.size = Pt(size if size is not None else _base_pt)
         run.bold = bold
 
-    def heading(text, size=13):
+    def heading(text, size=None):
+        _sz = (size or (_base_pt + 2))
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p.paragraph_format.space_before = Pt(2)
-        p.paragraph_format.space_after  = Pt(4)
-        r = p.add_run(text.upper()); font(r, size, bold=True)
+        p.paragraph_format.space_before = Pt(1)
+        p.paragraph_format.space_after  = Pt(2)
+        r = p.add_run(text.upper()); font(r, _sz, bold=True)
         return p
 
     def subheading(text):
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after  = Pt(8)
-        r = p.add_run(text); font(r, 11)
+        p.paragraph_format.space_after  = Pt(4)
+        r = p.add_run(text); font(r)
         return p
 
     def section(text):
         p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(8)
-        p.paragraph_format.space_after  = Pt(2)
-        r = p.add_run(text); font(r, 11, bold=True)
+        p.paragraph_format.space_before = Pt(4)
+        p.paragraph_format.space_after  = Pt(1)
+        r = p.add_run(text); font(r, bold=True)
         p.paragraph_format.keep_with_next = True
         return p
 
-    def para(text, indent=True, size=11, bold=False, italic=False):
+    def para(text, indent=True, size=None, bold=False, italic=False):
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after  = Pt(2)
-        p.paragraph_format.line_spacing = Pt(14)
-        if indent: p.paragraph_format.first_line_indent = Mm(10)
+        p.paragraph_format.space_after  = Pt(1)
+        p.paragraph_format.line_spacing = Pt(_base_pt * 1.25)
+        if indent: p.paragraph_format.first_line_indent = Mm(7)
         r = p.add_run(text); font(r, size, bold)
         r.italic = italic
         return p
 
     def city_date(city, date_str):
         p = doc.add_paragraph()
-        p.paragraph_format.space_before = Pt(4)
-        p.paragraph_format.space_after  = Pt(6)
+        p.paragraph_format.space_before = Pt(2)
+        p.paragraph_format.space_after  = Pt(3)
         from docx.oxml.ns import qn; from docx.oxml import OxmlElement
-        # Город слева, дата справа через табуляцию
-        r1 = p.add_run(f'г. {city}'); font(r1, 11)
+        r1 = p.add_run(f'г. {city}'); font(r1)
         p.add_run('\t\t\t\t\t')
-        r2 = p.add_run(date_str); font(r2, 11)
+        r2 = p.add_run(date_str); font(r2)
         return p
 
-    def right_para(text, size=11):
+    def right_para(text, size=None):
         p = doc.add_paragraph()
         p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
         p.paragraph_format.space_before = Pt(0)
-        p.paragraph_format.space_after  = Pt(2)
+        p.paragraph_format.space_after  = Pt(1)
         r = p.add_run(text); font(r, size)
         return p
 
-    def fill_cell(cell, text, bold=False, center=False, size=11):
+    def fill_cell(cell, text, bold=False, center=False, size=None):
         """Заполняет ячейку — каждая строка через \\n = отдельный параграф."""
         lines = str(text).split('\n')
         for i, line in enumerate(lines):
             p = cell.paragraphs[0] if i == 0 else cell.add_paragraph()
             p.paragraph_format.space_before = Pt(1)
             p.paragraph_format.space_after  = Pt(1)
-            p.paragraph_format.line_spacing = Pt(13)
+            p.paragraph_format.line_spacing = Pt(_base_pt * 1.2)
             if center: p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             r = p.add_run(line); font(r, size, bold)
 
@@ -332,7 +390,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         # keep_with_next чтобы не отрываться от предыдущего текста
         anchor = doc.add_paragraph()
         anchor.paragraph_format.keep_with_next = True
-        anchor.paragraph_format.space_before   = Pt(6)
+        anchor.paragraph_format.space_before   = Pt(2)
         anchor.paragraph_format.space_after    = Pt(0)
 
         t = doc.add_table(rows=2, cols=2)
@@ -354,10 +412,10 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
                 for row in t.rows:
                     row.cells[ci].width = Cm(w)
         for ci, h in enumerate(headers):
-            fill_cell(t.cell(0, ci), h, bold=True, center=True, size=10)
+            fill_cell(t.cell(0, ci), h, bold=True, center=True)
         for ri, row_data in enumerate(rows):
             for ci, val in enumerate(row_data):
-                fill_cell(t.cell(ri+1, ci), str(val), size=10)
+                fill_cell(t.cell(ri+1, ci), str(val))
         return t
 
     # ══════════════════════════════════════════════════════════════════════════
@@ -369,9 +427,8 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         city_date(co_city, contract_date)
 
         # Вступление — менеджер и клиент в родительном падеже
-        mgr_gen = manager_line  # менеджер уже хранится как "Фамилия Имя Отчество"
         para(
-            f'{co_name}, в лице менеджера {mgr_gen}, '
+            f'{co_name}, в лице менеджера {manager_gen}, '
             f'действующего на основании доверенности № {mgr_poa_num} от {mgr_poa_date}, '
             f'именуемый в дальнейшем «Подрядчик», и гр. {fname_gen}, '
             f'именуемый (ая) в дальнейшем «Заказчик», действующий (ая) как физическое лицо, '
@@ -1030,6 +1087,14 @@ def handler(event: dict, context) -> dict:
 
     user_id = payload.get('sub') or payload.get('user_id') or payload.get('id')
     company = get_company(user_id)
+
+    # Подгружаем доверенность менеджера из БД
+    mgr_name = client.get('manager_name', '') or ''
+    if mgr_name:
+        poa = get_manager_poa(mgr_name)
+        if poa.get('poa_number') or poa.get('poa_date'):
+            client['manager_poa_number'] = poa.get('poa_number', '')
+            client['manager_poa_date']   = poa.get('poa_date', '')
 
     if action == 'doc_docx':
         logger.info(f'doc_docx: {doc_type} for client {cid}')
