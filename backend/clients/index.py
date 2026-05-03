@@ -1309,12 +1309,32 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 </table>
 <p class="no-indent" style="text-align:center">({total_words})</p>
 <p class="no-indent">2. Комплектность, количество, вид, характеристики мебели соответствуют условиям договора. Визуальный осмотр мебели на предмет повреждений, царапин, сколов, трещин и других недостатков произведен Заказчиком. Фурнитура (петли, выдвижные механизмы, подъемные механизмы и т.д.) работает исправно. Заказчик претензий по объему, качеству, результату и срокам выполнения работ: <strong>не имеет / имеет</strong> (ненужное зачеркнуть).</p>
+
+<div style="margin:12px 0">
+  <div style="border-bottom:1px solid #000;margin-bottom:10px;height:18px">&nbsp;</div>
+  <div style="border-bottom:1px solid #000;margin-bottom:10px;height:18px">&nbsp;</div>
+  <div style="border-bottom:1px solid #000;margin-bottom:10px;height:18px">&nbsp;</div>
+  <div style="border-bottom:1px solid #000;margin-bottom:10px;height:18px">&nbsp;</div>
+  <div style="border-bottom:1px solid #000;margin-bottom:10px;height:18px">&nbsp;</div>
+  <div style="border-bottom:1px solid #000;height:18px">&nbsp;</div>
+</div>
+
 <p class="no-indent">3. В случае наличия замечаний Заказчик, после подписания акта, вправе требовать устранения замечаний, отражённых в данном акте.</p>
 <p class="no-indent">4. Настоящий акт подписан в 2 (двух) экземплярах по одному для каждой из Сторон.</p>
-<table style="margin-top:20px"><tr><th style="width:50%">Подрядчик: {co_name.upper()}</th><th style="width:50%">Заказчик: {fname}</th></tr>
-<tr><td>Менеджер</td><td>Паспорт: {_passport_str(c)}<br>Тел.: {c.get("phone") or "___________"}</td></tr>
-<tr><td style="height:50px"><span class="ul" style="min-width:200px">&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;</span></td></tr>
-<tr><td colspan="2" style="text-align:center;padding-top:6px">М.П.</td></tr></table>
+
+<div style="display:flex;justify-content:space-between;margin-top:20px">
+  <div>
+    <p class="no-indent" style="font-weight:bold">Подрядчик: {co_name.upper()}</p>
+    <br><br>
+    <span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+    <p class="no-indent" style="margin-top:4px">М.П.</p>
+  </div>
+  <div style="text-align:right">
+    <p class="no-indent" style="font-weight:bold">Заказчик: {fname}</p>
+    <br><br>
+    <span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+  </div>
+</div>
 </div></body></html>'''
 
     elif doc_type == 'tech':
