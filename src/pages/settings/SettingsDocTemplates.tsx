@@ -27,30 +27,7 @@ const DOC_TYPES = [
   { id: 'act_assembly',  label: 'Акт выполненных работ сборки' },
 ];
 
-// Стандартные блоки документов — заголовки разделов которые можно редактировать
-const DEFAULT_BLOCKS: Record<string, { id: string; type: string; label: string; content: string; enabled: boolean }[]> = {
-  contract: [
-    { id: 'header', type: 'header', label: 'Шапка документа', content: 'Приложение к договору бытового подряда на изготовление мебели № {{номер_договора}} от {{дата_договора}}', enabled: true },
-    { id: 's1', type: 'section', label: 'Раздел 1. ПРЕДМЕТ ДОГОВОРА', content: '1. ПРЕДМЕТ ДОГОВОРА', enabled: true },
-    { id: 's2', type: 'section', label: 'Раздел 2. РАЗРАБОТКА ТП', content: '2. РАЗРАБОТКА И СОГЛАСОВАНИЕ ТЕХНИЧЕСКОГО ПРОЕКТА', enabled: true },
-    { id: 's3', type: 'section', label: 'Раздел 3. СТОИМОСТЬ', content: '3. СТОИМОСТЬ РАБОТ И ПОРЯДОК РАСЧЁТОВ', enabled: true },
-    { id: 's4', type: 'section', label: 'Раздел 4. ПРАВА И ОБЯЗАННОСТИ', content: '4. ПРАВА И ОБЯЗАННОСТИ СТОРОН', enabled: true },
-    { id: 's5', type: 'section', label: 'Раздел 5. ГАРАНТИЯ', content: '5. ГАРАНТИЯ И КАЧЕСТВО ВЫПОЛНЕННЫХ РАБОТ', enabled: true },
-    { id: 's6', type: 'section', label: 'Раздел 6. ПРИЁМКА', content: '6. ПОРЯДОК ПРИЁМКИ ВЫПОЛНЕННЫХ РАБОТ', enabled: true },
-    { id: 's7', type: 'section', label: 'Раздел 7. ОТВЕТСТВЕННОСТЬ', content: '7. ОТВЕТСТВЕННОСТЬ СТОРОН', enabled: true },
-    { id: 's8', type: 'section', label: 'Раздел 8. СПОРЫ', content: '8. ПОРЯДОК РАЗРЕШЕНИЯ СПОРОВ', enabled: true },
-    { id: 's9', type: 'section', label: 'Раздел 9. СРОК ДЕЙСТВИЯ', content: '9. СРОК ДЕЙСТВИЯ ДОГОВОРА', enabled: true },
-    { id: 's10', type: 'section', label: 'Раздел 10. ЗАКЛЮЧЕНИЕ', content: '10. ЗАКЛЮЧИТЕЛЬНЫЕ ПОЛОЖЕНИЯ', enabled: true },
-    { id: 's11', type: 'section', label: 'Раздел 11. РЕКВИЗИТЫ', content: '11. РЕКВИЗИТЫ СТОРОН', enabled: true },
-  ],
-  act: [
-    { id: 'header', type: 'header', label: 'Шапка', content: 'Приложение № 4 к договору бытового подряда на изготовление мебели № {{номер_договора}} от {{дата_договора}}', enabled: true },
-    { id: 'p1', type: 'paragraph', label: 'Пункт 1 — перечень мебели', content: '1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда № {{номер_договора}} от {{дата_договора}}:', enabled: true },
-    { id: 'p2', type: 'paragraph', label: 'Пункт 2 — комплектность', content: '2. Комплектность, количество, вид, характеристики мебели соответствуют условиям договора. Заказчик претензий не имеет.', enabled: true },
-    { id: 'p3', type: 'paragraph', label: 'Пункт 3 — замечания', content: '3. В случае наличия замечаний Заказчик вправе требовать устранения замечаний, отражённых в данном акте.', enabled: true },
-    { id: 'p4', type: 'paragraph', label: 'Пункт 4 — экземпляры', content: '4. Настоящий акт подписан в 2 (двух) экземплярах по одному для каждой из Сторон.', enabled: true },
-  ],
-};
+// Блоки по умолчанию заполняются с бэкенда при создании шаблона
 
 interface Block {
   id: string;
@@ -103,14 +80,12 @@ export default function SettingsDocTemplates() {
   useEffect(() => { loadTemplates(); }, [loadTemplates]);
 
   const createTemplate = async () => {
-    const defaultBlocks = DEFAULT_BLOCKS[selectedDocType] || [];
     const res = await fetch(`${API}/`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({
         doc_type: selectedDocType,
         name: 'Мой шаблон',
-        blocks: defaultBlocks,
         settings: { fontSize: 9.5, lineHeight: 1.0, marginMm: 10 },
         is_default: templates.length === 0,
       }),
