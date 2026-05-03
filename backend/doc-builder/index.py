@@ -775,82 +775,48 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         p_frez.paragraph_format.space_before = Pt(1); p_frez.paragraph_format.space_after = Pt(1)
         r_frez = p_frez.add_run(frezerovka); font(r_frez, 9)
 
-        # ── Изображение проекта — через таблицу-обёртку
-        import urllib.request, io as _io
-        from docx.oxml.ns import qn as _qn
-        from docx.oxml import OxmlElement as _OxmlEl
+        # ── Изображение проекта
+        import urllib.request, io as _io, traceback as _tb
+        from PIL import Image as _PILImage
 
         tech_img = str(c.get('tech_image_url') or '').strip()
+        IMG_W = CONTENT_W   # 272мм в EMU
+        IMG_H = Mm(110)     # макс высота
 
-        # Высота зоны картинки: страница 210мм - поля 5+5мм - заголовок ~15мм - таблица ~25мм - дисклеймер ~20мм - подписи ~20мм
-        IMG_H = Mm(110)
-        IMG_W = CONTENT_W  # 272мм
-
-        # Таблица 1×1 без границ — стабильный контейнер
-        img_tbl = doc.add_table(rows=1, cols=1)
-        img_tbl.style = 'Table Grid'
-
-        # Убираем все границы таблицы
-        tblBorders = _OxmlEl('w:tblBorders')
-        for side in ('top', 'left', 'bottom', 'right', 'insideH', 'insideV'):
-            b = _OxmlEl(f'w:{side}')
-            b.set(_qn('w:val'), 'none')
-            tblBorders.append(b)
-        img_tbl._tbl.tblPr.append(tblBorders)
-
-        # Убираем внутренние отступы ячейки
-        tblCellMar = _OxmlEl('w:tblCellMar')
-        for side in ('top', 'left', 'bottom', 'right'):
-            m = _OxmlEl(f'w:{side}')
-            m.set(_qn('w:w'), '0')
-            m.set(_qn('w:type'), 'dxa')
-            tblCellMar.append(m)
-        img_tbl._tbl.tblPr.append(tblCellMar)
-
-        img_cell = img_tbl.cell(0, 0)
-        img_cell.width = IMG_W
-
-        # Вертикальное выравнивание по центру
-        tcPr = img_cell._tc.get_or_add_tcPr()
-        vAlign = _OxmlEl('w:vAlign')
-        vAlign.set(_qn('w:val'), 'center')
-        tcPr.append(vAlign)
-
-        p_img = img_cell.paragraphs[0]
+        p_img = doc.add_paragraph()
         p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_img.paragraph_format.space_before = Pt(0)
-        p_img.paragraph_format.space_after  = Pt(0)
+        p_img.paragraph_format.space_before = Pt(2)
+        p_img.paragraph_format.space_after  = Pt(2)
 
         if tech_img:
             try:
-                from PIL import Image as _PILImage
                 req = urllib.request.Request(tech_img, headers={'User-Agent': 'Mozilla/5.0'})
                 img_bytes = urllib.request.urlopen(req, timeout=20).read()
-                logger.info(f'tech img loaded: {len(img_bytes)} bytes')
+                logger.info(f'tech img bytes={len(img_bytes)}')
 
                 pil_img = _PILImage.open(_io.BytesIO(img_bytes))
                 iw, ih = pil_img.size
-                logger.info(f'tech img size: {iw}x{ih}')
+                logger.info(f'tech img WxH={iw}x{ih}')
+
+                # Конвертируем в RGB JPEG чтобы избежать проблем с форматом
+                buf = _io.BytesIO()
+                pil_img.convert('RGB').save(buf, format='JPEG', quality=90)
+                buf.seek(0)
 
                 if iw > 0 and ih > 0:
                     projected_h = int((IMG_W / iw) * ih)
-                    # Если по ширине влезает — тянем по ширине, иначе ограничиваем высоту
                     add_kw = {'width': IMG_W} if projected_h <= IMG_H else {'height': IMG_H}
                 else:
                     add_kw = {'width': IMG_W}
 
-                logger.info(f'tech img kw={add_kw}')
-                p_img.add_run().add_picture(_io.BytesIO(img_bytes), **add_kw)
+                logger.info(f'tech img add_picture kw={add_kw}')
+                p_img.add_run().add_picture(buf, **add_kw)
                 logger.info('tech img OK')
             except Exception as ex:
-                import traceback
-                logger.warning(f'tech img FAILED: {ex}\n{traceback.format_exc()}')
-                r_ph = p_img.add_run(f'[ ОШИБКА: {ex} ]')
-                font(r_ph, 8)
+                logger.warning(f'tech img FAILED: {ex}\n{_tb.format_exc()}')
+                font(p_img.add_run(f'[ ОШИБКА ФОТО: {ex} ]'), 8)
         else:
-            r_ph = p_img.add_run('[ Место для схемы / эскиза проекта ]')
-            font(r_ph, 10)
-            font(r_ph, 10)
+            font(p_img.add_run('[ Место для схемы / эскиза проекта ]'), 10)
 
         # ── Дисклеймер
         p_disc = doc.add_paragraph()
