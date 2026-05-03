@@ -186,17 +186,22 @@ def delivery_addr(c):
 
 def get_company(user_id):
     try:
-        import psycopg2
         schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
         with get_db() as conn:
             cur = conn.cursor()
-            cur.execute(f'SELECT settings FROM {schema}.app_state WHERE user_id = %s LIMIT 1', (user_id,))
+            # Пробуем поле state (основное), затем settings (старое)
+            cur.execute(f'SELECT state FROM {schema}.app_state WHERE user_id = %s LIMIT 1', (user_id,))
             row = cur.fetchone()
             if row and row[0]:
                 s = row[0] if isinstance(row[0], dict) else json.loads(row[0])
-                co = s.get('company') or {}
-                return co
-    except: pass
+                # Данные компании могут лежать в state.settings.company или state.company
+                settings = s.get('settings') or s
+                company_data = settings.get('company') or {}
+                logger.info(f'get_company(state): user_id={user_id}, keys={list(company_data.keys())}')
+                if company_data:
+                    return company_data
+    except Exception as e:
+        logger.error(f'get_company error: {e}')
     return {}
 
 def co(company, key, default=''):
@@ -582,44 +587,38 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         para('Цель обработки персональных данных: исполнение настоящего договора. Заказчик дает свое согласие на использование следующих персональных данных: фамилия, имя, отчество, паспортные данные, адрес места жительства, фотографии изделий на объекте Заказчика; номер телефона, адрес электронной почты. Согласие предоставляется на срок действия настоящего договора, а после прекращения договора – в течение 12 месяцев с даты подписания Сторонами акта сдачи-приемки выполненных Работ.')
         para('Настоящее условие договора может быть изменено Заказчиком – субъектом персональных данных, в любой момент в одностороннем порядке путем отзыва согласия на обработку персональных данных. Отзыв согласия на обработку персональных данных осуществляется посредством составления письменного документа, который может быть направлен в адрес Подрядчика почтовым отправлением с уведомлением о вручении, либо вручен лично под расписку представителю Подрядчика.')
 
-        # Строка подписи и расшифровки — через таблицу без рамок для ровного выравнивания
+        # Строка подписи — одна строка: линия (подпись) ... линия (расшифровка)
         from docx.oxml.ns import qn as _qn
         from docx.oxml import OxmlElement as _OxmlEl
-        p_pre_sig = doc.add_paragraph()
-        p_pre_sig.paragraph_format.space_before = Pt(8)
-        p_pre_sig.paragraph_format.space_after  = Pt(0)
+        from docx.shared import Cm as _Cm
 
-        t_sig = doc.add_table(rows=2, cols=2)
-        t_sig.style = 'Table Grid'
-        # Убираем рамки у всех ячеек
-        for row in t_sig.rows:
-            for cell in row.cells:
-                tc = cell._tc
-                tcPr = tc.get_or_add_tcPr()
-                tcBorders = _OxmlEl('w:tcBorders')
-                for side in ('top','left','bottom','right','insideH','insideV'):
-                    border = _OxmlEl(f'w:{side}')
-                    border.set(_qn('w:val'), 'none')
-                    tcBorders.append(border)
-                tcPr.append(tcBorders)
+        # Устанавливаем таб-стопы: центр листа для правой подписи
+        def _add_tab_stop(para, pos_cm, align='left'):
+            pPr = para._p.get_or_add_pPr()
+            tabs_el = pPr.find(_qn('w:tabs'))
+            if tabs_el is None:
+                tabs_el = _OxmlEl('w:tabs')
+                pPr.append(tabs_el)
+            tab = _OxmlEl('w:tab')
+            tab.set(_qn('w:val'), align)
+            tab.set(_qn('w:pos'), str(int(pos_cm * 567)))  # 1cm = 567 twips
+            tabs_el.append(tab)
 
-        # Строка 0 — линии подписи
-        def _sig_line(cell, text):
-            p = cell.paragraphs[0]
-            p.paragraph_format.space_before = Pt(0)
-            p.paragraph_format.space_after  = Pt(1)
-            r = p.add_run(text); font(r)
+        p_line = doc.add_paragraph()
+        p_line.paragraph_format.space_before = Pt(10)
+        p_line.paragraph_format.space_after  = Pt(0)
+        _add_tab_stop(p_line, 9.5)
+        r1 = p_line.add_run('_______________________  /'); font(r1)
+        p_line.add_run('\t')
+        r2 = p_line.add_run('_______________________  /'); font(r2)
 
-        def _sig_label(cell, text):
-            p = cell.paragraphs[0]
-            p.paragraph_format.space_before = Pt(0)
-            p.paragraph_format.space_after  = Pt(4)
-            r = p.add_run(text); font(r, size=8)
-
-        _sig_line(t_sig.cell(0, 0),  '_________________________ /')
-        _sig_line(t_sig.cell(0, 1),  '_________________________ /')
-        _sig_label(t_sig.cell(1, 0), '(подпись)')
-        _sig_label(t_sig.cell(1, 1), '(расшифровка подписи от руки)')
+        p_lbl = doc.add_paragraph()
+        p_lbl.paragraph_format.space_before = Pt(1)
+        p_lbl.paragraph_format.space_after  = Pt(6)
+        _add_tab_stop(p_lbl, 9.5)
+        r3 = p_lbl.add_run('(подпись)'); font(r3, size=8)
+        p_lbl.add_run('\t')
+        r4 = p_lbl.add_run('(расшифровка подписи от руки)'); font(r4, size=8)
 
         para('10.5. К настоящему Договору прилагаются и являются неотъемлемой частью следующие приложения:')
         para('1. Технический проект.', indent=False)
