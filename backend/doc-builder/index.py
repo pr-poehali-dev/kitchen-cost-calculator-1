@@ -810,11 +810,11 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
 
                 iw, ih = _img_size(img_bytes)
                 if iw and ih and iw > 0 and ih > 0:
-                    # Вписываем в прямоугольник IMG_W × IMG_H сохраняя пропорции
-                    scale_w = IMG_W / iw
-                    scale_h = IMG_H / ih
-                    scale = min(scale_w, scale_h)
-                    add_kw = {'width': int(iw * scale), 'height': int(ih * scale)}
+                    # Вписываем по ширине или высоте — только один параметр
+                    if (IMG_W / iw) * ih <= IMG_H:
+                        add_kw = {'width': IMG_W}   # ограничено по ширине
+                    else:
+                        add_kw = {'height': IMG_H}  # ограничено по высоте
                 else:
                     add_kw = {'width': IMG_W}
 
