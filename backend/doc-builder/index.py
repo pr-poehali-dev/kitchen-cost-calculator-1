@@ -700,24 +700,30 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
     # ТЕХНИЧЕСКИЙ ПРОЕКТ
     # ══════════════════════════════════════════════════════════════════════════
     elif doc_type == 'tech':
-        # Альбомная страница, минимальные поля
-        sec.page_width  = Mm(297); sec.page_height = Mm(210)
-        sec.left_margin = Mm(7);   sec.right_margin  = Mm(7)
-        sec.top_margin  = Mm(6);   sec.bottom_margin = Mm(6)
+        # ── Альбомная страница, поля: левое 20мм (подшивка), остальные 5мм
+        sec.page_width   = Mm(297); sec.page_height  = Mm(210)
+        sec.left_margin  = Mm(20);  sec.right_margin  = Mm(5)
+        sec.top_margin   = Mm(5);   sec.bottom_margin = Mm(5)
 
+        # Доступная ширина контента: 297 - 20 - 5 = 272мм
+        CONTENT_W = Mm(272)
+
+        # ── Заголовок
         p_hdr = doc.add_paragraph()
         p_hdr.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_hdr.paragraph_format.space_after = Pt(0)
-        r_hdr = p_hdr.add_run(f'Приложение № 1 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date}')
-        font(r_hdr, 9)
+        p_hdr.paragraph_format.space_before = Pt(0)
+        p_hdr.paragraph_format.space_after  = Pt(0)
+        r_hdr = p_hdr.add_run(
+            f'Приложение № 1 к договору бытового подряда на изготовление мебели № {contract_num} от  {contract_date}'
+        ); font(r_hdr, 9)
 
         p_title = doc.add_paragraph()
         p_title.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p_title.paragraph_format.space_before = Pt(0)
-        p_title.paragraph_format.space_after  = Pt(3)
-        r_title = p_title.add_run('«ТЕХНИЧЕСКИЙ ПРОЕКТ»'); font(r_title, 11, bold=True)
+        p_title.paragraph_format.space_after  = Pt(2)
+        r_title = p_title.add_run('«Технический проект»'); font(r_title, 10, bold=True)
 
-        # Таблица характеристик (4 колонки: label | value | label | value)
+        # ── Данные материалов
         korpus    = c.get('tech_korpus','') or ''
         fasad1    = c.get('tech_fasad1','') or ''
         fasad2    = c.get('tech_fasad2','') or ''
@@ -726,62 +732,145 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         pod_type  = c.get('tech_podsvetka_type','') or ''
         pod_svet  = c.get('tech_podsvetka_svet','') or ''
         frezerovka= c.get('tech_frezerovka','') or ''
-        pod_val   = f'Тип: {pod_type}   Свет: {pod_svet}' if (pod_type or pod_svet) else ''
 
-        tbl = doc.add_table(rows=4, cols=4)
+        # ── Таблица характеристик: 3 строки × 4 колонки + строка фрезеровки
+        # Ширины колонок: метка | значение | метка | значение
+        # Итого 272мм: 25 + 86 + 35 + 86 + 20 (подсветка доп)
+        tbl = doc.add_table(rows=4, cols=6)
         tbl.style = 'Table Grid'
-        widths = [Cm(2.8), Cm(8.0), Cm(3.5), Cm(10.7)]
+        col_w = [Cm(2.5), Cm(8.6), Cm(3.5), Cm(8.6), Cm(1.8), Cm(7.8)]
         for row in tbl.rows:
-            for ci, w in enumerate(widths): row.cells[ci].width = w
+            for ci, w in enumerate(col_w):
+                row.cells[ci].width = w
 
-        def tc(ri, ci, text, bold=False):
+        def tc(ri, ci, text, bold=False, size=9):
             cell = tbl.cell(ri, ci)
             p = cell.paragraphs[0]
-            p.paragraph_format.space_before = Pt(1); p.paragraph_format.space_after = Pt(1)
-            r = p.add_run(text); font(r, 9, bold)
+            p.paragraph_format.space_before = Pt(1)
+            p.paragraph_format.space_after  = Pt(1)
+            p.paragraph_format.line_spacing = Pt(11)
+            r = p.add_run(text); font(r, size, bold)
 
-        tc(0,0,'Корпус:', True);      tc(0,1, korpus)
-        tc(0,2,'Столешница:', True);  tc(0,3, stoleshn)
-        tc(1,0,'Фасад 1:', True);     tc(1,1, fasad1)
+        # Строка 0: Корпус | val | Столешница | val
+        tc(0,0,'Корпус:', True);       tc(0,1, korpus)
+        tc(0,2,'Столешница:', True);   tc(0,3, stoleshn)
+        # Объединяем 4 и 5 ячейки строки 0 (пусто)
+        tbl.cell(0,4).merge(tbl.cell(0,5))
+
+        # Строка 1: Фасад 1 | val | Стеновая панель | val
+        tc(1,0,'Фасад 1:', True);      tc(1,1, fasad1)
         tc(1,2,'Стеновая панель:', True); tc(1,3, stenovaya)
-        tc(2,0,'Фасад 2:', True);     tc(2,1, fasad2)
-        tc(2,2,'Подсветка', True);    tc(2,3, pod_val)
-        tc(3,0,'Фрезеровка:', True)
-        # Объединяем ячейки для фрезеровки
-        merged = tbl.cell(3,1).merge(tbl.cell(3,2)).merge(tbl.cell(3,3))
-        p_m = merged.paragraphs[0]
-        p_m.paragraph_format.space_before = Pt(1); p_m.paragraph_format.space_after = Pt(1)
-        r_m = p_m.add_run(frezerovka); font(r_m, 9)
+        tbl.cell(1,4).merge(tbl.cell(1,5))
 
-        # Изображение проекта
+        # Строка 2: Фасад 2 | val | Подсветка | Тип: val | Свет: val
+        tc(2,0,'Фасад 2:', True);      tc(2,1, fasad2)
+        tc(2,2,'Подсветка', True)
+        tc(2,3,'Тип:', True);          tc(2,4, pod_type)
+        tc(2,5,'Свет:  ' + pod_svet)
+
+        # Строка 3: Фрезеровка | объединённые ячейки
+        tc(3,0,'Фрезеровка:', True)
+        merged_frez = tbl.cell(3,1).merge(tbl.cell(3,2)).merge(tbl.cell(3,3)).merge(tbl.cell(3,4)).merge(tbl.cell(3,5))
+        p_frez = merged_frez.paragraphs[0]
+        p_frez.paragraph_format.space_before = Pt(1); p_frez.paragraph_format.space_after = Pt(1)
+        r_frez = p_frez.add_run(frezerovka); font(r_frez, 9)
+
+        # ── Изображение проекта — занимает максимум места
         tech_img = str(c.get('tech_image_url') or '').strip()
+        # Доступная высота для картинки: 210 - 5(top) - 5(bot) - ~18(заголовок) - ~20(таблица) - ~18(дисклеймер+подписи) = ~144мм
+        IMG_H = Mm(133)
+        IMG_W = CONTENT_W  # на всю ширину
+
         if tech_img:
             try:
                 import urllib.request, io as _io
                 req = urllib.request.Request(tech_img, headers={'User-Agent': 'Mozilla/5.0'})
-                img_bytes = urllib.request.urlopen(req, timeout=15).read()
-                p_img = doc.add_paragraph()
-                p_img.paragraph_format.space_before = Pt(4)
-                p_img.paragraph_format.space_after  = Pt(2)
+                img_bytes = urllib.request.urlopen(req, timeout=20).read()
+
+                # Определяем реальные размеры картинки чтобы вписать с сохранением пропорций
+                try:
+                    import struct, zlib
+                    def _img_size(data):
+                        if data[:8] == b'\x89PNG\r\n\x1a\n':
+                            w, h = struct.unpack('>II', data[16:24])
+                            return w, h
+                        if data[:2] == b'\xff\xd8':
+                            i = 2
+                            while i < len(data):
+                                marker = data[i:i+2]
+                                if marker in (b'\xff\xc0', b'\xff\xc2'):
+                                    h, w = struct.unpack('>HH', data[i+5:i+9])
+                                    return w, h
+                                length = struct.unpack('>H', data[i+2:i+4])[0]
+                                i += 2 + length
+                        return None, None
+                    iw, ih = _img_size(img_bytes)
+                    if iw and ih:
+                        ratio = iw / ih
+                        if IMG_W / ratio <= IMG_H:
+                            add_kw = {'width': IMG_W}
+                        else:
+                            add_kw = {'height': IMG_H}
+                    else:
+                        add_kw = {'width': IMG_W}
+                except Exception:
+                    add_kw = {'width': IMG_W}
+
+                # Рамка вокруг картинки
+                p_border = doc.add_paragraph()
+                p_border.paragraph_format.space_before = Pt(3)
+                p_border.paragraph_format.space_after  = Pt(3)
+                p_border.alignment = WD_ALIGN_PARAGRAPH.CENTER
+
+                # Таблица 1×1 для рамки вокруг изображения
+                tbl_img = doc.add_table(rows=1, cols=1)
+                tbl_img.style = 'Table Grid'
+                cell_img = tbl_img.cell(0, 0)
+                cell_img.width = IMG_W
+                from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+                cell_img.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+                p_img = cell_img.paragraphs[0]
                 p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                p_img.add_run().add_picture(_io.BytesIO(img_bytes), width=Mm(280))
+                p_img.paragraph_format.space_before = Pt(2)
+                p_img.paragraph_format.space_after  = Pt(2)
+                p_img.add_run().add_picture(_io.BytesIO(img_bytes), **add_kw)
+
             except Exception as ex:
                 logger.warning(f'tech img failed: {ex}')
-                p_ph = doc.add_paragraph()
-                p_ph.paragraph_format.space_before = Pt(160)
-                p_ph.paragraph_format.space_after  = Pt(4)
-                p_ph.add_run('Место для схемы / эскиза:')
+                # Пустая рамка-заглушка
+                tbl_img = doc.add_table(rows=1, cols=1)
+                tbl_img.style = 'Table Grid'
+                cell_img = tbl_img.cell(0, 0)
+                cell_img.width = IMG_W
+                p_ph = cell_img.paragraphs[0]
+                p_ph.paragraph_format.space_before = Pt(55)
+                p_ph.paragraph_format.space_after  = Pt(55)
+                p_ph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                r_ph = p_ph.add_run('[ Место для схемы / эскиза проекта ]'); font(r_ph, 10)
         else:
-            p_ph = doc.add_paragraph()
-            p_ph.paragraph_format.space_before = Pt(160)
-            p_ph.paragraph_format.space_after  = Pt(4)
-            p_ph.add_run('Место для схемы / эскиза:')
+            tbl_img = doc.add_table(rows=1, cols=1)
+            tbl_img.style = 'Table Grid'
+            cell_img = tbl_img.cell(0, 0)
+            cell_img.width = IMG_W
+            p_ph = cell_img.paragraphs[0]
+            p_ph.paragraph_format.space_before = Pt(55)
+            p_ph.paragraph_format.space_after  = Pt(55)
+            p_ph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            r_ph = p_ph.add_run('[ Место для схемы / эскиза проекта ]'); font(r_ph, 10)
 
+        # ── Дисклеймер
         p_disc = doc.add_paragraph()
-        p_disc.paragraph_format.space_before = Pt(2); p_disc.paragraph_format.space_after = Pt(2)
-        r_disc = p_disc.add_run('Подписывая Технический проект, Заказчик подтверждает, что ознакомлен с наименованием, качественными характеристиками, количеством, дизайном мебели и ему полностью понятны выполняемые Подрядчиком работы. Приложение: бланк замера.')
+        p_disc.paragraph_format.space_before = Pt(2)
+        p_disc.paragraph_format.space_after  = Pt(2)
+        r_disc = p_disc.add_run(
+            'Подписывая Технический проект, Заказчик подтверждает, что ознакомлен с наименованием, '
+            'качественными характеристиками, количеством, дизайном мебели и ему полностью понятны '
+            'выполняемые Подрядчиком работы. Стороны согласовали, что мебель изготовлена специально '
+            'для Заказчика по его индивидуальным параметрам. Приложение: бланк замера.'
+        )
         font(r_disc, 8); r_disc.italic = True
 
+        # ── Таблица подписей
         sig_table(
             f'Подрядчик: {co_name.upper()}',
             f'Менеджер\n\n______________________________\nМ.П.',
