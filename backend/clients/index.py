@@ -1670,12 +1670,19 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 <p style="margin-top:16px;font-style:italic">Соблюдая эти несложные правила, вы сохраните безупречный вид и функциональность вашей мебели на долгие годы. Помните: что несоблюдение правил эксплуатации может привести к сокращению сроков службы и преждевременному выходу из строя элементов кухонной мебели.</p>
 <p style="margin-top:12px;font-weight:bold">ВНИМАНИЕ! Подрядчик не несет ответственность за последствия от несоблюдения установленных норм и правил по уходу и эксплуатации корпусной мебели.</p>
 
-<table style="margin-top:30px"><tr><th style="width:50%">Подрядчик: ООО «ИНТЕРЬЕРНЫЕ РЕШЕНИЯ»</th><th style="width:50%">Заказчик:</th></tr>
-<tr><td style="height:50px">&nbsp;</td><td>&nbsp;</td></tr>
-<tr><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
-<tr><td style="height:50px">&nbsp;</td><td>&nbsp;</td></tr>
-</table>
-<p class="center" style="margin-top:30px">М.П.</p>
+<div style="display:flex;justify-content:space-between;margin-top:30px">
+<div>
+<p class="no-indent" style="font-weight:bold">Подрядчик: {co_name.upper()}</p>
+<br><br>
+<span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+<p class="no-indent" style="margin-top:4px">М.П.</p>
+</div>
+<div style="text-align:right">
+<p class="no-indent" style="font-weight:bold">Заказчик: {fname}</p>
+<br><br>
+<span class="ul" style="min-width:200px">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+</div>
+</div>
 </div></body></html>'''
 
     elif doc_type == 'act_delivery':
