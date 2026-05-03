@@ -1302,13 +1302,13 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 <p class="no-indent" style="text-align:center;font-size:8.5pt">Приложение № 4 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
 <h1>«Акт выполненных работ»</h1>
 <p class="center" style="margin-bottom:6px">от «____» ________________ 20____ г.</p>
-<p class="no-indent" style="margin-top:8px">{co_name}, в лице менеджера <strong>{manager_name}</strong>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик» и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», подписали настоящий Акт выполненных работ о нижеследующем:</p>
-<p class="no-indent" style="margin-top:8px">1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда № {contract_num} от {contract_date_full}:</p>
+<p class="no-indent" style="margin-top:16px">{co_name}, в лице менеджера <strong>{manager_name}</strong>, действующего на основании {poa_str}, именуемый в дальнейшем «Подрядчик» и гр. <strong>{fname}</strong>, именуемый (ая) в дальнейшем «Заказчик», подписали настоящий Акт выполненных работ о нижеследующем:</p>
+<p class="no-indent" style="margin-top:16px">1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда № {contract_num} от {contract_date_full}:</p>
 <table><tr><th style="width:5%">№</th><th>Наименование мебели, включая ее элементы</th><th style="width:13%">Ед. измерения</th><th style="width:12%">Кол-во изделий</th><th style="width:18%">Стоимость в руб.</th></tr>
 {product_rows}
 <tr><td colspan="4" style="text-align:right;font-weight:bold">ИТОГО:</td><td style="text-align:right;font-weight:bold">{total:,.0f} ({total_words})</td></tr>
 </table>
-<p class="no-indent" style="margin-top:8px">2. Комплектность, количество, вид, характеристики мебели соответствуют условиям договора. Визуальный осмотр мебели на предмет повреждений, царапин, сколов, трещин и других недостатков произведен Заказчиком. Фурнитура (петли, выдвижные механизмы, подъемные механизмы и т.д.) работает исправно. Заказчик претензий по объему, качеству, результату и срокам выполнения работ: <strong>не имеет / имеет</strong> (ненужное зачеркнуть).</p>
+<p class="no-indent" style="margin-top:16px">2. Комплектность, количество, вид, характеристики мебели соответствуют условиям договора. Визуальный осмотр мебели на предмет повреждений, царапин, сколов, трещин и других недостатков произведен Заказчиком. Фурнитура (петли, выдвижные механизмы, подъемные механизмы и т.д.) работает исправно. Заказчик претензий по объему, качеству, результату и срокам выполнения работ: <strong>не имеет / имеет</strong> (ненужное зачеркнуть).</p>
 
 <div style="margin:12px 0">
   <div style="border-bottom:1px solid #000;margin-bottom:10px;height:18px">&nbsp;</div>
