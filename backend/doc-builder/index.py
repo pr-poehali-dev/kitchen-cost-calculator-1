@@ -265,6 +265,9 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
     co_bank    = co(company,'bank','')
     co_bik     = co(company,'bik','')
     co_rs      = co(company,'rs','')
+    co_ks      = co(company,'ks','')
+    co_phone   = co(company,'phone','')
+    co_email   = co(company,'email','')
 
     # Данные клиента
     fname          = full_name(c)
@@ -585,33 +588,43 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         para('3. Правила эксплуатации корпусной мебели.', indent=False)
         para('4. Образец Акта выполненных работ.', indent=False)
 
-        # Раздел реквизитов — принудительно на новой странице чтобы не разрывался
-        from docx.oxml.ns import qn as _qn
-        from docx.oxml import OxmlElement as _OxmlElement
+        # Раздел реквизитов — keep_with_next, без принудительного переноса страницы
         p_sec11 = doc.add_paragraph()
-        p_sec11.paragraph_format.space_before = Pt(4)
-        p_sec11.paragraph_format.space_after  = Pt(1)
+        p_sec11.paragraph_format.space_before   = Pt(4)
+        p_sec11.paragraph_format.space_after    = Pt(1)
         p_sec11.paragraph_format.keep_with_next = True
-        # page break before — чтобы реквизиты всегда начинались на новой странице
-        pPr = p_sec11._p.get_or_add_pPr()
-        pb = _OxmlElement('w:pageBreakBefore')
-        pb.set(_qn('w:val'), '1')
-        pPr.append(pb)
         r11 = p_sec11.add_run('11. РЕКВИЗИТЫ СТОРОН'); font(r11, bold=True)
 
         inn_kpp = f'ИНН/КПП: {co_inn}/{co_kpp}' if co_kpp else f'ИНН: {co_inn}'
-        left_body  = f'{co_name}\n{inn_kpp}\nОГРН: {co_ogrn}\nЮридический и фактический адрес: {co_addr}'
-        if co_bank: left_body += f'\nБанковские реквизиты:\n{co_bank}'
-        if co_rs:   left_body += f'\nРас/с: {co_rs}'
-        if co_bik:  left_body += f'\nБИК: {co_bik}'
-        co_phone = co(company,'phone','')
-        co_email = co(company,'email','')
+        left_body = f'{co_name}\n{inn_kpp}\nОГРН: {co_ogrn}\nЮридический и фактический адрес: {co_addr}'
+        if co_bank or co_bik or co_rs or co_ks:
+            left_body += '\nБанковские реквизиты:'
+            if co_bank: left_body += f'\n{co_bank}'
+            if co_bik:  left_body += f'\nБИК: {co_bik}'
+            if co_rs:   left_body += f'\nРас/с: {co_rs}'
+            if co_ks:   left_body += f'\nКор/с: {co_ks}'
         if co_phone: left_body += f'\nТелефон: {co_phone}'
         if co_email: left_body += f'\nE-mail: {co_email}'
-        left_body += f'\n\nМенеджер:\n{manager_line}\n\n\n_________________________ М.П.'
+        left_body += f'\n\nМенеджер:\n{manager_line}\n\n_________________________ \n(подпись) М.П.'
 
-        reg_addr = ', '.join(filter(None,[c.get('reg_city',''), c.get('reg_street',''), c.get('reg_house','')]))
-        right_body = f'{fname}\nПаспорт. Серия, номер:\n{passport_str(c)}\nКем выдан:\n{c.get("passport_issued_by") or "___________"}\nАдрес прописки:\n{reg_addr or "___________"}\n\nТелефон:\n{c.get("phone") or "___________"}\nПредпочитаемый канал обмена сообщениями:\n{c.get("messenger") or "НЕТ"}\n\n\n_________________________'
+        reg_city  = c.get('reg_city','') or ''
+        reg_str   = c.get('reg_street','') or ''
+        reg_house = c.get('reg_house','') or ''
+        reg_apt   = c.get('reg_apt','') or ''
+        reg_addr  = ', '.join(filter(None, [reg_city, reg_str, reg_house]))
+        if reg_apt: reg_addr += f', кв. {reg_apt}'
+
+        passport_issued_date = fmt_date(c.get('passport_issued_date') or '')
+        passport_dept = c.get('passport_dept_code','') or ''
+        passport_date_dept = ', '.join(filter(None, [passport_issued_date, passport_dept]))
+
+        right_body = f'{fname}\nПаспорт. Серия, номер: {passport_str(c)}'
+        right_body += f'\nКем выдан: {c.get("passport_issued_by") or "___________"}'
+        if passport_date_dept: right_body += f'\nДата выдачи: {passport_date_dept}'
+        right_body += f'\n\nАдрес прописки:\n{reg_addr or "___________"}'
+        right_body += f'\n\nТелефон: {c.get("phone") or "___________"}'
+        if c.get('messenger'): right_body += f'\nПредпочитаемый канал обмена сообщениями: {c.get("messenger")}'
+        right_body += '\n\n_________________________\n(подпись)'
         sig_table('Подрядчик:', left_body, 'Заказчик:', right_body)
 
     # ══════════════════════════════════════════════════════════════════════════
