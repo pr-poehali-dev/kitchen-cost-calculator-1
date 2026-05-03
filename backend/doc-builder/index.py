@@ -406,9 +406,12 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         # Заголовки
         fill_cell(t.cell(0,0), left_header,  bold=True, center=True)
         fill_cell(t.cell(0,1), right_header, bold=True, center=True)
-        # Содержимое
+        # Содержимое — выравнивание по нижнему краю
         fill_cell(t.cell(1,0), left_body)
         fill_cell(t.cell(1,1), right_body)
+        from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+        t.cell(1,0).vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.BOTTOM
+        t.cell(1,1).vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.BOTTOM
         return t
 
     def simple_table(headers, rows, col_widths=None):
