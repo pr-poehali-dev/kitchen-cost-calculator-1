@@ -47,6 +47,7 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
 
   // Состояние фильтров
   const [catFilter, setCatFilter] = useState<string>('all');
+  const [mfrFilter, setMfrFilter] = useState<string>('all');
   const [search, setSearch] = useState(initialSearch);
   const [showArchived, setShowArchived] = useState(false);
 
@@ -72,16 +73,27 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
     return list.filter(m => m.categoryId === catFilter);
   }, [typeFiltered, catFilter]);
 
+  const mfrFiltered = useMemo(() => {
+    if (mfrFilter === 'all') return catFiltered;
+    return catFiltered.filter(m => m.manufacturerId === mfrFilter);
+  }, [catFiltered, mfrFilter]);
+
+  // Производители, присутствующие в текущей typeFiltered (для дропдауна)
+  const visibleManufacturers = useMemo(() => {
+    const ids = new Set((Array.isArray(catFiltered) ? catFiltered : []).map(m => m.manufacturerId));
+    return (catalog.manufacturers ?? []).filter(m => ids.has(m.id));
+  }, [catFiltered, catalog.manufacturers]);
+
   const filteredMaterials = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const list = (Array.isArray(catFiltered) ? catFiltered : []).filter(m => showArchived ? m.archived : !m.archived);
+    const list = (Array.isArray(mfrFiltered) ? mfrFiltered : []).filter(m => showArchived ? m.archived : !m.archived);
     if (!q) return list;
     return list.filter(m =>
       (m.name || '').toLowerCase().includes(q) ||
       (m.article || '').toLowerCase().includes(q) ||
       (m.color || '').toLowerCase().includes(q)
     );
-  }, [catFiltered, search, showArchived]);
+  }, [mfrFiltered, search, showArchived]);
 
   // Сбрасываем выделение при смене фильтра
   useEffect(() => {
@@ -190,6 +202,9 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
           onSearchChange={setSearch}
           catFilter={catFilter}
           onCatFilterChange={setCatFilter}
+          mfrFilter={mfrFilter}
+          onMfrFilterChange={v => { setMfrFilter(v); setSelected(new Set()); }}
+          visibleManufacturers={visibleManufacturers}
           showArchived={showArchived}
           onShowArchivedChange={setShowArchived}
           staleCount={staleCount}

@@ -1,5 +1,5 @@
 import { useCatalog, updateMaterial } from '@/hooks/useCatalog';
-import type { MaterialCategory } from '@/store/types';
+import type { MaterialCategory, Manufacturer } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import SearchInput from '@/components/ui/search-input';
 
@@ -8,6 +8,9 @@ interface Props {
   onSearchChange: (v: string) => void;
   catFilter: string;
   onCatFilterChange: (v: string) => void;
+  mfrFilter: string;
+  onMfrFilterChange: (v: string) => void;
+  visibleManufacturers: Manufacturer[];
   showArchived: boolean;
   onShowArchivedChange: (v: boolean) => void;
   staleCount: number;
@@ -27,6 +30,7 @@ interface Props {
 export default function MatFilterBar({
   search, onSearchChange,
   catFilter, onCatFilterChange,
+  mfrFilter, onMfrFilterChange, visibleManufacturers,
   showArchived, onShowArchivedChange,
   staleCount, archivedCount,
   visibleCategories, hasNoCat,
@@ -77,34 +81,52 @@ export default function MatFilterBar({
         )}
       </div>
 
-      {/* Поиск + фильтр по категории */}
+      {/* Поиск + фильтры */}
       <div className="flex items-center gap-2 mb-3 flex-wrap">
         <SearchInput
           value={search}
           onChange={onSearchChange}
           placeholder="Поиск по названию, артикулу, цвету..."
-          className="flex-1 min-w-0 sm:flex-none sm:w-72"
+          className="flex-1 min-w-0 sm:flex-none sm:w-64"
         />
 
+        {/* Фильтр по производителю */}
+        {visibleManufacturers.length > 0 && (
+          <select
+            value={mfrFilter}
+            onChange={e => onMfrFilterChange(e.target.value)}
+            className={`bg-[hsl(220,12%,14%)] border rounded px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors cursor-pointer ${mfrFilter !== 'all' ? 'border-gold/60 text-gold' : 'border-border'}`}
+          >
+            <option value="all">Все производители</option>
+            {visibleManufacturers.map(m => (
+              <option key={m.id} value={m.id}>{m.name}</option>
+            ))}
+          </select>
+        )}
+
+        {/* Фильтр по категории */}
         {(visibleCategories.length > 0 || hasNoCat) && (
-          <>
-            <select
-              value={catFilter}
-              onChange={e => onCatFilterChange(e.target.value)}
-              className="bg-[hsl(220,12%,14%)] border border-border rounded px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors cursor-pointer"
-            >
-              <option value="all">Все категории</option>
-              {visibleCategories.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-              {hasNoCat && <option value="none">Без категории</option>}
-            </select>
-            {catFilter !== 'all' && (
-              <button onClick={() => onCatFilterChange('all')} className="text-xs text-[hsl(var(--text-muted))] hover:text-foreground transition-colors flex items-center gap-1">
-                <Icon name="X" size={12} /> Сбросить
-              </button>
-            )}
-          </>
+          <select
+            value={catFilter}
+            onChange={e => onCatFilterChange(e.target.value)}
+            className={`bg-[hsl(220,12%,14%)] border rounded px-2.5 py-1.5 text-xs text-foreground outline-none focus:border-gold transition-colors cursor-pointer ${catFilter !== 'all' ? 'border-gold/60 text-gold' : 'border-border'}`}
+          >
+            <option value="all">Все категории</option>
+            {visibleCategories.map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+            {hasNoCat && <option value="none">Без категории</option>}
+          </select>
+        )}
+
+        {/* Сброс активных фильтров */}
+        {(mfrFilter !== 'all' || catFilter !== 'all') && (
+          <button
+            onClick={() => { onMfrFilterChange('all'); onCatFilterChange('all'); }}
+            className="text-xs text-[hsl(var(--text-muted))] hover:text-foreground transition-colors flex items-center gap-1"
+          >
+            <Icon name="X" size={12} /> Сбросить
+          </button>
         )}
 
         <span className="text-xs text-[hsl(var(--text-muted))] ml-auto">
