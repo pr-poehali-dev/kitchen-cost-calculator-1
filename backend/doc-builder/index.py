@@ -740,7 +740,8 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         # Итого 272мм: 25 + 86 + 35 + 86 + 20 (подсветка доп)
         tbl = doc.add_table(rows=4, cols=6)
         tbl.style = 'Table Grid'
-        col_w = [Cm(2.5), Cm(9.3), Cm(3.5), Cm(9.3), Cm(1.8), Cm(8.3)]
+        # Итого 28.7cm = 287мм = CONTENT_W
+        col_w = [Cm(2.5), Cm(8.0), Cm(3.5), Cm(8.0), Cm(1.8), Cm(4.9)]
         for row in tbl.rows:
             for ci, w in enumerate(col_w):
                 row.cells[ci].width = w
@@ -884,7 +885,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
             tab.set(_sqn('w:val'), 'left')
             tab.set(_sqn('w:pos'), str(int(pos_cm * 567)))
             tabs.append(tab)
-        _add_tab(p_names, 13.5)
+        _add_tab(p_names, 17.0)
         r_n1 = p_names.add_run(f'Подрядчик: {co_name.upper()}'); font(r_n1, 8, bold=True)
         p_names.add_run('\t')
         r_n2 = p_names.add_run(f'Заказчик:  {fname}'); font(r_n2, 8, bold=True)
@@ -893,7 +894,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         p_lines = doc.add_paragraph()
         p_lines.paragraph_format.space_before = Pt(8)
         p_lines.paragraph_format.space_after  = Pt(0)
-        _add_tab(p_lines, 13.5)
+        _add_tab(p_lines, 17.0)
         r_l1 = p_lines.add_run('______________________________'); font(r_l1, 9)
         p_lines.add_run('\t')
         r_l2 = p_lines.add_run('______________________________'); font(r_l2, 9)
