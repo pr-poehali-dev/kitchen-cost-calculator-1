@@ -816,7 +816,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         p_img = ic.paragraphs[0]
         p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
         # Отступ сверху чтобы картинка была по центру ячейки
-        p_img.paragraph_format.space_before = Mm(15)
+        p_img.paragraph_format.space_before = Pt(0)
         p_img.paragraph_format.space_after  = Pt(0)
 
         print(f'[TECH] tech_img={tech_img[:80] if tech_img else "EMPTY"}')
@@ -834,11 +834,8 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
                 pil_img.convert('RGB').save(buf, format='JPEG', quality=90)
                 buf.seek(0)
 
-                if iw > 0 and ih > 0:
-                    projected_h = int((IMG_W / iw) * ih)
-                    add_kw = {'width': IMG_W} if projected_h <= IMG_H else {'height': IMG_H}
-                else:
-                    add_kw = {'width': IMG_W}
+                # Всегда вставляем по ширине — ячейка фиксирована, картинка масштабируется
+                add_kw = {'width': IMG_W}
 
                 print(f'[TECH] add_picture kw={add_kw}')
                 p_img.add_run().add_picture(buf, **add_kw)
