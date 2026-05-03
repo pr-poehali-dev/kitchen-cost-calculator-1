@@ -842,8 +842,8 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
                 p_img.add_run().add_picture(buf, **add_kw)
                 logger.info('tech img OK')
             except Exception as ex:
-                logger.warning(f'tech img FAILED: {ex}\n{_tb.format_exc()}')
-                font(p_img.add_run(f'[ ОШИБКА ФОТО: {ex} ]'), 8)
+                logger.info(f'tech img FAILED: {ex}\n{_tb.format_exc()}')
+                font(p_img.add_run(f'[ ОШИБКА: {ex} ]'), 8)
         else:
             font(p_img.add_run('[ Место для схемы / эскиза проекта ]'), 10)
 
