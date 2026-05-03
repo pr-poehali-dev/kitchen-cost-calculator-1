@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
-import { useCatalog, deleteMaterial, updateMaterial } from '@/hooks/useCatalog';
+import { useCatalog, deleteMaterial, updateMaterial, bulkDeleteMaterials } from '@/hooks/useCatalog';
 import type { Material } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import PricelistUpdateModal from './materials/PricelistUpdateModal';
@@ -174,7 +174,7 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
   };
 
   const handleBulkDelete = async () => {
-    for (const id of selected) await deleteMaterial(id);
+    await bulkDeleteMaterials([...selected]);
     setSelected(new Set());
     setConfirmDelete(false);
   };

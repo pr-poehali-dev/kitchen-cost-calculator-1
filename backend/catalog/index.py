@@ -300,6 +300,19 @@ def update_prices_batch(conn, user_id, updates: list):
     return count
 
 
+def bulk_delete_materials(conn, user_id: int, ids: list) -> int:
+    if not ids:
+        return 0
+    schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+    cur = conn.cursor()
+    placeholders = ','.join(['%s'] * len(ids))
+    cur.execute(
+        f'DELETE FROM {schema}.catalog_materials WHERE user_id = %s AND id IN ({placeholders})',
+        [user_id] + ids
+    )
+    return cur.rowcount
+
+
 # ── Handler ───────────────────────────────────────────────────
 
 def handler(event: dict, context) -> dict:
@@ -315,6 +328,7 @@ def handler(event: dict, context) -> dict:
     POST ?action=delete_material&id=...           — удалить материал
     POST ?action=bulk_upsert_materials            — пакетная загрузка материалов (импорт)
     POST ?action=update_prices_batch              — пакетное обновление цен
+    POST ?action=bulk_delete_materials            — удалить массив материалов по списку id
     POST ?action=bulk_delete_by_article_prefix    — удалить материалы по префиксу артикула
     POST ?action=sync_all                         — синхронизировать весь каталог из AppState (миграция)
     """
@@ -399,6 +413,13 @@ def handler(event: dict, context) -> dict:
                 if not mid:
                     return err('Нет id')
                 return ok({'ok': delete_material(conn, user_id, mid)})
+
+            if action == 'bulk_delete_materials':
+                ids = body.get('ids', [])
+                if not ids:
+                    return err('Нет ids')
+                count = bulk_delete_materials(conn, user_id, ids)
+                return ok({'deleted': count})
 
             if action == 'bulk_upsert_materials':
                 materials = body.get('materials', [])

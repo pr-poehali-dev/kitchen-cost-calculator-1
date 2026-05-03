@@ -188,6 +188,22 @@ export async function deleteMaterial(id: string): Promise<void> {
   setCache({ materials: _cache.materials.filter(m => m.id !== id) });
 }
 
+export async function bulkDeleteMaterials(ids: string[]): Promise<void> {
+  if (!ids.length) return;
+  // Удаляем чанками по 500 чтобы не превысить лимит URL/body
+  const CHUNK = 500;
+  for (let i = 0; i < ids.length; i += CHUNK) {
+    const chunk = ids.slice(i, i + CHUNK);
+    await fetch(`${API_URLS.catalog}/?action=bulk_delete_materials`, {
+      method: 'POST',
+      headers: { ...authHeaders(), 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: chunk }),
+    });
+  }
+  const deleted = new Set(ids);
+  setCache({ materials: _cache.materials.filter(m => !deleted.has(m.id)) });
+}
+
 export async function duplicateMaterial(id: string): Promise<void> {
   const src = _cache.materials.find(m => m.id === id);
   if (!src) return;
