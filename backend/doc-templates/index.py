@@ -57,7 +57,7 @@ def handler(event: dict, context) -> dict:
     if not payload:
         return err('Не авторизован', 401)
 
-    user_id = payload.get('sub') or payload.get('user_id') or payload.get('id')
+    user_id = str(payload.get('sub') or payload.get('user_id') or payload.get('id') or '')
     method = event.get('httpMethod', 'GET')
     qs = event.get('queryStringParameters') or {}
     template_id = qs.get('id')
