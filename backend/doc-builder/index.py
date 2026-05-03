@@ -816,23 +816,29 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
                 except Exception:
                     add_kw = {'width': IMG_W}
 
-                # Рамка вокруг картинки
-                p_border = doc.add_paragraph()
-                p_border.paragraph_format.space_before = Pt(3)
-                p_border.paragraph_format.space_after  = Pt(3)
-                p_border.alignment = WD_ALIGN_PARAGRAPH.CENTER
-
-                # Таблица 1×1 для рамки вокруг изображения
+                # Таблица 1×1 для рамки вокруг изображения — без лишних параграфов
+                from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
+                from docx.oxml.ns import qn as _tqn
+                from docx.oxml import OxmlElement as _tEl
                 tbl_img = doc.add_table(rows=1, cols=1)
                 tbl_img.style = 'Table Grid'
+                # Задаём минимальную высоту строки = IMG_H
+                tr = tbl_img.rows[0]._tr
+                trPr = tr.get_or_add_trPr()
+                trHeight = _tEl('w:trHeight')
+                # IMG_H в EMU → в твипах: 1 twip = 914400/72/20 EMU = 635 EMU; IMG_H в Mm → мм*56.7 твипов
+                _img_h_mm = 133  # мм
+                trHeight.set(_tqn('w:val'), str(int(_img_h_mm * 56.7)))
+                trHeight.set(_tqn('w:hRule'), 'atLeast')
+                trPr.append(trHeight)
+
                 cell_img = tbl_img.cell(0, 0)
                 cell_img.width = IMG_W
-                from docx.enum.table import WD_CELL_VERTICAL_ALIGNMENT
                 cell_img.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
                 p_img = cell_img.paragraphs[0]
                 p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                p_img.paragraph_format.space_before = Pt(2)
-                p_img.paragraph_format.space_after  = Pt(2)
+                p_img.paragraph_format.space_before = Pt(1)
+                p_img.paragraph_format.space_after  = Pt(1)
                 p_img.add_run().add_picture(_io.BytesIO(img_bytes), **add_kw)
 
             except Exception as ex:
