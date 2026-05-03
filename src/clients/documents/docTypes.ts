@@ -44,8 +44,8 @@ export interface DocDef {
 export const DOCS: DocDef[] = [
   { id: 'contract',       title: 'Договор бытового подряда',   subtitle: 'Основной договор на изготовление мебели',             icon: 'FileText',       appendix: '',        group: 'Изготовление' },
   { id: 'tech',           title: 'Технический проект',          subtitle: 'Приложение № 1 — характеристики изделия',             icon: 'Ruler',          appendix: 'Прил. №1', group: 'Изготовление' },
-  { id: 'act',            title: 'Акт выполненных работ',       subtitle: 'Приложение № 4 — приёмка мебели',                     icon: 'ClipboardCheck', appendix: 'Прил. №4', group: 'Изготовление' },
   { id: 'rules',          title: 'Правила эксплуатации',        subtitle: 'Приложение № 3 — уход за мебелью и гарантия',         icon: 'BookOpen',       appendix: 'Прил. №3', group: 'Изготовление' },
+  { id: 'act',            title: 'Акт выполненных работ',       subtitle: 'Приложение № 4 — приёмка мебели',                     icon: 'ClipboardCheck', appendix: 'Прил. №4', group: 'Изготовление' },
   { id: 'delivery',       title: 'Договор доставки',            subtitle: 'Договор на оказание услуг по доставке мебели',        icon: 'Truck',          appendix: '',        group: 'Доставка и монтаж' },
   { id: 'act_delivery',   title: 'Акт приёма доставки',         subtitle: 'Приёмка мебели по факту доставки',                    icon: 'PackageCheck',   appendix: '',        group: 'Доставка и монтаж' },
   { id: 'assembly',       title: 'Договор монтажа',             subtitle: 'Договор на сборку и монтаж мебели',                   icon: 'Wrench',         appendix: '',        group: 'Доставка и монтаж' },

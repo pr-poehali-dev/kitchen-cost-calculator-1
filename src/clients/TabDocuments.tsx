@@ -20,10 +20,16 @@ export default function TabDocuments({ client, hasDraft, onSave, saving }: {
   });
   const [downloadingAll, setDownloadingAll] = useState(false);
   const [downloadingZip, setDownloadingZip] = useState(false);
+  const [downloadingZipPdf, setDownloadingZipPdf] = useState(false);
 
   const markSent = (docId: string, channel: string) => {
-    setSentStatus(client.id, docId, channel);
-    setSentMap(prev => ({ ...prev, [docId]: { date: new Date().toISOString().slice(0, 10), channel } }));
+    if (!channel) {
+      localStorage.removeItem(`doc_sent_${client.id}_${docId}`);
+      setSentMap(prev => ({ ...prev, [docId]: null }));
+    } else {
+      setSentStatus(client.id, docId, channel);
+      setSentMap(prev => ({ ...prev, [docId]: { date: new Date().toISOString().slice(0, 10), channel } }));
+    }
   };
 
   const handleDownloadAll = async () => {
@@ -71,10 +77,34 @@ export default function TabDocuments({ client, hasDraft, onSave, saving }: {
         a.download = data.filename || `Документы — ${clientName}.zip`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-        toast.success('ZIP-архив скачан');
+        toast.success('ZIP DOCX скачан');
       } else { toast.error('Ошибка генерации архива'); }
     } catch { toast.error('Ошибка при скачивании'); }
     finally { setDownloadingZip(false); }
+  };
+
+  const handleDownloadZipPdf = async () => {
+    setDownloadingZipPdf(true);
+    try {
+      if (hasDraft && onSave) await onSave();
+      for (const doc of DOCS) {
+        try {
+          const res = await apiFetch('doc_html', client.id, doc.id);
+          if (!res.ok) continue;
+          const html = await res.text();
+          const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+          const blobUrl = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = blobUrl;
+          a.download = `${doc.title} — ${clientName}.html`;
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+          await new Promise(r => setTimeout(r, 600));
+        } catch { /* skip */ }
+      }
+      toast.success('Все HTML-файлы скачаны — откройте каждый и напечатайте в PDF');
+    } catch { toast.error('Ошибка при скачивании'); }
+    finally { setDownloadingZipPdf(false); }
   };
 
   const hasData = client.contract_number || client.last_name;
@@ -108,19 +138,19 @@ export default function TabDocuments({ client, hasDraft, onSave, saving }: {
         <div className="flex flex-col gap-2 shrink-0">
           <button
             onClick={handleDownloadZip}
-            disabled={downloadingZip || downloadingAll}
+            disabled={downloadingZip || downloadingZipPdf}
             className="flex items-center gap-2 px-4 py-2 border border-emerald-500/40 rounded text-xs text-emerald-400 hover:text-emerald-300 hover:border-emerald-500 transition-all disabled:opacity-60"
           >
             {downloadingZip ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="FolderArchive" size={13} />}
-            Скачать ZIP
+            Скачать ZIP docx
           </button>
           <button
-            onClick={handleDownloadAll}
-            disabled={downloadingAll || downloadingZip}
-            className="flex items-center gap-2 px-4 py-2 border border-border rounded text-xs text-[hsl(var(--text-dim))] hover:text-gold hover:border-gold/50 transition-all disabled:opacity-60"
+            onClick={handleDownloadZipPdf}
+            disabled={downloadingZipPdf || downloadingZip}
+            className="flex items-center gap-2 px-4 py-2 border border-emerald-500/40 rounded text-xs text-emerald-400 hover:text-emerald-300 hover:border-emerald-500 transition-all disabled:opacity-60"
           >
-            {downloadingAll ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="Download" size={13} />}
-            Скачать все (.docx)
+            {downloadingZipPdf ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="FolderArchive" size={13} />}
+            Скачать ZIP pdf
           </button>
         </div>
       </div>
