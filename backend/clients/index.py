@@ -937,7 +937,7 @@ def _doc_style(title='', contract_num=''):
 }}
 *{{box-sizing:border-box;margin:0;padding:0}}
 html{{background:#2d2d2d;min-height:100vh}}
-body{{font-family:'PT Serif',Georgia,serif;font-size:8.8pt;line-height:1.18;color:#000;background:transparent}}
+body{{font-family:'PT Serif',Georgia,serif;font-size:9pt;line-height:1.2;color:#000;background:transparent}}
 .page{{width:210mm;min-height:297mm;margin:8px auto;padding:8mm 8mm 8mm 13mm;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)}}
 @media screen and (max-width:900px){{
   .page{{width:100%;min-height:auto;padding:12mm 8mm 12mm 10mm;font-size:10pt}}
@@ -945,7 +945,7 @@ body{{font-family:'PT Serif',Georgia,serif;font-size:8.8pt;line-height:1.18;colo
 h1{{font-size:12pt;text-align:center;font-weight:bold;margin:0 0 3px;text-transform:uppercase;letter-spacing:.1em}}
 h2{{font-size:10pt;text-align:center;font-weight:normal;margin:0 0 10px}}
 .city-date{{display:flex;justify-content:space-between;margin:8px 0 10px;font-size:10pt}}
-p{{margin:0 0 1px;text-align:justify;text-indent:1.27cm;line-height:1.18;orphans:3;widows:3}}
+p{{margin:0 0 1px;text-align:justify;text-indent:1.27cm;line-height:1.2;orphans:3;widows:3}}
 p.no-indent{{text-indent:0}}
 p.center{{text-align:center;text-indent:0}}
 .sec{{font-weight:bold;margin:5px 0 1px;text-indent:0;font-size:9pt;page-break-after:avoid}}
@@ -1245,8 +1245,8 @@ def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
 <p class="no-indent">3. Правила эксплуатации корпусной мебели.</p>
 <p class="no-indent">4. Образец Акта выполненных работ</p>
 
-<p class="sec" style="page-break-before:always;page-break-after:avoid">11. РЕКВИЗИТЫ СТОРОН</p>
-<table style="page-break-inside:avoid">
+<p class="sec" style="page-break-before:avoid;page-break-after:avoid">11. РЕКВИЗИТЫ СТОРОН</p>
+<table style="page-break-inside:avoid;page-break-before:avoid">
 <tr><th style="width:50%">Подрядчик:</th><th style="width:50%">Заказчик:</th></tr>
 <tr>
 <td style="vertical-align:top;padding:10px 12px;font-size:10pt;line-height:1.7">
