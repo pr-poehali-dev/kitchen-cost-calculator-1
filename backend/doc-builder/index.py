@@ -743,8 +743,8 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         # Отключаем autofit — без этого Word игнорирует ширины колонок
         tbl.autofit = False
         tbl.allow_autofit = False
-        # Итого 28.7cm = 287мм = CONTENT_W: 2.5+8.0+3.5+8.0+1.8+4.9
-        col_w = [Cm(2.5), Cm(8.0), Cm(3.5), Cm(8.0), Cm(1.8), Cm(4.9)]
+        # Итого ~267мм (чуть меньше CONTENT_W с учётом отступов ячеек)
+        col_w = [Cm(2.3), Cm(7.5), Cm(3.3), Cm(7.5), Cm(1.7), Cm(4.4)]
         for row in tbl.rows:
             for ci, w in enumerate(col_w):
                 row.cells[ci].width = w
@@ -880,23 +880,24 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         sig.autofit = False
         sig.allow_autofit = False
         for row in sig.rows:
-            row.cells[0].width = Mm(115)
-            row.cells[1].width = Mm(172)
+            row.cells[0].width = Mm(100)
+            row.cells[1].width = Mm(167)
         _sb = _sEl('w:tblBorders')
         for _side in ('top','left','bottom','right','insideH','insideV'):
             _e = _sEl(f'w:{_side}'); _e.set(_sqn('w:val'),'none'); _sb.append(_e)
         sig._tbl.tblPr.append(_sb)
 
-        def _sc(row, col, text, bold=False, size=8, sb=3):
+        def _sc(row, col, text, bold=False, size=8, sb=3, align=WD_ALIGN_PARAGRAPH.LEFT):
             p = sig.cell(row, col).paragraphs[0]
             p.paragraph_format.space_before = Pt(sb)
             p.paragraph_format.space_after  = Pt(0)
+            p.alignment = align
             font(p.add_run(text), size, bold)
 
         _sc(0, 0, f'Подрядчик: {co_name.upper()}', bold=True)
-        _sc(0, 1, f'Заказчик:  {fname}', bold=True)
+        _sc(0, 1, f'Заказчик:  {fname}', bold=True, align=WD_ALIGN_PARAGRAPH.RIGHT)
         _sc(1, 0, '______________________________', size=9, sb=8)
-        _sc(1, 1, '______________________________', size=9, sb=8)
+        _sc(1, 1, '______________________________', size=9, sb=8, align=WD_ALIGN_PARAGRAPH.RIGHT)
         _sc(2, 0, 'М.П.', sb=1)
 
     # ══════════════════════════════════════════════════════════════════════════
