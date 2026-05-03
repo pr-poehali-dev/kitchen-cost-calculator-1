@@ -1598,16 +1598,7 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 
     elif doc_type == 'rules':
         style = _doc_style('Правила эксплуатации', contract_num)
-        rules_extra = '''<style>
-body{font-size:8.5pt!important;line-height:1.15!important}
-p{margin:0 0 1px!important;line-height:1.15!important}
-.sec{margin:10px 0 3px!important;font-size:8.5pt!important}
-h1{font-size:10.5pt!important;margin:2px 0 4px!important}
-.page{padding:8mm 8mm 8mm 13mm!important}
-@page{margin:8mm 8mm 8mm 13mm!important}
-@media print{body{font-size:8.5pt!important;line-height:1.15!important}}
-</style>'''
-        return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Правила эксплуатации мебели</title>{style}{rules_extra}</head><body><div class="page">
+        return f'''<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8"><title>Правила эксплуатации мебели</title>{style}</head><body><div class="page">
 <p class="no-indent" style="text-align:center;font-size:8.5pt">Приложение № 3 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date_full}</p>
 <h1>«Правила эксплуатации корпусной мебели»</h1>
 
