@@ -152,13 +152,22 @@ export default function SettingsDocTemplates() {
     setSelectedTemplate({ ...selectedTemplate, blocks });
   };
 
-  const addCustomBlock = () => {
+  const addBlock = (type: string) => {
     if (!selectedTemplate) return;
+    const defaults: Record<string, Partial<Block>> = {
+      paragraph:  { label: 'Новый пункт',          content: 'Текст нового пункта...' },
+      section:    { label: 'Новый раздел',          content: 'НАЗВАНИЕ РАЗДЕЛА' },
+      divider:    { label: 'Разделитель',           content: '' },
+      spacer:     { label: 'Отступ',                content: '20' },
+      lines:      { label: 'Линии для записей',     content: '6' },
+      table:      { label: 'Таблица',               content: 'Колонка 1;Колонка 2;Колонка 3\nЗначение 1;Значение 2;Значение 3' },
+    };
+    const d = defaults[type] || defaults.paragraph;
     const newBlock: Block = {
       id: `custom_${Date.now()}`,
-      type: 'paragraph',
-      label: 'Новый пункт',
-      content: 'Текст нового пункта...',
+      type,
+      label: d.label || 'Блок',
+      content: d.content || '',
       enabled: true,
     };
     setSelectedTemplate({ ...selectedTemplate, blocks: [...selectedTemplate.blocks, newBlock] });
@@ -197,6 +206,24 @@ ${blocks.map(b => {
     .replace(/\{\{компания\}\}/g, 'ООО «Интерьерные Решения»');
   if (b.type === 'header') return `<p style="text-align:center;font-size:8.5pt">${text}</p>`;
   if (b.type === 'section') return `<p class="sec">${text}</p>`;
+  if (b.type === 'divider') return `<hr style="border:none;border-top:1px solid #000;margin:8px 0"/>`;
+  if (b.type === 'spacer') return `<div style="height:${b.content || 20}px"></div>`;
+  if (b.type === 'lines') {
+    const count = parseInt(b.content) || 6;
+    return Array(count).fill(0).map(() =>
+      `<div style="border-bottom:1px solid #000;height:22px;margin-bottom:4px"></div>`
+    ).join('');
+  }
+  if (b.type === 'table') {
+    const rows = b.content.split('\n').filter(r => r.trim());
+    if (!rows.length) return '';
+    const header = rows[0].split(';');
+    const body = rows.slice(1);
+    return `<table style="width:100%;border-collapse:collapse;margin:6px 0;font-size:${fontSize}pt">
+      <tr>${header.map(h => `<th style="border:1px solid #000;padding:3px 5px;background:#f0f0f0;font-weight:bold">${h}</th>`).join('')}</tr>
+      ${body.map(r => `<tr>${r.split(';').map(c => `<td style="border:1px solid #000;padding:3px 5px">${c}</td>`).join('')}</tr>`).join('')}
+    </table>`;
+  }
   return `<p>${text}</p>`;
 }).join('\n')}
 </div></body></html>`;
@@ -347,12 +374,26 @@ ${blocks.map(b => {
             <div>
               <div className="flex items-center justify-between mb-2">
                 <p className="text-xs font-medium text-foreground">Блоки документа</p>
-                <button
-                  onClick={addCustomBlock}
-                  className="flex items-center gap-1 px-2 py-1 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-emerald-400 transition-all"
-                >
-                  <Icon name="Plus" size={10} /> Добавить блок
-                </button>
+                <div className="flex gap-1 flex-wrap justify-end">
+                  {[
+                    { type: 'paragraph', label: 'Текст',      icon: 'AlignLeft' },
+                    { type: 'section',   label: 'Раздел',     icon: 'Heading' },
+                    { type: 'divider',   label: 'Линия',      icon: 'Minus' },
+                    { type: 'spacer',    label: 'Отступ',     icon: 'ArrowUpDown' },
+                    { type: 'lines',     label: 'Линии',      icon: 'SeparatorHorizontal' },
+                    { type: 'table',     label: 'Таблица',    icon: 'Table' },
+                  ].map(({ type, label, icon }) => (
+                    <button
+                      key={type}
+                      onClick={() => addBlock(type)}
+                      className="flex items-center gap-1 px-2 py-1 border border-border rounded text-[10px] text-[hsl(var(--text-muted))] hover:text-emerald-400 hover:border-emerald-500/40 transition-all"
+                      title={`Добавить: ${label}`}
+                    >
+                      <Icon name={icon as Parameters<typeof Icon>[0]['name']} size={10} />
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               <div className="space-y-1">
@@ -369,11 +410,15 @@ ${blocks.map(b => {
 
                       {/* Тип */}
                       <span className={`shrink-0 text-[10px] px-1.5 py-0.5 rounded border ${
-                        block.type === 'section' ? 'border-gold/40 text-gold bg-gold/10' :
-                        block.type === 'header' ? 'border-blue-500/40 text-blue-400 bg-blue-500/10' :
+                        block.type === 'section'  ? 'border-gold/40 text-gold bg-gold/10' :
+                        block.type === 'header'   ? 'border-blue-500/40 text-blue-400 bg-blue-500/10' :
+                        block.type === 'divider'  ? 'border-zinc-500/40 text-zinc-400 bg-zinc-500/10' :
+                        block.type === 'spacer'   ? 'border-violet-500/40 text-violet-400 bg-violet-500/10' :
+                        block.type === 'lines'    ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10' :
+                        block.type === 'table'    ? 'border-orange-500/40 text-orange-400 bg-orange-500/10' :
                         'border-border text-[hsl(var(--text-muted))]'
                       }`}>
-                        {block.type === 'section' ? 'раздел' : block.type === 'header' ? 'шапка' : 'текст'}
+                        {{ section:'раздел', header:'шапка', divider:'линия', spacer:'отступ', lines:'линии', table:'таблица', paragraph:'текст' }[block.type] || block.type}
                       </span>
 
                       {/* Название блока */}
@@ -393,11 +438,9 @@ ${blocks.map(b => {
                         >
                           <Icon name="Pencil" size={12} />
                         </button>
-                        {block.id.startsWith('custom_') && (
-                          <button onClick={() => removeBlock(block.id)} className="text-red-400/50 hover:text-red-400">
-                            <Icon name="X" size={12} />
-                          </button>
-                        )}
+                        <button onClick={() => removeBlock(block.id)} className="text-red-400/30 hover:text-red-400 transition-all">
+                          <Icon name="X" size={12} />
+                        </button>
                       </div>
                     </div>
 
@@ -412,15 +455,52 @@ ${blocks.map(b => {
                             className="w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1 text-xs text-foreground"
                           />
                         </div>
-                        <div>
-                          <label className="text-[10px] text-[hsl(var(--text-muted))] block mb-1">Содержимое</label>
-                          <textarea
-                            value={block.content}
-                            onChange={e => updateBlock(block.id, 'content', e.target.value)}
-                            rows={3}
-                            className="w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1 text-xs text-foreground resize-none"
-                          />
-                        </div>
+                        {block.type === 'divider' && (
+                          <p className="text-[10px] text-[hsl(var(--text-muted))]">Горизонтальная линия — настройка не требуется.</p>
+                        )}
+                        {block.type === 'spacer' && (
+                          <div>
+                            <label className="text-[10px] text-[hsl(var(--text-muted))] block mb-1">Высота отступа (px)</label>
+                            <input type="number" min={5} max={200} value={block.content || '20'}
+                              onChange={e => updateBlock(block.id, 'content', e.target.value)}
+                              className="w-24 bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1 text-xs text-foreground"
+                            />
+                          </div>
+                        )}
+                        {block.type === 'lines' && (
+                          <div>
+                            <label className="text-[10px] text-[hsl(var(--text-muted))] block mb-1">Количество линий</label>
+                            <input type="number" min={1} max={20} value={block.content || '6'}
+                              onChange={e => updateBlock(block.id, 'content', e.target.value)}
+                              className="w-24 bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1 text-xs text-foreground"
+                            />
+                          </div>
+                        )}
+                        {block.type === 'table' && (
+                          <div>
+                            <label className="text-[10px] text-[hsl(var(--text-muted))] block mb-1">
+                              Строки таблицы — первая строка заголовок, столбцы разделяй «;»
+                            </label>
+                            <textarea
+                              value={block.content}
+                              onChange={e => updateBlock(block.id, 'content', e.target.value)}
+                              rows={5}
+                              placeholder={'Колонка 1;Колонка 2;Колонка 3\nДанные 1;Данные 2;Данные 3'}
+                              className="w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1 text-xs text-foreground font-mono resize-none"
+                            />
+                          </div>
+                        )}
+                        {(block.type === 'paragraph' || block.type === 'section' || block.type === 'header') && (
+                          <div>
+                            <label className="text-[10px] text-[hsl(var(--text-muted))] block mb-1">Содержимое</label>
+                            <textarea
+                              value={block.content}
+                              onChange={e => updateBlock(block.id, 'content', e.target.value)}
+                              rows={3}
+                              className="w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1 text-xs text-foreground resize-none"
+                            />
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
