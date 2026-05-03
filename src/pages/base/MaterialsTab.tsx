@@ -97,7 +97,7 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
   }, [catalog.materials]);
 
   const archivedCount = useMemo(
-    () => catalog.materials.filter(m => m.archived).length,
+    () => (catalog.materials ?? []).filter(m => m.archived).length,
     [catalog.materials]
   );
 
@@ -112,15 +112,15 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
   );
 
   const mfrMap = useMemo(
-    () => new Map(catalog.manufacturers.map(m => [m.id, m])),
+    () => new Map((catalog.manufacturers ?? []).map(m => [m.id, m])),
     [catalog.manufacturers]
   );
   const vendorMap = useMemo(
-    () => new Map(catalog.vendors.map(v => [v.id, v])),
+    () => new Map((catalog.vendors ?? []).map(v => [v.id, v])),
     [catalog.vendors]
   );
   const typeMap = useMemo(
-    () => new Map(store.settings.materialTypes.map(t => [t.id, t])),
+    () => new Map((store.settings.materialTypes ?? []).map(t => [t.id, t])),
     [store.settings.materialTypes]
   );
   const catMap = useMemo(
