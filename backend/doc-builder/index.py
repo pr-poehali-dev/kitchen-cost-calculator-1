@@ -685,31 +685,73 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
     # АКТ ВЫПОЛНЕННЫХ РАБОТ
     # ══════════════════════════════════════════════════════════════════════════
     elif doc_type == 'act':
-        right_para(f'Приложение № 4 к договору бытового подряда\nна изготовление мебели от {contract_date}')
+        # Шапка по центру
+        p_app = doc.add_paragraph()
+        p_app.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_app.paragraph_format.space_before = Pt(0); p_app.paragraph_format.space_after = Pt(2)
+        font(p_app.add_run(f'Приложение № 4 к договору бытового подряда на изготовление мебели № {contract_num} от {contract_date}'), 9)
+
         heading('«АКТ ВЫПОЛНЕННЫХ РАБОТ»')
-        city_date(co_city, contract_date)
-        para(f'{co_name}, в лице менеджера {manager_line}, именуемый «Подрядчик», и гр. {fname}, именуемый «Заказчик», подписали настоящий Акт о нижеследующем:', indent=False)
-        para(f'1. Подрядчик изготовил для Заказчика мебель по договору № {contract_num} от {contract_date}:')
+
+        p_date = doc.add_paragraph()
+        p_date.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_date.paragraph_format.space_before = Pt(0); p_date.paragraph_format.space_after = Pt(6)
+        font(p_date.add_run('от «____» ________________ 20____ г.'), _base_pt)
+
+        para(f'{co_name}, в лице менеджера {manager_line}, действующего на основании доверенности № {mgr_poa_num} от {mgr_poa_date}, именуемый в дальнейшем «Подрядчик», и гр. {fname}, именуемый (ая) в дальнейшем «Заказчик», подписали настоящий Акт выполненных работ о нижеследующем:', indent=False)
+
+        p1 = doc.add_paragraph(); p1.paragraph_format.space_before = Pt(6); p1.paragraph_format.space_after = Pt(2)
+        font(p1.add_run(f'1. Подрядчик изготовил для Заказчика мебель по договору бытового подряда № {contract_num} от {contract_date}:'), _base_pt)
 
         if products:
             rows = [(i+1, p.get('name','Кухонный гарнитур'), 'шт.', p.get('qty',1), '') for i, p in enumerate(products)]
         else:
-            rows = [(1, 'Кухонный гарнитур', 'шт.', 1, f'{total:,.0f}')]
-        rows.append(('', '', '', 'ИТОГО:', f'{total:,.0f}'))
-        simple_table(['№','Наименование мебели','Ед. изм.','Кол-во','Стоимость, руб.'], rows, [1,7,2,2,3])
+            rows = [(1, 'Кухонный гарнитур', 'шт.', 1, f'{int(total):,}'.replace(',', ' '))]
+        rows.append(('', '', '', 'ИТОГО:', f'{int(total):,} ({total_words})'.replace(',', ' ')))
+        simple_table(['№','Наименование мебели, включая ее элементы','Ед. изм.','Кол-во изделий','Стоимость в руб.'], rows, [1,7,2,2,3])
 
-        p_sum = doc.add_paragraph()
-        p_sum.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_sum.paragraph_format.space_before = Pt(2)
-        r_sum = p_sum.add_run(f'({total_words})'); font(r_sum, 10)
+        p2 = doc.add_paragraph(); p2.paragraph_format.space_before = Pt(6); p2.paragraph_format.space_after = Pt(2)
+        r2 = p2.add_run('2. Комплектность, количество, вид, характеристики мебели соответствуют условиям договора. Визуальный осмотр мебели на предмет повреждений, царапин, сколов, трещин и других недостатков произведен Заказчиком. Фурнитура (петли, выдвижные механизмы, подъемные механизмы и т.д.) работает исправно. Заказчик претензий по объему, качеству, результату и срокам выполнения работ: ')
+        font(r2, _base_pt)
+        r2b = p2.add_run('не имеет / имеет'); font(r2b, _base_pt, bold=True)
+        r2c = p2.add_run(' (ненужное зачеркнуть).'); font(r2c, _base_pt)
+        p2.paragraph_format.first_line_indent = None
 
-        para('2. Комплектность, количество, вид, характеристики мебели соответствуют условиям договора. Визуальный осмотр произведён Заказчиком. Фурнитура проверена.')
-        para('3. Заказчик принял результат выполненных работ. Претензий нет.')
-        para('4. Обязательства Подрядчика выполнены в полном объёме. Оплата произведена.')
-        sig_table(
-            'Подрядчик', f'{co_name}\n\nМенеджер: ______________________________\nМ.П.',
-            'Заказчик', f'{fname}\nПаспорт: {passport_str(c)}\nТелефон: {c.get("phone") or "___________"}\n\nПодпись: ______________________________'
-        )
+        # 6 линий для записей замечаний
+        for _ in range(6):
+            pl = doc.add_paragraph()
+            pl.paragraph_format.space_before = Pt(6)
+            pl.paragraph_format.space_after  = Pt(0)
+            from docx.oxml.ns import qn as _aqn; from docx.oxml import OxmlElement as _aEl
+            pBdr = _aEl('w:pBdr'); bot = _aEl('w:bottom')
+            bot.set(_aqn('w:val'), 'single'); bot.set(_aqn('w:sz'), '6'); bot.set(_aqn('w:space'), '1'); bot.set(_aqn('w:color'), '000000')
+            pBdr.append(bot)
+            pl._p.get_or_add_pPr().append(pBdr)
+
+        para('3. В случае наличия замечаний Заказчик, после подписания акта, вправе требовать устранения замечаний, отражённых в данном акте.', indent=False)
+        para('4. Настоящий акт подписан в 2 (двух) экземплярах по одному для каждой из Сторон.', indent=False)
+
+        # Подписи без таблицы
+        from docx.oxml.ns import qn as _sqn2; from docx.oxml import OxmlElement as _sEl2
+        p_sig = doc.add_paragraph(); p_sig.paragraph_format.space_before = Pt(12)
+        def _tab3(para, pos_cm):
+            pPr = para._p.get_or_add_pPr()
+            tabs = pPr.find(_sqn2('w:tabs'))
+            if tabs is None: tabs = _sEl2('w:tabs'); pPr.append(tabs)
+            tab = _sEl2('w:tab'); tab.set(_sqn2('w:val'), 'left'); tab.set(_sqn2('w:pos'), str(int(pos_cm * 567))); tabs.append(tab)
+        _tab3(p_sig, 10)
+        font(p_sig.add_run(f'Подрядчик: {co_name}'), _base_pt, bold=True)
+        p_sig.add_run('\t')
+        font(p_sig.add_run(f'Заказчик: {fname}'), _base_pt, bold=True)
+
+        p_lines3 = doc.add_paragraph(); p_lines3.paragraph_format.space_before = Pt(14)
+        _tab3(p_lines3, 10)
+        font(p_lines3.add_run('______________________________'), _base_pt)
+        p_lines3.add_run('\t')
+        font(p_lines3.add_run('______________________________'), _base_pt)
+
+        p_mp2 = doc.add_paragraph(); p_mp2.paragraph_format.space_before = Pt(1)
+        font(p_mp2.add_run('М.П.'), _base_pt)
 
     # ══════════════════════════════════════════════════════════════════════════
     # ТЕХНИЧЕСКИЙ ПРОЕКТ
