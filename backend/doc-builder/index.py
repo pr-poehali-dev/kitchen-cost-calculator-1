@@ -781,12 +781,12 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
 
         tech_img = str(c.get('tech_image_url') or '').strip()
         IMG_W = CONTENT_W   # 272мм в EMU
-        IMG_H = Mm(110)     # макс высота
+        IMG_H = Mm(140)     # макс высота — занять максимум пространства
 
         p_img = doc.add_paragraph()
         p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
-        p_img.paragraph_format.space_before = Pt(2)
-        p_img.paragraph_format.space_after  = Pt(2)
+        p_img.paragraph_format.space_before = Pt(4)
+        p_img.paragraph_format.space_after  = Pt(4)
 
         if tech_img:
             try:
