@@ -919,7 +919,7 @@ def _doc_style(title='', contract_num=''):
 @import url('https://fonts.googleapis.com/css2?family=PT+Serif:ital,wght@0,400;0,700;1,400&display=swap');
 @page{{
   size:A4 portrait;
-  margin:20mm 20mm 20mm 25mm;
+  margin:15mm 15mm 15mm 20mm;
   @top-center{{
     content:"{header_content}";
     font-family:'PT Serif',Georgia,serif;
@@ -937,18 +937,18 @@ def _doc_style(title='', contract_num=''):
 }}
 *{{box-sizing:border-box;margin:0;padding:0}}
 html{{background:#2d2d2d;min-height:100vh}}
-body{{font-family:'PT Serif',Georgia,serif;font-size:11pt;line-height:1.6;color:#000;background:transparent}}
-.page{{width:210mm;min-height:297mm;margin:8px auto;padding:20mm 20mm 20mm 25mm;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)}}
+body{{font-family:'PT Serif',Georgia,serif;font-size:10pt;line-height:1.45;color:#000;background:transparent}}
+.page{{width:210mm;min-height:297mm;margin:8px auto;padding:15mm 15mm 15mm 20mm;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)}}
 @media screen and (max-width:900px){{
   .page{{width:100%;min-height:auto;padding:12mm 8mm 12mm 10mm;font-size:10pt}}
 }}
-h1{{font-size:13pt;text-align:center;font-weight:bold;margin:0 0 3px;text-transform:uppercase;letter-spacing:.1em}}
-h2{{font-size:11pt;text-align:center;font-weight:normal;margin:0 0 14px}}
-.city-date{{display:flex;justify-content:space-between;margin:10px 0 14px;font-size:11pt}}
-p{{margin:0 0 6px;text-align:justify;text-indent:1.27cm;line-height:1.6;orphans:3;widows:3}}
+h1{{font-size:12pt;text-align:center;font-weight:bold;margin:0 0 3px;text-transform:uppercase;letter-spacing:.1em}}
+h2{{font-size:10pt;text-align:center;font-weight:normal;margin:0 0 10px}}
+.city-date{{display:flex;justify-content:space-between;margin:8px 0 10px;font-size:10pt}}
+p{{margin:0 0 5px;text-align:justify;text-indent:1.27cm;line-height:1.45;orphans:3;widows:3}}
 p.no-indent{{text-indent:0}}
 p.center{{text-align:center;text-indent:0}}
-.sec{{font-weight:bold;margin:14px 0 4px;text-indent:0;font-size:11pt;page-break-after:avoid}}
+.sec{{font-weight:bold;margin:10px 0 3px;text-indent:0;font-size:10pt;page-break-after:avoid}}
 .sec-block{{page-break-inside:avoid}}
 table{{width:100%;border-collapse:collapse;margin:8px 0;font-size:10pt;page-break-inside:avoid}}
 th,td{{border:1px solid #000;padding:5px 8px}}
@@ -966,9 +966,9 @@ tbody tr:nth-child(even){{background:#f8f8f8}}
 a{{color:#000;text-decoration:none}}
 @media print{{
   html{{background:#fff}}
-  body{{margin:0;font-size:11pt}}
+  body{{margin:0;font-size:10pt}}
   .page{{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}}
-  @page{{size:A4 portrait;margin:20mm 20mm 20mm 25mm}}
+  @page{{size:A4 portrait;margin:15mm 15mm 15mm 20mm}}
   a{{color:#000;text-decoration:none}}
 }}
 </style>'''
@@ -1364,36 +1364,40 @@ p.disclaimer{font-style:italic;font-size:7.5pt;margin:2px 0;text-indent:0;line-h
 <h1>«Технический проект»</h1>
 <table style="margin-top:3px">
 <tr>
-  <th style="width:11%">Корпус:</th>
-  <td style="width:27%">{tech_korpus}</td>
-  <th style="width:13%">Столешница:</th>
-  <td style="width:49%">{tech_stoleshniza}</td>
+  <th style="width:8%">Корпус:</th>
+  <td style="width:26%">{tech_korpus}</td>
+  <th style="width:12%">Столешница:</th>
+  <td style="width:30%">{tech_stoleshniza}</td>
+  <td colspan="2"></td>
 </tr>
 <tr>
   <th>Фасад 1:</th>
   <td>{tech_fasad1}</td>
   <th>Стеновая панель:</th>
   <td>{tech_stenovaya}</td>
+  <td colspan="2"></td>
 </tr>
 <tr>
   <th>Фасад 2:</th>
   <td>{tech_fasad2}</td>
   <th>Подсветка</th>
-  <td>Тип:&nbsp;&nbsp;{tech_podsvetka_type}&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Свет:&nbsp;&nbsp;{tech_podsvetka_svet}</td>
+  <td>Тип:</td>
+  <td style="width:7%">{tech_podsvetka_type}</td>
+  <td>Свет:&nbsp;{tech_podsvetka_svet}</td>
 </tr>
 <tr>
   <th>Фрезеровка:</th>
-  <td colspan="3">{tech_frezerovka}</td>
+  <td colspan="5">{tech_frezerovka}</td>
 </tr>
 </table>
 <div class="img-area">{image_block}</div>
 <div class="bottom-block">
 <p class="disclaimer">Подписывая Технический проект, Заказчик подтверждает, что ознакомлен с наименованием, качественными характеристиками, количеством, дизайном мебели и ему полностью понятны выполняемые Подрядчиком работы. Стороны согласовали, что мебель изготовлена специально для Заказчика по его индивидуальным параметрам. Приложение: бланк замера.</p>
 <table class="sig-table">
-<tr><th>Подрядчик: {co_name.upper()}</th><th>Заказчик:&nbsp;&nbsp;{fname}</th></tr>
-<tr><td>Менеджер</td><td>&nbsp;</td></tr>
-<tr><td style="height:36px"><span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td><span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
+<tr><th style="width:42%">Подрядчик: {co_name.upper()}</th><th style="width:58%;text-align:right">Заказчик:&nbsp;&nbsp;{fname}</th></tr>
+<tr><td style="height:36px"><span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td><td style="text-align:right"><span class="ul">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span></td></tr>
 </table>
+<p style="margin-top:4px;font-size:7.5pt;text-indent:0">М.П.</p>
 </div>
 </div></body></html>'''
 
