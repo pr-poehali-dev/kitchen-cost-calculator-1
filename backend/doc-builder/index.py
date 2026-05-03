@@ -582,17 +582,44 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         para('Цель обработки персональных данных: исполнение настоящего договора. Заказчик дает свое согласие на использование следующих персональных данных: фамилия, имя, отчество, паспортные данные, адрес места жительства, фотографии изделий на объекте Заказчика; номер телефона, адрес электронной почты. Согласие предоставляется на срок действия настоящего договора, а после прекращения договора – в течение 12 месяцев с даты подписания Сторонами акта сдачи-приемки выполненных Работ.')
         para('Настоящее условие договора может быть изменено Заказчиком – субъектом персональных данных, в любой момент в одностороннем порядке путем отзыва согласия на обработку персональных данных. Отзыв согласия на обработку персональных данных осуществляется посредством составления письменного документа, который может быть направлен в адрес Подрядчика почтовым отправлением с уведомлением о вручении, либо вручен лично под расписку представителю Подрядчика.')
 
-        # Строка подписи перед приложениями
-        p_sig = doc.add_paragraph()
-        p_sig.paragraph_format.space_before = Pt(6)
-        p_sig.paragraph_format.space_after  = Pt(0)
-        r_line = p_sig.add_run('_________________________ /\t\t\t\t\t\t\t\t_________________________/')
-        font(r_line)
-        p_sig2 = doc.add_paragraph()
-        p_sig2.paragraph_format.space_before = Pt(0)
-        p_sig2.paragraph_format.space_after  = Pt(6)
-        r_label = p_sig2.add_run('         (подпись)\t\t\t\t\t\t\t\t(расшифровка подписи от руки)')
-        font(r_label, size=8)
+        # Строка подписи и расшифровки — через таблицу без рамок для ровного выравнивания
+        from docx.oxml.ns import qn as _qn
+        from docx.oxml import OxmlElement as _OxmlEl
+        p_pre_sig = doc.add_paragraph()
+        p_pre_sig.paragraph_format.space_before = Pt(8)
+        p_pre_sig.paragraph_format.space_after  = Pt(0)
+
+        t_sig = doc.add_table(rows=2, cols=2)
+        t_sig.style = 'Table Grid'
+        # Убираем рамки у всех ячеек
+        for row in t_sig.rows:
+            for cell in row.cells:
+                tc = cell._tc
+                tcPr = tc.get_or_add_tcPr()
+                tcBorders = _OxmlEl('w:tcBorders')
+                for side in ('top','left','bottom','right','insideH','insideV'):
+                    border = _OxmlEl(f'w:{side}')
+                    border.set(_qn('w:val'), 'none')
+                    tcBorders.append(border)
+                tcPr.append(tcBorders)
+
+        # Строка 0 — линии подписи
+        def _sig_line(cell, text):
+            p = cell.paragraphs[0]
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after  = Pt(1)
+            r = p.add_run(text); font(r)
+
+        def _sig_label(cell, text):
+            p = cell.paragraphs[0]
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after  = Pt(4)
+            r = p.add_run(text); font(r, size=8)
+
+        _sig_line(t_sig.cell(0, 0),  '_________________________ /')
+        _sig_line(t_sig.cell(0, 1),  '_________________________ /')
+        _sig_label(t_sig.cell(1, 0), '(подпись)')
+        _sig_label(t_sig.cell(1, 1), '(расшифровка подписи от руки)')
 
         para('10.5. К настоящему Договору прилагаются и являются неотъемлемой частью следующие приложения:')
         para('1. Технический проект.', indent=False)
@@ -607,6 +634,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         p_sec11.paragraph_format.keep_with_next = True
         r11 = p_sec11.add_run('11. РЕКВИЗИТЫ СТОРОН'); font(r11, bold=True)
 
+        # Реквизиты компании — все поля из настроек
         inn_kpp = f'ИНН/КПП: {co_inn}/{co_kpp}' if co_kpp else f'ИНН: {co_inn}'
         left_body = f'{co_name}\n{inn_kpp}\nОГРН: {co_ogrn}\nЮридический и фактический адрес: {co_addr}'
         if co_bank or co_bik or co_rs or co_ks:
@@ -617,8 +645,9 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
             if co_ks:   left_body += f'\nКор/с: {co_ks}'
         if co_phone: left_body += f'\nТелефон: {co_phone}'
         if co_email: left_body += f'\nE-mail: {co_email}'
-        left_body += f'\n\nМенеджер:\n{manager_line}\n\n_________________________ \n(подпись) М.П.'
+        left_body += f'\n\nМенеджер:\n{manager_line}\n\n\n_________________________\n(подпись) М.П.'
 
+        # Реквизиты заказчика — паспорт, адрес, телефон (без канала связи)
         reg_city  = c.get('reg_city','') or ''
         reg_str   = c.get('reg_street','') or ''
         reg_house = c.get('reg_house','') or ''
@@ -635,8 +664,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         if passport_date_dept: right_body += f'\nДата выдачи: {passport_date_dept}'
         right_body += f'\n\nАдрес прописки:\n{reg_addr or "___________"}'
         right_body += f'\n\nТелефон: {c.get("phone") or "___________"}'
-        if c.get('messenger'): right_body += f'\nПредпочитаемый канал обмена сообщениями: {c.get("messenger")}'
-        right_body += '\n\n_________________________\n(подпись)'
+        right_body += '\n\n\n_________________________\n(подпись)'
         sig_table('Подрядчик:', left_body, 'Заказчик:', right_body)
 
     # ══════════════════════════════════════════════════════════════════════════
