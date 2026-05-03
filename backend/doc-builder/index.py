@@ -786,7 +786,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         tech_img = str(c.get('tech_image_url') or '').strip()
 
         # 210 - 5 - 5(поля) - ~20(заголовок) - ~22(таблица хар-к) - ~22(дисклеймер+подписи) = ~136мм
-        IMG_H_MM = 130
+        IMG_H_MM = 110
         IMG_W = CONTENT_W
         IMG_H = Mm(IMG_H_MM)
 
@@ -815,7 +815,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
 
         # 20 пустых строк перед картинкой чтобы она была по центру ячейки
         from docx.oxml.ns import qn as _qn2
-        for _ in range(35):
+        for _ in range(30):
             pe = ic.add_paragraph()
             pe.paragraph_format.space_before = Pt(0)
             pe.paragraph_format.space_after  = Pt(0)
