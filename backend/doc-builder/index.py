@@ -786,7 +786,7 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         tech_img = str(c.get('tech_image_url') or '').strip()
 
         # 210 - 5 - 5(поля) - ~20(заголовок) - ~22(таблица хар-к) - ~22(дисклеймер+подписи) = ~136мм
-        IMG_H_MM = 110
+        IMG_H_MM = 130
         IMG_W = CONTENT_W
         IMG_H = Mm(IMG_H_MM)
 
