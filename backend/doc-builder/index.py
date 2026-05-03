@@ -775,57 +775,61 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
         p_frez.paragraph_format.space_before = Pt(1); p_frez.paragraph_format.space_after = Pt(1)
         r_frez = p_frez.add_run(frezerovka); font(r_frez, 9)
 
-        # ── Изображение проекта — напрямую в параграф, без таблицы-обёртки
-        import urllib.request, io as _io, struct as _struct
+        # ── Изображение проекта — через таблицу-обёртку с фиксированной высотой
+        import urllib.request, io as _io
         tech_img = str(c.get('tech_image_url') or '').strip()
-        # Максимальные размеры: ширина = весь контент, высота = остаток страницы
-        IMG_W = CONTENT_W
-        IMG_H = Mm(120)  # консервативно, оставляем место для дисклеймера и подписей
+        IMG_W = CONTENT_W          # 272мм в EMU
+        IMG_H = Mm(120)            # максимальная высота
 
-        p_img_wrap = doc.add_paragraph()
-        p_img_wrap.paragraph_format.space_before = Pt(2)
-        p_img_wrap.paragraph_format.space_after  = Pt(2)
-        p_img_wrap.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        # Таблица 1×1 — даёт стабильный контейнер для картинки в Word
+        img_tbl = doc.add_table(rows=1, cols=1)
+        img_tbl.style = 'Table Grid'
+        img_cell = img_tbl.cell(0, 0)
+        img_cell.width = IMG_W
+
+        # Фиксируем высоту строки через XML
+        from docx.oxml.ns import qn as _qn
+        from docx.oxml import OxmlElement as _OxmlEl
+        tr = img_tbl.rows[0]._tr
+        trPr = tr.get_or_add_trPr()
+        trHeight = _OxmlEl('w:trHeight')
+        trHeight.set(_qn('w:val'), str(int(Mm(120) / 914)))  # EMU→twips: /914
+        trHeight.set(_qn('w:hRule'), 'exact')
+        trPr.append(trHeight)
+
+        p_img = img_cell.paragraphs[0]
+        p_img.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_img.paragraph_format.space_before = Pt(0)
+        p_img.paragraph_format.space_after  = Pt(0)
 
         if tech_img:
             try:
                 from PIL import Image as _PILImage
                 req = urllib.request.Request(tech_img, headers={'User-Agent': 'Mozilla/5.0'})
                 img_bytes = urllib.request.urlopen(req, timeout=20).read()
-                logger.info(f'tech img loaded: {len(img_bytes)} bytes, url={tech_img[:80]}')
+                logger.info(f'tech img loaded: {len(img_bytes)} bytes')
 
-                # Определяем размеры через Pillow
                 pil_img = _PILImage.open(_io.BytesIO(img_bytes))
                 iw, ih = pil_img.size
-                logger.info(f'tech img PIL size: {iw}x{ih}')
-
-                IMG_MIN_H = Mm(60)  # минимальная высота картинки
+                logger.info(f'tech img size: {iw}x{ih}')
 
                 if iw > 0 and ih > 0:
                     projected_h = int((IMG_W / iw) * ih)
-                    logger.info(f'projected_h={projected_h} IMG_H={IMG_H} IMG_MIN_H={IMG_MIN_H}')
-                    if projected_h > IMG_H:
-                        # Картинка слишком высокая — ограничиваем по высоте
-                        add_kw = {'height': IMG_H}
-                    elif projected_h < IMG_MIN_H:
-                        # Картинка слишком плоская — тянем по высоте до минимума
-                        add_kw = {'height': IMG_MIN_H}
-                    else:
-                        add_kw = {'width': IMG_W}
+                    add_kw = {'height': IMG_H} if projected_h > IMG_H else {'width': IMG_W}
                 else:
                     add_kw = {'width': IMG_W}
 
-                logger.info(f'tech img inserting with {add_kw}')
-                p_img_wrap.add_run().add_picture(_io.BytesIO(img_bytes), **add_kw)
+                logger.info(f'tech img kw={add_kw}')
+                p_img.add_run().add_picture(_io.BytesIO(img_bytes), **add_kw)
                 logger.info('tech img OK')
             except Exception as ex:
                 import traceback
-                tb = traceback.format_exc()
-                logger.warning(f'tech img FAILED: {ex}\n{tb}')
-                r_ph = p_img_wrap.add_run(f'[ ОШИБКА ЗАГРУЗКИ ФОТО: {ex} ]')
+                logger.warning(f'tech img FAILED: {ex}\n{traceback.format_exc()}')
+                r_ph = p_img.add_run(f'[ ОШИБКА: {ex} ]')
                 font(r_ph, 8)
         else:
-            r_ph = p_img_wrap.add_run('\n\n\n\n\n[ Место для схемы / эскиза проекта ]\n\n\n\n\n')
+            r_ph = p_img.add_run('[ Место для схемы / эскиза проекта ]')
+            font(r_ph, 10)
             font(r_ph, 10)
 
         # ── Дисклеймер
