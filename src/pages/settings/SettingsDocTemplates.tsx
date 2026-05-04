@@ -211,7 +211,8 @@ export default function SettingsDocTemplates() {
             </div>
             <iframe
               srcDoc={previewHtml}
-              className="flex-1 w-full bg-[hsl(220,12%,18%)]"
+              className="flex-1 w-full"
+              style={{ background: '#e8e8e8' }}
               title="Предпросмотр"
             />
           </div>

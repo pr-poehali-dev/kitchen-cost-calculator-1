@@ -189,12 +189,59 @@ export function buildPreviewHtml(template: Template): string {
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
-  @page{size:${pageW} ${pageH};margin:0}
-  body{font-family:'${fontFamily}',serif;font-size:${globalFontSize}pt;line-height:${lineHeight};margin:0;padding:0}
-  .page{width:${pageW};min-height:${pageH};margin:0 auto;padding:${mTop}mm ${mRight}mm ${mBottom}mm ${mLeft}mm;background:#fff;box-sizing:border-box}
+  @page{size:${pageW} ${pageH};margin:${mTop}mm ${mRight}mm ${mBottom}mm ${mLeft}mm}
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:#e8e8e8;font-family:'${fontFamily}',serif;font-size:${globalFontSize}pt;line-height:${lineHeight}}
   h1{text-align:center;font-size:${globalFontSize + 1}pt}
   p{margin:0 0 2px;text-align:justify}
-</style></head><body><div class="page">
+  /* Обёртка всех листов */
+  .pages-wrap{padding:12px;display:flex;flex-direction:column;gap:12px;align-items:center}
+  /* Один лист */
+  .page{
+    width:${pageW};
+    height:${pageH};
+    background:#fff;
+    box-shadow:0 2px 8px rgba(0,0,0,0.25);
+    padding:${mTop}mm ${mRight}mm ${mBottom}mm ${mLeft}mm;
+    overflow:hidden;
+    position:relative;
+    page-break-after:always;
+  }
+  @media print{
+    html,body{background:#fff}
+    .pages-wrap{padding:0;gap:0}
+    .page{box-shadow:none;page-break-after:always}
+  }
+</style>
+<script>
+window.addEventListener('load', function() {
+  var source = document.getElementById('content-source');
+  var pagesWrap = document.getElementById('pages-wrap');
+  var children = Array.from(source.children);
+
+  function makePage() {
+    var p = document.createElement('div');
+    p.className = 'page';
+    pagesWrap.appendChild(p);
+    return p;
+  }
+
+  var cur = makePage();
+  children.forEach(function(el) {
+    var clone = el.cloneNode(true);
+    cur.appendChild(clone);
+    if (cur.scrollHeight > cur.clientHeight) {
+      cur.removeChild(clone);
+      cur = makePage();
+      cur.appendChild(clone);
+    }
+  });
+});
+</script>
+</head><body>
+<div id="content-source" style="display:none">
 ${rendered}
-</div></body></html>`;
+</div>
+<div id="pages-wrap" class="pages-wrap"></div>
+</body></html>`;
 }
