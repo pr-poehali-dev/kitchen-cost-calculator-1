@@ -503,10 +503,8 @@ def parse_boyard(csv_text: str) -> dict:
             if not header_passed:
                 continue
 
-            price_opt = parse_price(g(3))     # опт руб — основная цена
-            price_retail = parse_price(g(5)) # розница руб — резерв
-            price = price_opt if price_opt > 0 else price_retail
-            if price <= 0:
+            price_opt = parse_price(g(3))  # опт руб
+            if price_opt <= 0:
                 continue
 
             # Очищаем артикул от лишних пробелов и невидимых символов
@@ -522,9 +520,7 @@ def parse_boyard(csv_text: str) -> dict:
                 'name': col1,
                 'category': cat,
                 'type_id': boyard_type(type_cat),
-                'price_opt': round(price_opt, 2),
-                'price_retail': round(price_retail, 2),
-                'price': round(price, 2),
+                'price': round(price_opt, 2),
                 'unit': 'шт',
             })
 

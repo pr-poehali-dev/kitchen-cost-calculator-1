@@ -22,8 +22,6 @@ interface BoyardItem {
   name: string;
   category: string;
   type_id: string;
-  price_opt: number;
-  price_retail: number;
   price: number;
   unit: string;
 }
@@ -128,7 +126,7 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
       const first = group[0];
       const gKey = boyardGroupKey(name);
       const existingInCatalog = catalog.materials.find(m => m.article === gKey);
-      const bestPrice = (item: BoyardItem) => item.price_opt > 0 ? item.price_opt : item.price ?? item.price_retail;
+      const bestPrice = (item: BoyardItem) => item.price;
       return {
         id: existingInCatalog?.id ?? `m${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
         name,

@@ -12,8 +12,6 @@ interface BoyardItem {
   name: string;
   category: string;
   type_id: string;
-  price_opt: number;
-  price_retail: number;
   price: number;
   unit: string;
 }
@@ -79,7 +77,7 @@ export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
           if (!item) continue;
 
           const currentPrice = variant.basePrice;
-          const newPrice = item.price_opt > 0 ? item.price_opt : (item.price ?? item.price_retail);
+          const newPrice = item.price;
 
           if (Math.round(currentPrice) !== Math.round(newPrice)) {
             result.push({
