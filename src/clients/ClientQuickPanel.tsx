@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Icon from '@/components/ui/icon';
 import { useClient } from './useClients';
 import { CLIENT_STATUSES, clientFullName } from './types';
@@ -14,12 +14,27 @@ interface Props {
 const fmt = (n: number) => n.toLocaleString('ru-RU');
 
 export default function ClientQuickPanel({ clientId, onClose, onOpen, onStatusChange }: Props) {
-  const { client, loading } = useClient(clientId);
+  const { client, loading, save } = useClient(clientId);
   const [showStatusMenu, setShowStatusMenu] = useState(false);
+  const [comment, setComment] = useState('');
+  const [saving, setSaving] = useState(false);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setShowStatusMenu(false);
-  }, [clientId]);
+    setComment(client?.comment || '');
+  }, [clientId, client?.comment]);
+
+  const handleCommentChange = (value: string) => {
+    setComment(value);
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(async () => {
+      if (!client) return;
+      setSaving(true);
+      await save({ ...client, comment: value });
+      setSaving(false);
+    }, 1000);
+  };
 
   if (!clientId) return null;
 
@@ -191,14 +206,19 @@ export default function ClientQuickPanel({ clientId, onClose, onOpen, onStatusCh
         )}
 
         {/* Комментарий */}
-        {client.comment && (
-          <section className="space-y-1.5">
+        <section className="space-y-1.5">
+          <div className="flex items-center justify-between">
             <SectionLabel>Комментарий</SectionLabel>
-            <p className="text-xs text-[hsl(var(--text-dim))] bg-[hsl(220,12%,14%)] rounded px-3 py-2 border-l-2 border-gold/30 italic">
-              {client.comment}
-            </p>
-          </section>
-        )}
+            {saving && <span className="text-[10px] text-[hsl(var(--text-muted))]">сохраняется…</span>}
+          </div>
+          <textarea
+            value={comment}
+            onChange={e => handleCommentChange(e.target.value)}
+            placeholder="Добавить комментарий…"
+            rows={3}
+            className="w-full bg-[hsl(220,12%,14%)] border border-border rounded px-3 py-2 text-xs text-foreground outline-none focus:border-gold resize-none scrollbar-thin transition-colors placeholder:text-[hsl(var(--text-muted))] placeholder:italic"
+          />
+        </section>
 
         {/* Напоминание */}
         {client.reminder_date && new Date(client.reminder_date) > new Date() && (
