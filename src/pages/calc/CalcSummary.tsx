@@ -31,12 +31,16 @@ type GroupingMode = 'groups' | 'types' | 'both';
 
 const MODE_STORAGE_KEY = 'kuhni_summary_display_mode';
 const GROUPING_STORAGE_KEY = 'kuhni_summary_grouping_mode';
+const DISTRIBUTE_STORAGE_KEY = 'kuhni_summary_distribute_expenses';
 
 function loadMode(): DisplayMode {
   return (localStorage.getItem(MODE_STORAGE_KEY) as DisplayMode) || 'manager';
 }
 function loadGrouping(): GroupingMode {
   return (localStorage.getItem(GROUPING_STORAGE_KEY) as GroupingMode) || 'groups';
+}
+function loadDistribute(): boolean {
+  return localStorage.getItem(DISTRIBUTE_STORAGE_KEY) === 'true';
 }
 
 export default function CalcSummary({
@@ -50,9 +54,15 @@ export default function CalcSummary({
 
   const [displayMode, setDisplayMode] = useState<DisplayMode>(loadMode);
   const [groupingMode, setGroupingMode] = useState<GroupingMode>(loadGrouping);
+  const [distributeExpenses, setDistributeExpenses] = useState<boolean>(loadDistribute);
 
   const setMode = (m: DisplayMode) => { setDisplayMode(m); localStorage.setItem(MODE_STORAGE_KEY, m); };
   const setGrouping = (m: GroupingMode) => { setGroupingMode(m); localStorage.setItem(GROUPING_STORAGE_KEY, m); };
+  const toggleDistribute = () => {
+    const next = !distributeExpenses;
+    setDistributeExpenses(next);
+    localStorage.setItem(DISTRIBUTE_STORAGE_KEY, String(next));
+  };
 
   type SummaryRow = {
     id: string;
@@ -148,20 +158,48 @@ export default function CalcSummary({
   }
 
   // ── Строки для режима клиента ──────────────────────────────
-  // Блоки материалов (каждый блок отдельно)
   const clientRows: SummaryRow[] = [];
 
-  totals.blockExtras.forEach(b => {
-    if (b.base <= 0) return;
-    clientRows.push({ id: `client-block-${b.blockId}`, label: b.blockName, value: b.base, section: 'materials' });
-  });
+  // Сумма всех блоков материалов (без услуг)
+  const blocksTotal = totals.blockExtras.reduce((s, b) => s + b.base + b.extra, 0);
+  // Расходы сверху (то что не входит в блоки): percent + fixed + totalMarkup
+  const overheadTotal = grandTotal - blocksTotal - totalServices;
+
+  if (distributeExpenses && blocksTotal > 0) {
+    // Вариант 1: растворяем overhead пропорционально в блоки
+    // Итого блоков после распределения = grandTotal - услуги
+    const targetMaterialsTotal = grandTotal - totalServices;
+
+    totals.blockExtras.forEach(b => {
+      if (b.base <= 0) return;
+      // Доля блока от суммы всех блоков × целевая сумма материалов
+      const blockRaw = b.base + b.extra;
+      const distributed = blocksTotal > 0 ? Math.round(blockRaw / blocksTotal * targetMaterialsTotal) : blockRaw;
+      clientRows.push({ id: `client-block-${b.blockId}`, label: b.blockName, value: distributed, section: 'materials' });
+    });
+
+    // Корректируем последний блок чтобы суммы сходились точно
+    const materialsSum = clientRows.filter(r => r.section === 'materials').reduce((s, r) => s + r.value, 0);
+    const diff = targetMaterialsTotal - materialsSum;
+    if (diff !== 0 && clientRows.length > 0) {
+      const lastMat = [...clientRows].reverse().find(r => r.section === 'materials');
+      if (lastMat) lastMat.value += diff;
+    }
+  } else {
+    // Обычный режим: блоки как есть
+    totals.blockExtras.forEach(b => {
+      if (b.base <= 0) return;
+      clientRows.push({ id: `client-block-${b.blockId}`, label: b.blockName, value: b.base, section: 'materials' });
+    });
+  }
 
   if (totalServices > 0) {
     clientRows.push({ id: 'client-services', label: 'Услуги', value: totalServices, section: 'services' });
   }
 
   // Статьи расходов для клиента — только надбавки/скидки на итог (без внутренних расходов)
-  if (totals.totalMarkupAmount !== 0) {
+  // В режиме распределения — скрываем их (уже включены в блоки), но оставляем в списке для управления
+  if (!distributeExpenses && totals.totalMarkupAmount !== 0) {
     const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
     Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
       const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
@@ -181,6 +219,11 @@ export default function CalcSummary({
       }
     });
   }
+
+  // Подсказка для UI: на сколько блоки не сходятся без распределения
+  const clientBlocksSum = totals.blockExtras.reduce((s, b) => s + b.base, 0);
+  const gapWithoutDistribute = grandTotal - clientBlocksSum - totalServices;
+  void overheadTotal;
 
   // ── Итоговые наборы с учётом скрытых строк ─────────────────
   const rows = isClient ? clientRows : managerRows;
@@ -280,6 +323,40 @@ export default function CalcSummary({
             </div>
           )}
 
+          {/* Распределение расходов по блокам (только для клиента) */}
+          {isClient && (
+            <div>
+              <div className="text-xs text-[hsl(var(--text-muted))] mb-2 uppercase tracking-wider">Суммы блоков</div>
+              <button
+                onClick={toggleDistribute}
+                className={`flex items-center gap-2 px-3 py-2 rounded border text-xs w-full text-left transition-colors ${
+                  distributeExpenses
+                    ? 'bg-gold/15 border-gold/40 text-gold'
+                    : 'border-border text-[hsl(var(--text-muted))] hover:border-gold/30 hover:text-foreground'
+                }`}
+              >
+                <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${distributeExpenses ? 'bg-gold border-gold' : 'border-border'}`}>
+                  {distributeExpenses && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
+                </span>
+                <div>
+                  <div className="font-medium">Распределить расходы по блокам</div>
+                  <div className="text-[10px] opacity-70 mt-0.5">
+                    {distributeExpenses
+                      ? 'Суммы блоков пересчитаны — совпадают с итогом'
+                      : gapWithoutDistribute > 0
+                        ? `Блоки не сходятся с итогом на ${fmt(gapWithoutDistribute)} ${cur}`
+                        : 'Блоки совпадают с итогом'}
+                  </div>
+                </div>
+              </button>
+              {distributeExpenses && (
+                <p className="text-[10px] text-[hsl(var(--text-muted))] mt-1.5 leading-relaxed">
+                  Расходы пропорционально растворены в суммах блоков. Клиент видит итоговые цены — без строк расходов.
+                </p>
+              )}
+            </div>
+          )}
+
           {/* Видимость строк — для обоих режимов */}
           {rows.length > 0 && (
             <div>
@@ -294,11 +371,6 @@ export default function CalcSummary({
                   </button>
                 )}
               </div>
-              {isClient && clientRows.some(r => r.section === 'expenses') && (
-                <p className="text-[10px] text-[hsl(var(--text-muted))] mt-2">
-                  Скидки и надбавки можно показать или скрыть в итоге для клиента
-                </p>
-              )}
             </div>
           )}
         </div>
