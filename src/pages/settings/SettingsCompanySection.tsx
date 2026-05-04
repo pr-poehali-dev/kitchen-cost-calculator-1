@@ -187,8 +187,16 @@ export default function SettingsCompanySection() {
 
           {/* Логотип */}
           <div className="rounded-lg border border-border bg-[hsl(220,12%,14%)]">
-            <div className="px-3 py-2.5 border-b border-[hsl(220,12%,18%)]">
-              <span className="text-sm font-medium">Логотип компании</span>
+            <div className="flex items-center gap-3 px-3 py-2.5 border-b border-[hsl(220,12%,18%)]">
+              <span className="text-sm font-medium flex-1">Логотип компании</span>
+              <span className="text-xs text-[hsl(var(--text-muted))] shrink-0">{company.useLogo ? 'Включён' : 'Выключен'}</span>
+              <button
+                type="button"
+                onClick={() => upd('useLogo', !company.useLogo)}
+                className={`w-9 h-5 rounded-full transition-colors shrink-0 flex items-center px-0.5 ${company.useLogo ? 'bg-gold justify-end' : 'bg-[hsl(220,12%,26%)] justify-start'}`}
+              >
+                <span className="w-4 h-4 bg-white rounded-full shadow block" />
+              </button>
             </div>
             <div className="flex items-center gap-3 px-3 py-3">
               <div className="w-16 h-10 rounded border border-dashed border-border bg-[hsl(220,12%,12%)] flex items-center justify-center shrink-0 overflow-hidden">
@@ -206,7 +214,7 @@ export default function SettingsCompanySection() {
                   {uploadingLogo ? 'Загружаю...' : 'Загрузить'}
                 </button>
                 {company.logoUrl
-                  ? <button type="button" onClick={() => store.updateSettings({ company: { ...company, logoUrl: '' } })}
+                  ? <button type="button" onClick={() => store.updateSettings({ company: { ...company, logoUrl: '', useLogo: false } })}
                       className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-destructive hover:text-destructive transition-colors">
                       <Icon name="Trash2" size={11} /> Удалить
                     </button>

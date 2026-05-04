@@ -214,6 +214,7 @@ export interface CompanyInfo {
   poaDate?: string;
   // Логотип
   logoUrl?: string;
+  useLogo?: boolean;
   // Печать и подпись
   stampUrl?: string;
   signatureUrl?: string;
