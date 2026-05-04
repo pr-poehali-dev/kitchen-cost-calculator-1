@@ -82,6 +82,7 @@ export interface Client {
   credit_balance: number;
   // Технический проект
   tech_korpus: string;
+  tech_korpus2: string;
   tech_fasad1: string;
   tech_fasad2: string;
   tech_stoleshniza: string;
@@ -145,7 +146,7 @@ export function emptyClient(): Omit<Client, 'id' | 'created_at' | 'updated_at'> 
     reminder_date: '', reminder_note: '', comment: '',
     credit_contract_number: '', credit_contract_date: '', credit_bank: '',
     credit_prepaid: 0, credit_balance: 0,
-    tech_korpus: '', tech_fasad1: '', tech_fasad2: '',
+    tech_korpus: '', tech_korpus2: '', tech_fasad1: '', tech_fasad2: '',
     tech_stoleshniza: '', tech_stenovaya: '',
     tech_podsvetka_type: '', tech_podsvetka_svet: '',
     tech_frezerovka: '', tech_image_url: '',

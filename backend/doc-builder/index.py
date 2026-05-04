@@ -802,6 +802,7 @@ def build_docx(c: dict, doc_type: str, company: dict, template_settings: dict | 
 
         # ── Данные материалов
         korpus    = c.get('tech_korpus','') or ''
+        korpus2   = c.get('tech_korpus2','') or ''
         fasad1    = c.get('tech_fasad1','') or ''
         fasad2    = c.get('tech_fasad2','') or ''
         stoleshn  = c.get('tech_stoleshniza','') or ''
@@ -810,13 +811,11 @@ def build_docx(c: dict, doc_type: str, company: dict, template_settings: dict | 
         pod_svet  = c.get('tech_podsvetka_svet','') or ''
         frezerovka= c.get('tech_frezerovka','') or ''
 
-        # ── Таблица характеристик: 3 строки × 4 колонки + строка фрезеровки
-        # Ширины колонок: метка | значение | метка | значение
-        # Итого 272мм: 25 + 86 + 35 + 86 + 20 (подсветка доп)
+        # ── Таблица характеристик: 5 строк × 6 колонок
         from docx.oxml.ns import qn as _qn
         from docx.oxml import OxmlElement as _OxmlEl
 
-        tbl = doc.add_table(rows=4, cols=6)
+        tbl = doc.add_table(rows=5, cols=6)
         tbl.style = 'Table Grid'
         tbl.autofit = False
         tbl.allow_autofit = False
@@ -843,26 +842,29 @@ def build_docx(c: dict, doc_type: str, company: dict, template_settings: dict | 
             p.paragraph_format.line_spacing = Pt(11)
             r = p.add_run(text); font(r, size, bold)
 
-        # Строка 0: Корпус | val | Столешница | val
-        tc(0,0,'Корпус:', True);       tc(0,1, korpus)
+        # Строка 0: Корпус 1 | val | Столешница | val
+        tc(0,0,'Корпус 1:', True);     tc(0,1, korpus)
         tc(0,2,'Столешница:', True);   tc(0,3, stoleshn)
-        # Объединяем 4 и 5 ячейки строки 0 (пусто)
         tbl.cell(0,4).merge(tbl.cell(0,5))
 
-        # Строка 1: Фасад 1 | val | Стеновая панель | val
-        tc(1,0,'Фасад 1:', True);      tc(1,1, fasad1)
+        # Строка 1: Корпус 2 | val | Стеновая панель | val
+        tc(1,0,'Корпус 2:', True);     tc(1,1, korpus2)
         tc(1,2,'Стеновая панель:', True); tc(1,3, stenovaya)
         tbl.cell(1,4).merge(tbl.cell(1,5))
 
-        # Строка 2: Фасад 2 | val | Подсветка | Тип: val | Свет: val
-        tc(2,0,'Фасад 2:', True);      tc(2,1, fasad2)
-        tc(2,2,'Подсветка', True)
-        tc(2,3,'Тип:', True);          tc(2,4, pod_type)
-        tc(2,5,'Свет:  ' + pod_svet)
+        # Строка 2: Фасад 1 | val | (пусто)
+        tc(2,0,'Фасад 1:', True);      tc(2,1, fasad1)
+        tbl.cell(2,2).merge(tbl.cell(2,3)).merge(tbl.cell(2,4)).merge(tbl.cell(2,5))
 
-        # Строка 3: Фрезеровка | объединённые ячейки
-        tc(3,0,'Фрезеровка:', True)
-        merged_frez = tbl.cell(3,1).merge(tbl.cell(3,2)).merge(tbl.cell(3,3)).merge(tbl.cell(3,4)).merge(tbl.cell(3,5))
+        # Строка 3: Фасад 2 | val | Подсветка | Тип: val | Свет: val
+        tc(3,0,'Фасад 2:', True);      tc(3,1, fasad2)
+        tc(3,2,'Подсветка', True)
+        tc(3,3,'Тип:', True);          tc(3,4, pod_type)
+        tc(3,5,'Свет:  ' + pod_svet)
+
+        # Строка 4: Фрезеровка | объединённые ячейки
+        tc(4,0,'Фрезеровка:', True)
+        merged_frez = tbl.cell(4,1).merge(tbl.cell(4,2)).merge(tbl.cell(4,3)).merge(tbl.cell(4,4)).merge(tbl.cell(4,5))
         p_frez = merged_frez.paragraphs[0]
         p_frez.paragraph_format.space_before = Pt(1); p_frez.paragraph_format.space_after = Pt(1)
         r_frez = p_frez.add_run(frezerovka); font(r_frez, 9)

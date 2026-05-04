@@ -1,9 +1,110 @@
+import { useState, useRef, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import type { Client, ClientPhoto } from '../types';
 import { INPUT, SELECT, TEXTAREA, Field, Section } from '../ClientCardShared';
 import { useStore } from '@/store/useStore';
 
-export function TabContract({ client, onChange, photos = [] }: { client: Client; onChange: (f: keyof Client, v: string | number | object) => void; photos?: ClientPhoto[] }) {
+// Пикер материала из привязанного расчёта
+function MaterialPicker({ value, onChange, clientId, placeholder }: {
+  value: string;
+  onChange: (v: string) => void;
+  clientId: string;
+  placeholder?: string;
+}) {
+  const store = useStore();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
+
+  // Собираем уникальные имена материалов из всех привязанных расчётов
+  const linked = store.projects.filter(p => p.clientId === clientId);
+  const items: string[] = [];
+  const seen = new Set<string>();
+  linked.forEach(p => {
+    p.blocks.forEach(b => {
+      // Добавляем название блока как группу
+      b.rows.forEach(r => {
+        if (!r.name.trim()) return;
+        const label = r.name.trim();
+        if (!seen.has(label)) { seen.add(label); items.push(label); }
+      });
+    });
+  });
+
+  // Группируем по блокам для удобства
+  const groups: { blockName: string; items: string[] }[] = [];
+  linked.forEach(p => {
+    p.blocks.forEach(b => {
+      const blockItems: string[] = [];
+      const blockSeen = new Set<string>();
+      b.rows.forEach(r => {
+        if (!r.name.trim()) return;
+        const label = r.name.trim();
+        if (!blockSeen.has(label)) { blockSeen.add(label); blockItems.push(label); }
+      });
+      if (blockItems.length > 0) {
+        groups.push({ blockName: `${p.object ? p.object + ' — ' : ''}${b.name}`, items: blockItems });
+      }
+    });
+  });
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="flex gap-1.5">
+        <input
+          className={INPUT + ' flex-1'}
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={placeholder || 'Введите или выберите из расчёта'}
+        />
+        {linked.length > 0 && items.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setOpen(o => !o)}
+            title="Выбрать из расчёта"
+            className={`px-2 rounded border transition-colors shrink-0 ${open ? 'border-gold/50 text-gold bg-gold/10' : 'border-border text-[hsl(var(--text-muted))] hover:text-gold hover:border-gold/40'}`}
+          >
+            <Icon name="Calculator" size={13} />
+          </button>
+        )}
+      </div>
+      {open && groups.length > 0 && (
+        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-[hsl(220,14%,13%)] border border-border rounded-lg shadow-xl max-h-56 overflow-y-auto">
+          {groups.map((g, gi) => (
+            <div key={gi}>
+              <div className="px-3 py-1.5 text-[10px] uppercase tracking-wider text-[hsl(var(--text-muted))] bg-[hsl(220,14%,10%)] sticky top-0">
+                {g.blockName}
+              </div>
+              {g.items.map((item, ii) => (
+                <button
+                  key={ii}
+                  type="button"
+                  onClick={() => { onChange(item); setOpen(false); }}
+                  className={`w-full text-left px-3 py-2 text-sm hover:bg-[hsl(220,12%,20%)] transition-colors ${value === item ? 'text-gold bg-gold/5' : ''}`}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+export function TabContract({ client, onChange, photos = [] }: {
+  client: Client;
+  onChange: (f: keyof Client, v: string | number | object) => void;
+  photos?: ClientPhoto[];
+}) {
   const store = useStore();
 
   const addProduct = () => {
@@ -15,7 +116,7 @@ export function TabContract({ client, onChange, photos = [] }: { client: Client;
     onChange('products', client.products.map(p => p.id === id ? { ...p, [field]: value } : p));
   };
 
-  const showBalance = client.payment_type === '50% предоплата' || client.payment_type === 'Рассрочка' || client.payment_type === 'Кредит/рассрочка банка';
+  const showBalance = client.payment_type === '50% предоплата' || client.payment_type === 'Кредит/рассрочка банка';
   const showCredit = client.payment_type === 'Кредит/рассрочка банка';
 
   const handleGenContractNumber = () => {
@@ -117,7 +218,7 @@ export function TabContract({ client, onChange, photos = [] }: { client: Client;
             </Field>
             <Field label="Схема оплаты">
               <select className={SELECT} value={client.payment_type} onChange={e => onChange('payment_type', e.target.value)}>
-                {['100% предоплата', '50% предоплата', 'Рассрочка', 'Кредит/рассрочка банка', 'Своя схема'].map(t => <option key={t}>{t}</option>)}
+                {['100% предоплата', '50% предоплата', 'Кредит/рассрочка банка', 'Своя схема'].map(t => <option key={t}>{t}</option>)}
               </select>
             </Field>
           </div>
@@ -200,21 +301,50 @@ export function TabContract({ client, onChange, photos = [] }: { client: Client;
       {/* Технический проект */}
       <Section title="Технический проект (Прил. №1)" icon="Ruler">
         <div className="space-y-3">
+          <div className="text-xs text-[hsl(var(--text-muted))] flex items-center gap-1.5">
+            <Icon name="Calculator" size={11} />
+            Кнопка справа от поля — выбрать из привязанного расчёта
+          </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Корпус">
-              <input className={INPUT} value={client.tech_korpus || ''} onChange={e => onChange('tech_korpus', e.target.value)} placeholder="Lamarty Белый" />
+            <Field label="Корпус 1">
+              <MaterialPicker
+                value={client.tech_korpus || ''}
+                onChange={v => onChange('tech_korpus', v)}
+                clientId={client.id}
+                placeholder="Lamarty Белый"
+              />
             </Field>
             <Field label="Столешница">
-              <input className={INPUT} value={client.tech_stoleshniza || ''} onChange={e => onChange('tech_stoleshniza', e.target.value)} placeholder="Мрамор бланко 2347/Pt" />
+              <MaterialPicker
+                value={client.tech_stoleshniza || ''}
+                onChange={v => onChange('tech_stoleshniza', v)}
+                clientId={client.id}
+                placeholder="Мрамор бланко 2347/Pt"
+              />
             </Field>
-            <Field label="Фасад 1">
-              <input className={INPUT} value={client.tech_fasad1 || ''} onChange={e => onChange('tech_fasad1', e.target.value)} placeholder="Акрил Лёд 5230" />
+            <Field label="Корпус 2">
+              <MaterialPicker
+                value={client.tech_korpus2 || ''}
+                onChange={v => onChange('tech_korpus2', v)}
+                clientId={client.id}
+                placeholder="нет"
+              />
             </Field>
             <Field label="Стеновая панель">
-              <input className={INPUT} value={client.tech_stenovaya || ''} onChange={e => onChange('tech_stenovaya', e.target.value)} placeholder="Мрамор бланко 2347/Pt" />
+              <MaterialPicker
+                value={client.tech_stenovaya || ''}
+                onChange={v => onChange('tech_stenovaya', v)}
+                clientId={client.id}
+                placeholder="Мрамор бланко 2347/Pt"
+              />
             </Field>
-            <Field label="Фасад 2">
-              <input className={INPUT} value={client.tech_fasad2 || ''} onChange={e => onChange('tech_fasad2', e.target.value)} placeholder="нет" />
+            <Field label="Фасад 1">
+              <MaterialPicker
+                value={client.tech_fasad1 || ''}
+                onChange={v => onChange('tech_fasad1', v)}
+                clientId={client.id}
+                placeholder="Акрил Лёд 5230"
+              />
             </Field>
             <div className="space-y-2">
               <div className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider">Подсветка</div>
@@ -239,6 +369,14 @@ export function TabContract({ client, onChange, photos = [] }: { client: Client;
                 </Field>
               </div>
             </div>
+            <Field label="Фасад 2">
+              <MaterialPicker
+                value={client.tech_fasad2 || ''}
+                onChange={v => onChange('tech_fasad2', v)}
+                clientId={client.id}
+                placeholder="нет"
+              />
+            </Field>
           </div>
           <Field label="Фрезеровка">
             <input className={INPUT} value={client.tech_frezerovka || ''} onChange={e => onChange('tech_frezerovka', e.target.value)} placeholder="нет" />
