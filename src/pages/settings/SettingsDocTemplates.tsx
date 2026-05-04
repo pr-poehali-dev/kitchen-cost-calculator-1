@@ -91,6 +91,26 @@ export default function SettingsDocTemplates() {
     loadTemplates();
   };
 
+  const duplicateTemplate = async () => {
+    if (!selectedTemplate) return;
+    const res = await fetch(`${API}/`, {
+      method: 'POST',
+      headers: authHeaders(),
+      body: JSON.stringify({
+        doc_type: selectedDocType,
+        name: `${selectedTemplate.name} (копия)`,
+        blocks: selectedTemplate.blocks,
+        settings: selectedTemplate.settings,
+        is_default: false,
+      }),
+    });
+    const data = await res.json();
+    if (data.id) {
+      toast.success('Шаблон скопирован');
+      loadTemplates();
+    }
+  };
+
   const handleUpdateTemplate = (t: Template) => setSelectedTemplate(t);
 
   const handlePreview = () => {
@@ -173,6 +193,7 @@ export default function SettingsDocTemplates() {
             onDelete={() => deleteTemplate(selectedTemplate.id)}
             onSetDefault={() => setDefault(selectedTemplate.id)}
             onPreview={handlePreview}
+            onDuplicate={duplicateTemplate}
             onEditBlock={setEditingBlock}
           />
         )}

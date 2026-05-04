@@ -12,6 +12,7 @@ interface Props {
   onDelete: () => void;
   onSetDefault: () => void;
   onPreview: () => void;
+  onDuplicate: () => void;
   onEditBlock: (id: string | null) => void;
 }
 
@@ -43,7 +44,7 @@ const SETTINGS_SLIDERS = [
 
 export default function DocTemplateEditor({
   template, saving, editingBlock,
-  onUpdate, onSave, onDelete, onSetDefault, onPreview, onEditBlock,
+  onUpdate, onSave, onDelete, onSetDefault, onPreview, onDuplicate, onEditBlock,
 }: Props) {
   const updateBlock = (blockId: string, field: keyof Block, value: string | boolean | number | undefined) => {
     onUpdate({
@@ -98,6 +99,9 @@ export default function DocTemplateEditor({
         )}
         <button onClick={onPreview} className="px-2 py-1.5 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-emerald-400 transition-all" title="Предпросмотр">
           <Icon name="Eye" size={12} />
+        </button>
+        <button onClick={onDuplicate} className="px-2 py-1.5 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-blue-400 transition-all" title="Копировать шаблон">
+          <Icon name="Copy" size={12} />
         </button>
         <button
           onClick={onSave}
