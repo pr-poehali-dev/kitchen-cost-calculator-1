@@ -178,58 +178,45 @@ export default function SettingsCompanySection() {
         </div>
       </Section>
 
-      {/* Логотип */}
-      <Section title="Логотип компании" icon="ImageIcon">
-        <div className="space-y-3">
-          <p className="text-xs text-[hsl(var(--text-muted))]">
-            Логотип будет отображаться в шапке КП и договоров. Рекомендуется PNG с прозрачным фоном.
-          </p>
-          <div className="flex items-center gap-4">
-            <div className="w-24 h-16 rounded border border-dashed border-border bg-[hsl(220,12%,12%)] flex items-center justify-center shrink-0 overflow-hidden">
-              {company.logoUrl
-                ? <img src={company.logoUrl} alt="Логотип" className="w-full h-full object-contain p-1" />
-                : <Icon name="ImageIcon" size={22} className="text-[hsl(var(--text-muted))]" />
-              }
-            </div>
-            <div className="flex flex-col gap-2">
-              <input
-                ref={logoRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/svg+xml"
-                className="hidden"
-                onChange={e => { const f = e.target.files?.[0]; if (f) uploadAsset(f, 'logo'); e.target.value = ''; }}
-              />
-              <button
-                type="button"
-                onClick={() => logoRef.current?.click()}
-                disabled={uploadingLogo}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-gold hover:text-gold transition-colors disabled:opacity-50"
-              >
-                {uploadingLogo ? <Icon name="Loader" size={12} className="animate-spin" /> : <Icon name="Upload" size={12} />}
-                {uploadingLogo ? 'Загружаю...' : 'Загрузить логотип'}
-              </button>
-              {company.logoUrl && (
-                <button
-                  type="button"
-                  onClick={() => store.updateSettings({ company: { ...company, logoUrl: '' } })}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-destructive hover:text-destructive transition-colors"
-                >
-                  <Icon name="Trash2" size={12} /> Удалить
-                </button>
-              )}
-              {!company.logoUrl && <p className="text-xs text-[hsl(var(--text-muted))]">PNG, JPG, SVG — до 5 МБ</p>}
-            </div>
-          </div>
-        </div>
-      </Section>
-
-      {/* Печать и подпись */}
-      <Section title="Печать и подпись" icon="Stamp">
+      {/* Логотип, печать и подпись — единый блок */}
+      <Section title="Логотип и документы" icon="ImageIcon">
         <div className="space-y-4">
           <p className="text-xs text-[hsl(var(--text-muted))]">
-            Загрузите изображения печати и подписи директора — они будут вставляться в блок реквизитов документов. Рекомендуется PNG с прозрачным фоном.
+            Логотип отображается в шапке КП и договоров. Печать и подпись вставляются в блок реквизитов. Рекомендуется PNG с прозрачным фоном.
           </p>
 
+          {/* Логотип */}
+          <div className="rounded-lg border border-border bg-[hsl(220,12%,14%)]">
+            <div className="px-3 py-2.5 border-b border-[hsl(220,12%,18%)]">
+              <span className="text-sm font-medium">Логотип компании</span>
+            </div>
+            <div className="flex items-center gap-3 px-3 py-3">
+              <div className="w-16 h-10 rounded border border-dashed border-border bg-[hsl(220,12%,12%)] flex items-center justify-center shrink-0 overflow-hidden">
+                {company.logoUrl
+                  ? <img src={company.logoUrl} alt="Логотип" className="w-full h-full object-contain p-0.5" />
+                  : <Icon name="ImageIcon" size={16} className="text-[hsl(var(--text-muted))]" />
+                }
+              </div>
+              <input ref={logoRef} type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadAsset(f, 'logo'); e.target.value = ''; }} />
+              <div className="flex items-center gap-2 flex-wrap">
+                <button type="button" onClick={() => logoRef.current?.click()} disabled={uploadingLogo}
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-gold hover:text-gold transition-colors disabled:opacity-50">
+                  {uploadingLogo ? <Icon name="Loader" size={11} className="animate-spin" /> : <Icon name="Upload" size={11} />}
+                  {uploadingLogo ? 'Загружаю...' : 'Загрузить'}
+                </button>
+                {company.logoUrl
+                  ? <button type="button" onClick={() => store.updateSettings({ company: { ...company, logoUrl: '' } })}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-destructive hover:text-destructive transition-colors">
+                      <Icon name="Trash2" size={11} /> Удалить
+                    </button>
+                  : <span className="text-xs text-[hsl(var(--text-muted))]">PNG, JPG, SVG — до 5 МБ</span>
+                }
+              </div>
+            </div>
+          </div>
+
+          {/* Печать и подпись */}
           {([
             {
               label: 'Печать организации',
@@ -254,20 +241,19 @@ export default function SettingsCompanySection() {
               onDelete: () => store.updateSettings({ company: { ...company, signatureUrl: '', useSignature: false } }),
             },
           ] as const).map(item => (
-            <div key={item.label} className="rounded-lg border border-border bg-[hsl(220,12%,14%)] overflow-hidden">
-              {/* Шапка строки: название + тоггл */}
-              <div className="flex items-center justify-between px-3 py-2.5 border-b border-[hsl(220,12%,18%)]">
-                <span className="text-sm font-medium">{item.label}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-[hsl(var(--text-muted))]">{item.enabled ? 'Включена' : 'Выключена'}</span>
-                  <button
-                    type="button"
-                    onClick={item.onToggle}
-                    className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${item.enabled ? 'bg-gold' : 'bg-[hsl(220,12%,26%)]'}`}
-                  >
-                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${item.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                  </button>
-                </div>
+            <div key={item.label} className="rounded-lg border border-border bg-[hsl(220,12%,14%)]">
+              {/* Шапка: название | статус + тоггл */}
+              <div className="flex items-center gap-3 px-3 py-2.5 border-b border-[hsl(220,12%,18%)]">
+                <span className="text-sm font-medium flex-1">{item.label}</span>
+                <span className="text-xs text-[hsl(var(--text-muted))] shrink-0">{item.enabled ? 'Включена' : 'Выключена'}</span>
+                {/* Тоггл без absolute — через padding */}
+                <button
+                  type="button"
+                  onClick={item.onToggle}
+                  className={`shrink-0 w-9 h-5 rounded-full transition-colors flex items-center px-0.5 ${item.enabled ? 'bg-gold justify-end' : 'bg-[hsl(220,12%,26%)] justify-start'}`}
+                >
+                  <span className="w-4 h-4 bg-white rounded-full shadow block" />
+                </button>
               </div>
               {/* Тело: превью + кнопки */}
               <div className="flex items-center gap-3 px-3 py-3">
@@ -277,13 +263,8 @@ export default function SettingsCompanySection() {
                     : <Icon name={item.icon} size={16} className="text-[hsl(var(--text-muted))]" />
                   }
                 </div>
-                <input
-                  ref={item.ref}
-                  type="file"
-                  accept="image/png,image/jpeg,image/webp"
-                  className="hidden"
-                  onChange={e => { const f = e.target.files?.[0]; if (f) item.onUpload(f); e.target.value = ''; }}
-                />
+                <input ref={item.ref} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) item.onUpload(f); e.target.value = ''; }} />
                 <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
