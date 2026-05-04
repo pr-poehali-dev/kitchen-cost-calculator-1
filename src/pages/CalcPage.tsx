@@ -83,7 +83,6 @@ export default function CalcPage({ onOpenClient }: CalcPageProps) {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showClientView, setShowClientView] = useState(false);
   const [confirmDeleteProject, setConfirmDeleteProject] = useState<string | null>(null);
-  const [hiddenSummaryRows, setHiddenSummaryRows] = useState<Set<string>>(new Set());
   const [showSummarySettings, setShowSummarySettings] = useState(false);
   const [refreshed, setRefreshed] = useState(false);
   const [showCompare, setShowCompare] = useState(false);
@@ -280,11 +279,8 @@ export default function CalcPage({ onOpenClient }: CalcPageProps) {
           totals={totals}
           totalServices={totalServices}
           grandTotal={grandTotal}
-          hiddenRows={hiddenSummaryRows}
           showSettings={showSummarySettings}
           onToggleSettings={() => setShowSummarySettings(v => !v)}
-          onToggleRow={id => setHiddenSummaryRows(prev => { const next = new Set(prev); if (next.has(id)) next.delete(id); else next.add(id); return next; })}
-          onShowAll={() => setHiddenSummaryRows(new Set())}
         />
       </div>
 
