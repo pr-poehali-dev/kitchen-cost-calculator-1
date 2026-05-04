@@ -158,6 +158,16 @@ export default function CalcHeader({
                 <span className="bg-[hsl(220,12%,20%)] text-[hsl(var(--text-muted))] text-xs px-1.5 py-0.5 rounded-full">{store.templates.length}</span>
               )}
             </button>
+            {project.clientId && onOpenClient && (
+              <button
+                onClick={() => onOpenClient(project.clientId!)}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[hsl(var(--text-dim))] hover:text-foreground border border-border rounded hover:border-[hsl(var(--text-dim))] transition-colors"
+                title="Открыть карточку клиента и документы"
+              >
+                <Icon name="BookOpen" size={13} />
+                <span>Документы</span>
+              </button>
+            )}
             <button
               onClick={onOpenClientView}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-[hsl(var(--text-dim))] hover:text-foreground border border-border rounded hover:border-[hsl(var(--text-dim))] transition-colors"
