@@ -39,7 +39,13 @@ const BLOCK_DEFAULTS: Record<string, Partial<Block>> = {
 const SETTINGS_SLIDERS = [
   { key: 'fontSize',   label: 'Шрифт (pt)',   min: 7,   max: 14, step: 0.5 },
   { key: 'lineHeight', label: 'Межстрочный',  min: 0.8, max: 2,  step: 0.05 },
-  { key: 'marginMm',   label: 'Поля (мм)',    min: 5,   max: 30, step: 1 },
+];
+
+const MARGIN_FIELDS = [
+  { key: 'marginLeft',   label: '←', title: 'Левое поле (мм)' },
+  { key: 'marginRight',  label: '→', title: 'Правое поле (мм)' },
+  { key: 'marginTop',    label: '↑', title: 'Верхнее поле (мм)' },
+  { key: 'marginBottom', label: '↓', title: 'Нижнее поле (мм)' },
 ];
 
 export default function DocTemplateEditor({
@@ -134,6 +140,28 @@ export default function DocTemplateEditor({
             </div>
           </div>
         ))}
+        {/* Поля страницы */}
+        <div>
+          <label className="text-xs text-[hsl(var(--text-muted))] block mb-1">Поля (мм)</label>
+          <div className="grid grid-cols-2 gap-1">
+            {MARGIN_FIELDS.map(({ key, label, title }) => {
+              const s = template.settings as Record<string, number>;
+              const fallback = key === 'marginLeft' ? 20 : key === 'marginRight' ? 10 : 10;
+              const val = s[key] != null ? s[key] : (s['marginMm'] ?? fallback);
+              return (
+                <div key={key} className="flex items-center gap-1" title={title}>
+                  <span className="text-[10px] text-[hsl(var(--text-muted))] w-4 text-center shrink-0">{label}</span>
+                  <input
+                    type="number" min={3} max={50} step={1}
+                    value={val}
+                    onChange={e => onUpdate({ ...template, settings: { ...template.settings, [key]: parseFloat(e.target.value) || 0 } })}
+                    className="w-12 bg-[hsl(220,14%,12%)] border border-border rounded px-1.5 py-0.5 text-xs text-foreground text-center"
+                  />
+                </div>
+              );
+            })}
+          </div>
+        </div>
         {/* Ориентация */}
         <div>
           <label className="text-xs text-[hsl(var(--text-muted))] block mb-1">Ориентация</label>

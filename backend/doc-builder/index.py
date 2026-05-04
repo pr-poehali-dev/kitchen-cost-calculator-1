@@ -313,15 +313,19 @@ def build_docx(c: dict, doc_type: str, company: dict, template_settings: dict | 
         sec.page_width  = Mm(297); sec.page_height = Mm(210)
     else:
         sec.page_width  = Mm(210); sec.page_height = Mm(297)
+    # Дефолтные поля по типу документа
     if doc_type == 'rules':
-        sec.left_margin = Mm(15); sec.right_margin  = Mm(10)
-        sec.top_margin  = Mm(10); sec.bottom_margin = Mm(10)
+        def_l, def_r, def_t, def_b = 15, 10, 10, 10
     elif doc_type == 'contract':
-        sec.left_margin = Mm(20);  sec.right_margin  = Mm(10)
-        sec.top_margin  = Mm(10);  sec.bottom_margin = Mm(10)
+        def_l, def_r, def_t, def_b = 20, 10, 10, 10
     else:
-        sec.left_margin = Mm(20);  sec.right_margin  = Mm(15)
-        sec.top_margin  = Mm(15);  sec.bottom_margin = Mm(15)
+        def_l, def_r, def_t, def_b = 20, 15, 15, 15
+    # Применяем настройки из шаблона (если заданы)
+    fallback = ts.get('marginMm')
+    sec.left_margin   = Mm(float(ts['marginLeft'])   if 'marginLeft'   in ts else (fallback or def_l))
+    sec.right_margin  = Mm(float(ts['marginRight'])  if 'marginRight'  in ts else (fallback or def_r))
+    sec.top_margin    = Mm(float(ts['marginTop'])    if 'marginTop'    in ts else (fallback or def_t))
+    sec.bottom_margin = Mm(float(ts['marginBottom']) if 'marginBottom' in ts else (fallback or def_b))
 
     # Базовый размер шрифта — зависит от типа документа
     # Договор должен уместиться на 6 листов А4

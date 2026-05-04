@@ -91,7 +91,11 @@ export function buildPreviewHtml(template: Template): string {
   const s = template.settings as Record<string, number | string>;
   const globalFontSize = (s.fontSize as number) || 9.5;
   const lineHeight = (s.lineHeight as number) || 1.0;
-  const margin = (s.marginMm as number) || 10;
+  const fallbackMargin = (s.marginMm as number) || 10;
+  const mLeft   = (s.marginLeft   as number) ?? fallbackMargin;
+  const mRight  = (s.marginRight  as number) ?? fallbackMargin;
+  const mTop    = (s.marginTop    as number) ?? fallbackMargin;
+  const mBottom = (s.marginBottom as number) ?? fallbackMargin;
   const landscape = s.orientation === 'landscape';
   const pageW = landscape ? '297mm' : '210mm';
   const pageH = landscape ? '210mm' : '297mm';
@@ -186,7 +190,7 @@ export function buildPreviewHtml(template: Template): string {
 <style>
   @page{size:${pageW} ${pageH};margin:0}
   body{font-family:'Times New Roman',serif;font-size:${globalFontSize}pt;line-height:${lineHeight};margin:0;padding:0}
-  .page{width:${pageW};min-height:${pageH};margin:0 auto;padding:${margin}mm;background:#fff;box-sizing:border-box}
+  .page{width:${pageW};min-height:${pageH};margin:0 auto;padding:${mTop}mm ${mRight}mm ${mBottom}mm ${mLeft}mm;background:#fff;box-sizing:border-box}
   h1{text-align:center;font-size:${globalFontSize + 1}pt}
   p{margin:0 0 2px;text-align:justify}
 </style></head><body><div class="page">
