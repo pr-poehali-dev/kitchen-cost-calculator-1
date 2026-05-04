@@ -69,7 +69,11 @@ function SortableBlock({ block, ...props }: {
   );
 }
 
-export default function CalcPage() {
+interface CalcPageProps {
+  onOpenClient?: (clientId: string) => void;
+}
+
+export default function CalcPage({ onOpenClient }: CalcPageProps) {
   const store = useStore();
   const project = store.getActiveProject();
   const [editingBlockId, setEditingBlockId] = useState<string | null>(null);
@@ -208,6 +212,7 @@ export default function CalcPage() {
         onRequestDeleteProject={setConfirmDeleteProject}
         onConfirmDeleteProject={handleDeleteProject}
         onCancelDeleteProject={() => setConfirmDeleteProject(null)}
+        onOpenClient={onOpenClient}
       />
 
       <div className="flex-1 overflow-auto scrollbar-thin p-3 md:p-6 space-y-3 md:space-y-4">

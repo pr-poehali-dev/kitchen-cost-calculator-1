@@ -181,6 +181,7 @@ export interface ClientView {
 export interface Project {
   id: string;
   client: string;
+  clientId?: string;
   object: string;
   address: string;
   phone: string;

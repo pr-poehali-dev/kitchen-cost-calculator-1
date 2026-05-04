@@ -4,6 +4,7 @@ import Layout from '@/components/Layout';
 import GlobalSearch from '@/components/GlobalSearch';
 import { AppLoadingSkeleton } from '@/components/Skeleton';
 import { useStore, loadStateFromDb, setStoreToken, forceSetGlobalState, saveStateToDb } from '@/store/useStore';
+import { setState as setStoreState } from '@/store/stateCore';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { setCatalogToken, loadCatalog, syncCatalogFromAppState, catalogCache } from '@/hooks/useCatalog';
 import HomePage from '@/pages/HomePage';
@@ -121,8 +122,8 @@ export default function App() {
         onOpenSearch={() => setShowSearch(true)}
       >
         {section === 'home'     && <HomePage onNav={setSection} />}
-        {section === 'clients'  && <ClientsPage openClientId={openClientId} key={openClientId ?? 'clients'} />}
-        {section === 'calc'     && <CalcPage />}
+        {section === 'clients'  && <ClientsPage openClientId={openClientId} key={openClientId ?? 'clients'} onOpenCalc={(projectId) => { if (projectId) setStoreState(s => ({ ...s, activeProjectId: projectId })); setSection('calc'); }} />}
+        {section === 'calc'     && <CalcPage onOpenClient={clientId => { setOpenClientId(clientId); setSection('clients'); }} />}
         {section === 'blocks'   && <BlocksPage />}
         {section === 'services' && <ServicesPage />}
         {section === 'base'     && <BasePage initialSearch={baseSearch?.search} initialTab={baseSearch?.tab} key={baseSearch ? `${baseSearch.tab}-${baseSearch.search}` : 'base'} />}

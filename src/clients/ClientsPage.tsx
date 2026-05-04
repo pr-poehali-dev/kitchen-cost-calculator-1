@@ -16,7 +16,7 @@ type View = 'list' | 'kanban';
 type SortField = 'name' | 'created_at' | 'delivery_date' | 'total_amount';
 type SortDir = 'asc' | 'desc';
 
-export default function ClientsPage({ openClientId }: { openClientId?: string | null }) {
+export default function ClientsPage({ openClientId, onOpenCalc }: { openClientId?: string | null; onOpenCalc?: (projectId?: string) => void }) {
   const { clients, total, pages, page, loading, fetchClients, loadAll, createClient, updateStatus } = useClients();
   const [view, setView] = useState<View>('list');
   const [search, setSearch] = useState('');
@@ -148,7 +148,7 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
   if (loading && clients.length === 0) return <ClientsListSkeleton />;
 
   if (fullCardId) {
-    return <ClientCard clientId={fullCardId} onBack={() => { setFullCardId(null); setPanelId(null); fetchClients(buildFilter(), page); }} />;
+    return <ClientCard clientId={fullCardId} onBack={() => { setFullCardId(null); setPanelId(null); fetchClients(buildFilter(), page); }} onOpenCalc={onOpenCalc} />;
   }
 
   const showCounter = !!(search || filterStatus !== 'all' || hasAdvancedFilters || selectedIds.size > 0) && !loading;

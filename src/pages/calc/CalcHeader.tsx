@@ -2,6 +2,9 @@ import { useStore } from '@/store/useStore';
 import type { Project } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { MESSENGERS, fmt } from './constants';
+import ClientPicker from './ClientPicker';
+import type { Client } from '@/clients/types';
+import { clientFullName } from '@/clients/types';
 
 interface Props {
   project: Project;
@@ -21,6 +24,7 @@ interface Props {
   onRequestDeleteProject: (id: string) => void;
   onConfirmDeleteProject: (id: string) => void;
   onCancelDeleteProject: () => void;
+  onOpenClient?: (clientId: string) => void;
 }
 
 function InlineEdit({ value, onChange, placeholder = '', className = '' }: {
@@ -42,8 +46,24 @@ export default function CalcHeader({
   onToggleProjects, onStopPropagation,
   onOpenTemplates, onExportPdf, onOpenClientView, onOpenCompare,
   onRequestDeleteProject, onConfirmDeleteProject, onCancelDeleteProject,
+  onOpenClient,
 }: Props) {
   const store = useStore();
+
+  const handleClientSelect = (c: Client) => {
+    store.updateProjectInfo(project.id, {
+      clientId: c.id,
+      client: clientFullName(c),
+      phone: c.phone || project.phone,
+      address: c.delivery_city
+        ? [c.delivery_city, c.delivery_street, c.delivery_house].filter(Boolean).join(', ')
+        : project.address,
+    });
+  };
+
+  const handleClientClear = () => {
+    store.updateProjectInfo(project.id, { clientId: undefined, client: '' });
+  };
 
   return (
     <div className="border-b border-border bg-[hsl(220,14%,11%)] px-3 md:px-6 py-3 md:py-4">
@@ -202,8 +222,34 @@ export default function CalcHeader({
 
       {/* Project info fields */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-2 md:gap-3">
+        {/* Клиент — с пикером */}
+        <div>
+          <label className="text-[hsl(var(--text-muted))] text-xs uppercase tracking-wider block mb-1">Клиент</label>
+          {project.clientId ? (
+            <ClientPicker
+              clientId={project.clientId}
+              clientName={project.client}
+              onSelect={handleClientSelect}
+              onClear={handleClientClear}
+              onOpenClient={onOpenClient}
+            />
+          ) : (
+            <div className="flex items-center gap-1 flex-wrap">
+              <InlineEdit
+                value={project.client}
+                onChange={v => store.updateProjectInfo(project.id, { client: v })}
+                placeholder="ФИО клиента"
+                className="text-sm text-foreground w-full placeholder:text-[hsl(var(--text-muted))]"
+              />
+              <ClientPicker
+                onSelect={handleClientSelect}
+                onClear={handleClientClear}
+                onOpenClient={onOpenClient}
+              />
+            </div>
+          )}
+        </div>
         {[
-          { label: 'Клиент', key: 'client' as const, placeholder: 'ФИО клиента' },
           { label: 'Изделие', key: 'object' as const, placeholder: 'Название изделия', colSpan: 2 },
           { label: 'Телефон', key: 'phone' as const, placeholder: '+7 000 000-00-00' },
           { label: 'Адрес', key: 'address' as const, placeholder: 'Адрес объекта' },

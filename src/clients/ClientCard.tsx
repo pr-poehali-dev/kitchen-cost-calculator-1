@@ -38,7 +38,7 @@ const TABS: { id: Tab; label: string; icon: string }[] = [
   { id: 'history',    label: 'История',    icon: 'Clock' },
 ];
 
-export default function ClientCard({ clientId, onBack }: { clientId: string; onBack: () => void }) {
+export default function ClientCard({ clientId, onBack, onOpenCalc }: { clientId: string; onBack: () => void; onOpenCalc?: (projectId?: string) => void }) {
   const { client, photos, history, loading, saving, save, changeStatus, uploadPhoto, deletePhoto } = useClient(clientId);
   const { createClient } = useClients();
   const [tab, setTab] = useState<Tab>('overview');
@@ -330,7 +330,7 @@ export default function ClientCard({ clientId, onBack }: { clientId: string; onB
       {/* Tab content */}
       <div className="flex-1 overflow-auto scrollbar-thin">
         <div className="px-3 py-4 sm:px-6 sm:py-6 max-w-3xl mx-auto">
-          {tab === 'overview'   && <TabOverview client={current} onChange={onChange} onStatusChange={handleStatusChange} />}
+          {tab === 'overview'   && <TabOverview client={current} onChange={onChange} onStatusChange={handleStatusChange} onOpenCalc={onOpenCalc} />}
           {tab === 'data'       && <TabData client={current} onChange={onChange} />}
           {tab === 'contract'   && <TabContract client={current} onChange={onChange} photos={photos} />}
           {tab === 'photos'     && <TabPhotos clientId={clientId} photos={photos} onUpload={uploadPhoto} onDelete={deletePhoto} />}
