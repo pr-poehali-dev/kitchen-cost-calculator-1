@@ -88,10 +88,13 @@ export function serializeTableContent(rows: string[][]): string {
 
 export function buildPreviewHtml(template: Template): string {
   const blocks = template.blocks.filter(b => b.enabled);
-  const s = template.settings as Record<string, number>;
-  const globalFontSize = s.fontSize || 9.5;
-  const lineHeight = s.lineHeight || 1.0;
-  const margin = s.marginMm || 10;
+  const s = template.settings as Record<string, number | string>;
+  const globalFontSize = (s.fontSize as number) || 9.5;
+  const lineHeight = (s.lineHeight as number) || 1.0;
+  const margin = (s.marginMm as number) || 10;
+  const landscape = s.orientation === 'landscape';
+  const pageW = landscape ? '297mm' : '210mm';
+  const pageH = landscape ? '210mm' : '297mm';
 
   const rendered = blocks.map(b => {
     const text = b.content
@@ -181,8 +184,9 @@ export function buildPreviewHtml(template: Template): string {
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
+  @page{size:${pageW} ${pageH};margin:0}
   body{font-family:'Times New Roman',serif;font-size:${globalFontSize}pt;line-height:${lineHeight};margin:0;padding:0}
-  .page{width:210mm;min-height:297mm;margin:0 auto;padding:${margin}mm;background:#fff}
+  .page{width:${pageW};min-height:${pageH};margin:0 auto;padding:${margin}mm;background:#fff;box-sizing:border-box}
   h1{text-align:center;font-size:${globalFontSize + 1}pt}
   p{margin:0 0 2px;text-align:justify}
 </style></head><body><div class="page">

@@ -117,9 +117,9 @@ export default function DocTemplateEditor({
       </div>
 
       {/* Настройки отображения */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="flex flex-wrap gap-4 items-end">
         {SETTINGS_SLIDERS.map(({ key, label, min, max, step }) => (
-          <div key={key}>
+          <div key={key} className="flex-1 min-w-[120px]">
             <label className="text-xs text-[hsl(var(--text-muted))] block mb-1">{label}</label>
             <div className="flex items-center gap-2">
               <input
@@ -134,6 +134,29 @@ export default function DocTemplateEditor({
             </div>
           </div>
         ))}
+        {/* Ориентация */}
+        <div>
+          <label className="text-xs text-[hsl(var(--text-muted))] block mb-1">Ориентация</label>
+          <div className="flex gap-1">
+            {[
+              { value: 'portrait',  label: 'Книжная',  icon: '▯' },
+              { value: 'landscape', label: 'Альбомная', icon: '▭' },
+            ].map(opt => {
+              const active = (template.settings.orientation ?? 'portrait') === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => onUpdate({ ...template, settings: { ...template.settings, orientation: opt.value } })}
+                  title={opt.label}
+                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs transition-all ${active ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+                >
+                  <span className="text-sm leading-none">{opt.icon}</span>
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
       </div>
 
       {/* Переменные */}

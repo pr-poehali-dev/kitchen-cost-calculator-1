@@ -254,7 +254,7 @@ def get_products(c):
 
 # ── DOCX builder ─────────────────────────────────────────────────────────────
 
-def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
+def build_docx(c: dict, doc_type: str, company: dict, template_settings: dict | None = None) -> bytes:
     from docx import Document
     from docx.shared import Pt, Mm, Cm
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -307,7 +307,12 @@ def build_docx(c: dict, doc_type: str, company: dict) -> bytes:
     # ── Создаём документ ─────────────────────────────────────────────────────
     doc = Document()
     sec = doc.sections[0]
-    sec.page_width  = Mm(210); sec.page_height = Mm(297)
+    ts = template_settings or {}
+    landscape = ts.get('orientation') == 'landscape'
+    if landscape:
+        sec.page_width  = Mm(297); sec.page_height = Mm(210)
+    else:
+        sec.page_width  = Mm(210); sec.page_height = Mm(297)
     if doc_type == 'rules':
         sec.left_margin = Mm(15); sec.right_margin  = Mm(10)
         sec.top_margin  = Mm(10); sec.bottom_margin = Mm(10)
@@ -1434,9 +1439,21 @@ def handler(event: dict, context) -> dict:
             client['manager_poa_number'] = poa.get('poa_number', '')
             client['manager_poa_date']   = poa.get('poa_date', '')
 
+    # Загружаем настройки шаблона (orientation и др.)
+    template_settings = {}
+    with get_db() as conn:
+        cur = conn.cursor()
+        cur.execute(
+            f"SELECT settings FROM {schema}.doc_templates WHERE user_id = %s AND doc_type = %s AND is_default = true LIMIT 1",
+            (str(user_id), doc_type)
+        )
+        trow = cur.fetchone()
+        if trow:
+            template_settings = trow[0] or {}
+
     if action == 'doc_docx':
         logger.info(f'doc_docx: {doc_type} for client {cid}, tech_img={str(client.get("tech_image_url",""))[:80]}')
-        docx_bytes = build_docx(client, doc_type, company)
+        docx_bytes = build_docx(client, doc_type, company, template_settings)
         logger.info(f'doc_docx: generated {len(docx_bytes)} bytes')
         return {
             'statusCode': 200,
@@ -1467,7 +1484,7 @@ def handler(event: dict, context) -> dict:
         with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
             for dt, name in DOCS_ZIP.items():
                 try:
-                    b = build_docx(client, dt, company)
+                    b = build_docx(client, dt, company, template_settings)
                     zf.writestr(f'{name} — {fname_client}.docx', b)
                     logger.info(f'zip: added {dt} ({len(b)} bytes)')
                 except Exception as ex:
