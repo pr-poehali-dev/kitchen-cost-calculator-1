@@ -8,6 +8,7 @@ import VariantsEditor from './VariantsEditor';
 import VendorSidebar from './vendors/VendorSidebar';
 import VendorHeroCard from './vendors/VendorHeroCard';
 import VendorAssortment from './vendors/VendorAssortment';
+import VendorEditSidebar from './vendors/VendorEditSidebar';
 
 interface Props {
   selectedId: string | null;
@@ -18,6 +19,7 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
   const store = useStore();
   const catalog = useCatalog();
   const [editingVendor, setEditingVendor] = useState<Partial<Vendor> | null>(null);
+  const [editSidebarId, setEditSidebarId] = useState<string | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Partial<Material> | null>(null);
   const [expandedMfr, setExpandedMfr] = useState<Record<string, boolean>>({});
   const [sideSearch, setSideSearch] = useState('');
@@ -107,7 +109,7 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
               vendorMaterialsCount={vendorMaterials.length}
               mfrWithMaterials={mfrWithMaterials}
               allTypes={allTypes}
-              onEditVendor={() => setEditingVendor(vendor)}
+              onEditVendor={() => setEditSidebarId(vendor.id)}
               onDeleteVendor={async () => { await deleteVendor(vendor.id); onSelect(null); }}
               onAddMaterial={handleAddMaterial}
             />
@@ -132,6 +134,15 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
               <p className="text-[hsl(var(--text-muted))] text-sm">Выберите поставщика</p>
             </div>
           </div>
+        )}
+
+        {/* Edit Sidebar — поставщик */}
+        {editSidebarId && (
+          <VendorEditSidebar
+            vendorId={editSidebarId}
+            onClose={() => setEditSidebarId(null)}
+            onDeleted={() => onSelect(null)}
+          />
         )}
       </div>
 

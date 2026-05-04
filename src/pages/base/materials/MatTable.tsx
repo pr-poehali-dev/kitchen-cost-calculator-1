@@ -20,6 +20,8 @@ interface Props {
   onToggleAllVisible: () => void;
   onEdit: (m: Material) => void;
   onDelete: (id: string) => void;
+  onRowClick?: (id: string) => void;
+  selectedRowId?: string | null;
 }
 
 function GoldCheckbox({ checked, indeterminate, onChange, onClick }: {
@@ -54,6 +56,7 @@ export default function MatTable({
   selected, isAllVisibleSelected, isIndeterminate,
   onToggleOne, onToggleAllVisible,
   onEdit, onDelete,
+  onRowClick, selectedRowId,
 }: Props) {
   const COLS = '20px 2fr 1fr 1fr 1fr 0.8fr 0.7fr 1fr 0.7fr 1fr 28px';
   const parentRef = useRef<HTMLDivElement>(null);
@@ -124,9 +127,9 @@ export default function MatTable({
                 key={m.id}
                 data-index={virtualRow.index}
                 ref={virtualizer.measureElement}
-                onClick={() => onToggleOne(m.id)}
+                onClick={() => onRowClick ? onRowClick(m.id) : onToggleOne(m.id)}
                 className={`grid items-center px-4 border-b border-[hsl(220,12%,14%)] group transition-colors text-sm cursor-pointer absolute top-0 left-0 w-full ${
-                  isSelected ? 'bg-gold/5' : 'hover:bg-[hsl(220,12%,12%)]'
+                  selectedRowId === m.id ? 'bg-[hsl(220,12%,15%)]' : isSelected ? 'bg-gold/5' : 'hover:bg-[hsl(220,12%,12%)]'
                 }`}
                 style={{
                   gridTemplateColumns: COLS,

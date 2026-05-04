@@ -17,6 +17,7 @@ import TmfPriceModal from './materials/TmfPriceModal';
 import MatTypeBar from './materials/MatTypeBar';
 import MatFilterBar from './materials/MatFilterBar';
 import MatTable from './materials/MatTable';
+import MaterialSidebar from './materials/MaterialSidebar';
 
 interface Props {
   matTypeFilter: string;
@@ -27,6 +28,9 @@ interface Props {
 export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSearch = '' }: Props) {
   const store = useStore();
   const catalog = useCatalog();
+
+  // Состояние сайдбара
+  const [selectedMaterialId, setSelectedMaterialId] = useState<string | null>(null);
 
   // Состояние модалок
   const [editingMaterial, setEditingMaterial] = useState<Partial<Material> | null>(null);
@@ -186,7 +190,8 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
 
   return (
     <>
-      <div>
+      <div className="flex gap-0 h-full min-h-0">
+      <div className="flex-1 min-w-0">
         <MatTypeBar
           matTypeFilter={matTypeFilter}
           onFilterChange={onFilterChange}
@@ -249,7 +254,18 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
           onToggleAllVisible={toggleAllVisible}
           onEdit={m => setEditingMaterial(m)}
           onDelete={async id => { await deleteMaterial(id); }}
+          onRowClick={id => setSelectedMaterialId(prev => prev === id ? null : id)}
+          selectedRowId={selectedMaterialId}
         />
+      </div>
+
+      {/* Боковая панель материала */}
+      {selectedMaterialId && (
+        <MaterialSidebar
+          materialId={selectedMaterialId}
+          onClose={() => setSelectedMaterialId(null)}
+        />
+      )}
       </div>
 
       {/* Диалог подтверждения удаления */}

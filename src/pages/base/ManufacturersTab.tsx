@@ -8,6 +8,7 @@ import VariantsEditor from './VariantsEditor';
 import MfrSidebar from './manufacturers/MfrSidebar';
 import MfrHeroCard from './manufacturers/MfrHeroCard';
 import MfrAssortment from './manufacturers/MfrAssortment';
+import MfrEditSidebar from './manufacturers/MfrEditSidebar';
 
 interface Props {
   selectedId: string | null;
@@ -18,6 +19,7 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
   const store = useStore();
   const catalog = useCatalog();
   const [editingMfr, setEditingMfr] = useState<Partial<Manufacturer> | null>(null);
+  const [editSidebarId, setEditSidebarId] = useState<string | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Partial<Material> | null>(null);
   const [catFilter, setCatFilter] = useState<string>('all');
   const [sideSearch, setSideSearch] = useState('');
@@ -103,7 +105,7 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
             <MfrHeroCard
               manufacturer={manufacturer}
               mfrMaterialsCount={mfrMaterials.length}
-              onEdit={() => setEditingMfr(manufacturer)}
+              onEdit={() => setEditSidebarId(manufacturer.id)}
               onDelete={async () => { await deleteManufacturer(manufacturer.id); onSelect(null); }}
             />
             <MfrAssortment
@@ -129,6 +131,15 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
               <p className="text-[hsl(var(--text-muted))] text-sm">Выберите производителя</p>
             </div>
           </div>
+        )}
+
+        {/* Edit Sidebar — производитель */}
+        {editSidebarId && (
+          <MfrEditSidebar
+            manufacturerId={editSidebarId}
+            onClose={() => setEditSidebarId(null)}
+            onDeleted={() => onSelect(null)}
+          />
         )}
       </div>
 
