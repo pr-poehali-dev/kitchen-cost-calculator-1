@@ -162,6 +162,29 @@ export default function DocTemplateEditor({
             })}
           </div>
         </div>
+        {/* Шрифт */}
+        <div>
+          <label className="text-xs text-[hsl(var(--text-muted))] block mb-1">Гарнитура</label>
+          <div className="flex flex-col gap-1">
+            {[
+              { value: 'Times New Roman', label: 'Times New Roman' },
+              { value: 'Arial',           label: 'Arial' },
+              { value: 'Calibri',         label: 'Calibri' },
+            ].map(opt => {
+              const active = (template.settings.fontFamily ?? 'Times New Roman') === opt.value;
+              return (
+                <button
+                  key={opt.value}
+                  onClick={() => onUpdate({ ...template, settings: { ...template.settings, fontFamily: opt.value } })}
+                  style={{ fontFamily: opt.value }}
+                  className={`px-2.5 py-0.5 rounded border text-xs text-left transition-all ${active ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
         {/* Ориентация */}
         <div>
           <label className="text-xs text-[hsl(var(--text-muted))] block mb-1">Ориентация</label>

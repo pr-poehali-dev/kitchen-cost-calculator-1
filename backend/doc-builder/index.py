@@ -330,9 +330,10 @@ def build_docx(c: dict, doc_type: str, company: dict, template_settings: dict | 
     # Базовый размер шрифта — зависит от типа документа
     # Договор должен уместиться на 6 листов А4
     _base_pt = 10.0 if doc_type == 'contract' else (9.5 if doc_type == 'rules' else 11)
+    _font_name = ts.get('fontFamily') or 'Times New Roman'
 
     style = doc.styles['Normal']
-    style.font.name = 'Times New Roman'
+    style.font.name = _font_name
     style.font.size = Pt(_base_pt)
     style.paragraph_format.line_spacing = Pt(_base_pt * 1.25)
     style.paragraph_format.space_after  = Pt(0)
@@ -340,7 +341,7 @@ def build_docx(c: dict, doc_type: str, company: dict, template_settings: dict | 
 
     # ── Вспомогательные функции ───────────────────────────────────────────────
     def font(run, size=None, bold=False):
-        run.font.name = 'Times New Roman'
+        run.font.name = _font_name
         run.font.size = Pt(size if size is not None else _base_pt)
         run.bold = bold
 

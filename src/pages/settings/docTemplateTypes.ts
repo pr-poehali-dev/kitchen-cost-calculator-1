@@ -91,6 +91,7 @@ export function buildPreviewHtml(template: Template): string {
   const s = template.settings as Record<string, number | string>;
   const globalFontSize = (s.fontSize as number) || 9.5;
   const lineHeight = (s.lineHeight as number) || 1.0;
+  const fontFamily = (s.fontFamily as string) || 'Times New Roman';
   const fallbackMargin = (s.marginMm as number) || 10;
   const mLeft   = (s.marginLeft   as number) ?? fallbackMargin;
   const mRight  = (s.marginRight  as number) ?? fallbackMargin;
@@ -189,7 +190,7 @@ export function buildPreviewHtml(template: Template): string {
   return `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
   @page{size:${pageW} ${pageH};margin:0}
-  body{font-family:'Times New Roman',serif;font-size:${globalFontSize}pt;line-height:${lineHeight};margin:0;padding:0}
+  body{font-family:'${fontFamily}',serif;font-size:${globalFontSize}pt;line-height:${lineHeight};margin:0;padding:0}
   .page{width:${pageW};min-height:${pageH};margin:0 auto;padding:${mTop}mm ${mRight}mm ${mBottom}mm ${mLeft}mm;background:#fff;box-sizing:border-box}
   h1{text-align:center;font-size:${globalFontSize + 1}pt}
   p{margin:0 0 2px;text-align:justify}
