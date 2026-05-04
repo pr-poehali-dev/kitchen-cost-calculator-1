@@ -4,6 +4,7 @@ import {
   defaultSettings,
   DEFAULT_MATERIAL_TYPES,
   DEFAULT_MATERIAL_CATEGORIES,
+  DEFAULT_SERVICE_CATEGORIES,
 } from './initialState';
 import { API_URLS } from '@/config/api';
 
@@ -61,11 +62,12 @@ function parseAndMerge(raw: string): AppState {
     : initialState.expenses;
 
   return {
-    manufacturers:   mergeById(parsed.manufacturers,  initialState.manufacturers),
-    vendors:         mergeById(parsed.vendors,         initialState.vendors),
-    materials:       mergeById(parsed.materials,       initialState.materials),
-    services:        parsed.services?.length ? parsed.services : initialState.services,
-    expenseGroups:   mergeById(parsed.expenseGroups,   initialState.expenseGroups),
+    manufacturers:      mergeById(parsed.manufacturers,  initialState.manufacturers),
+    vendors:            mergeById(parsed.vendors,         initialState.vendors),
+    materials:          mergeById(parsed.materials,       initialState.materials),
+    serviceCategories:  mergeById(parsed.serviceCategories ?? [], DEFAULT_SERVICE_CATEGORIES),
+    services:           parsed.services?.length ? parsed.services : initialState.services,
+    expenseGroups:      mergeById(parsed.expenseGroups,   initialState.expenseGroups),
     expenses:        migratedExpenses,
     settings: {
       ...defaultSettings,

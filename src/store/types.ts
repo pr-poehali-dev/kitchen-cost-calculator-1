@@ -82,13 +82,24 @@ export interface Material {
   priceHistory?: MaterialPriceHistoryItem[]; // история изменений цены
 }
 
+export interface ServiceCategory {
+  id: string;
+  name: string;
+  color: string;
+  description?: string;
+}
+
 export interface Service {
   id: string;
   name: string;
-  category: string;
+  categoryId?: string;
+  category: string;        // устарело, оставляем для совместимости
   unit: Unit;
-  basePrice: number;
+  basePrice: number;       // себестоимость / закупочная цена
+  clientPrice?: number;    // рекомендованная цена клиенту
+  description?: string;    // описание для клиента (в КП)
   note?: string;
+  archived?: boolean;
 }
 
 export interface ExpenseGroup {
@@ -271,6 +282,7 @@ export interface AppState {
   vendors: Vendor[];
   materials: Material[];
   services: Service[];
+  serviceCategories: ServiceCategory[];
   expenseGroups: ExpenseGroup[];
   expenses: ExpenseItem[];
   settings: Settings;

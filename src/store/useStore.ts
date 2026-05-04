@@ -157,6 +157,15 @@ export function useStore() {
     addService: servicesSlice.addService,
     updateService: servicesSlice.updateService,
     deleteService: servicesSlice.deleteService,
+    archiveService: servicesSlice.archiveService,
+
+    // Категории услуг
+    addServiceCategory: servicesSlice.addServiceCategory,
+    updateServiceCategory: servicesSlice.updateServiceCategory,
+    deleteServiceCategory: servicesSlice.deleteServiceCategory,
+
+    // Хелпер: получить категорию услуги по id
+    getServiceCategoryById: (id?: string) => (state.serviceCategories || []).find(c => c.id === id),
 
     // Расходы
     addExpense: expensesSlice.addExpense,

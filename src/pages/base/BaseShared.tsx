@@ -25,10 +25,10 @@ export function Field({ label, value, onChange, type = 'text', required = false,
   );
 }
 
-export function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+export function Modal({ title, onClose, children, width = 'max-w-lg' }: { title: string; onClose: () => void; children: React.ReactNode; width?: string }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg shadow-2xl w-full max-w-lg mx-2 sm:mx-4 animate-fade-in max-h-[90vh] overflow-auto scrollbar-thin">
+      <div className={`bg-[hsl(220,14%,11%)] border border-border rounded-lg shadow-2xl w-full ${width} mx-2 sm:mx-4 animate-fade-in max-h-[90vh] overflow-auto scrollbar-thin`}>
         <div className="flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 border-b border-border sticky top-0 bg-[hsl(220,14%,11%)] z-10">
           <span className="font-semibold text-sm">{title}</span>
           <button onClick={onClose} className="text-[hsl(var(--text-muted))] hover:text-foreground"><Icon name="X" size={16} /></button>

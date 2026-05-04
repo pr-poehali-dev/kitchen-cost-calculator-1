@@ -1,6 +1,13 @@
 import type {
-  AppState, Settings, MaterialType, MaterialCategory, CalcColumnKey,
+  AppState, Settings, MaterialType, MaterialCategory, ServiceCategory, CalcColumnKey,
 } from './types';
+
+export const DEFAULT_SERVICE_CATEGORIES: ServiceCategory[] = [
+  { id: 'sc1', name: 'Сборка',              color: '#c8a96e', description: 'Монтаж и сборка мебели' },
+  { id: 'sc2', name: 'Доставка',            color: '#78b4c8', description: 'Доставка и подъём' },
+  { id: 'sc3', name: 'Установка',           color: '#a0c878', description: 'Установка техники и фурнитуры' },
+  { id: 'sc4', name: 'Дополнительные работы', color: '#b478c8', description: 'Прочие работы' },
+];
 
 export const DEFAULT_MATERIAL_TYPES: MaterialType[] = [
   { id: 'mt1', name: 'ЛДСП', color: '#c8a96e' },
@@ -216,12 +223,13 @@ export const initialState: AppState = {
       ],
     },
   ],
+  serviceCategories: DEFAULT_SERVICE_CATEGORIES,
   services: [
-    { id: 'sv1', name: 'Сборка кухни', category: 'Сборка', unit: 'компл', basePrice: 15000 },
-    { id: 'sv2', name: 'Доставка по городу', category: 'Доставка', unit: 'компл', basePrice: 3000 },
-    { id: 'sv3', name: 'Подъём на этаж', category: 'Доставка', unit: 'шт', basePrice: 500 },
-    { id: 'sv4', name: 'Установка столешницы', category: 'Установка', unit: 'м.п.', basePrice: 1200 },
-    { id: 'sv5', name: 'Врезка мойки', category: 'Дополнительные работы', unit: 'шт', basePrice: 1500 },
+    { id: 'sv1', name: 'Сборка кухни',        category: 'Сборка',                  categoryId: 'sc1', unit: 'компл', basePrice: 15000, clientPrice: 18000 },
+    { id: 'sv2', name: 'Доставка по городу',   category: 'Доставка',                categoryId: 'sc2', unit: 'компл', basePrice: 3000,  clientPrice: 3500  },
+    { id: 'sv3', name: 'Подъём на этаж',       category: 'Доставка',                categoryId: 'sc2', unit: 'шт',    basePrice: 500,   clientPrice: 700   },
+    { id: 'sv4', name: 'Установка столешницы', category: 'Установка',               categoryId: 'sc3', unit: 'м.п.', basePrice: 1200,  clientPrice: 1500  },
+    { id: 'sv5', name: 'Врезка мойки',         category: 'Дополнительные работы',   categoryId: 'sc4', unit: 'шт',   basePrice: 1500,  clientPrice: 2000  },
   ],
   expenseGroups: [
     { id: 'eg1', name: 'Наценки' },

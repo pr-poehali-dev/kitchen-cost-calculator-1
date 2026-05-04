@@ -22,8 +22,10 @@ export default function ServiceRowComponent({ row, currency, services, onUpdate,
   const rowTotal = row.qty * row.price;
 
   const filtered = services.filter(s =>
-    s.name.toLowerCase().includes(nameFilter.toLowerCase()) ||
-    s.category.toLowerCase().includes(nameFilter.toLowerCase())
+    !s.archived && (
+      s.name.toLowerCase().includes(nameFilter.toLowerCase()) ||
+      s.category.toLowerCase().includes(nameFilter.toLowerCase())
+    )
   );
 
   const sv = services.find(s => s.id === row.serviceId);
