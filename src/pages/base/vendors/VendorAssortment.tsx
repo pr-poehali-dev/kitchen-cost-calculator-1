@@ -21,6 +21,7 @@ interface Props {
   onToggleMfr: (mfrId: string) => void;
   onAddMaterial: (patch: Partial<Material>) => void;
   onEditMaterial: (m: Material) => void;
+  selectedMatId?: string | null;
 }
 
 export default function VendorAssortment({
@@ -35,6 +36,7 @@ export default function VendorAssortment({
   onToggleMfr,
   onAddMaterial,
   onEditMaterial,
+  selectedMatId,
 }: Props) {
   const store = useStore();
 
@@ -118,7 +120,8 @@ export default function VendorAssortment({
                   if (catsUsed.length === 0) {
                     return mats.map(m => (
                       <MaterialRow key={m.id} material={m} currency={store.settings.currency}
-                        onEdit={() => onEditMaterial(m)} onDelete={() => deleteMaterial(m.id)} />
+                        onEdit={() => onEditMaterial(m)} onDelete={() => deleteMaterial(m.id)}
+                        onRowClick={() => onEditMaterial(m)} highlighted={selectedMatId === m.id} />
                     ));
                   }
                   return (
@@ -134,7 +137,8 @@ export default function VendorAssortment({
                             </div>
                             {mats.filter(m => m.categoryId === cat.id).map(m => (
                               <MaterialRow key={m.id} material={m} currency={store.settings.currency}
-                                onEdit={() => onEditMaterial(m)} onDelete={() => deleteMaterial(m.id)} />
+                                onEdit={() => onEditMaterial(m)} onDelete={() => deleteMaterial(m.id)}
+                                onRowClick={() => onEditMaterial(m)} highlighted={selectedMatId === m.id} />
                             ))}
                           </div>
                         );
@@ -147,7 +151,8 @@ export default function VendorAssortment({
                           </div>
                           {uncategorized.map(m => (
                             <MaterialRow key={m.id} material={m} currency={store.settings.currency}
-                              onEdit={() => onEditMaterial(m)} onDelete={() => deleteMaterial(m.id)} />
+                              onEdit={() => onEditMaterial(m)} onDelete={() => deleteMaterial(m.id)}
+                              onRowClick={() => onEditMaterial(m)} highlighted={selectedMatId === m.id} />
                           ))}
                         </div>
                       )}

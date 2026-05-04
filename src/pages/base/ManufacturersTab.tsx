@@ -124,6 +124,7 @@ export default function ManufacturersTab({ selectedId, onSelect }: Props) {
               onCatFilterChange={setCatFilter}
               onAddMaterial={() => setEditingMaterial({ manufacturerId: manufacturer.id, unit: 'м²', typeId: allTypes[0]?.id, basePrice: 0 })}
               onEditMaterial={m => setMatSidebarId(prev => prev === m.id ? null : m.id)}
+              selectedMatId={matSidebarId}
             />
           </div>
         ) : (

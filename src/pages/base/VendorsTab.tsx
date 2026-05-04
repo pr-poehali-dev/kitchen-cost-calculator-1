@@ -127,6 +127,7 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
               onToggleMfr={toggleMfr}
               onAddMaterial={handleAddMaterial}
               onEditMaterial={m => setMatSidebarId(prev => prev === m.id ? null : m.id)}
+              selectedMatId={matSidebarId}
             />
           </div>
         ) : (

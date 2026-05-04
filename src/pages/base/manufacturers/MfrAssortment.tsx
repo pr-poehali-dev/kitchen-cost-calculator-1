@@ -29,13 +29,14 @@ interface Props {
   onCatFilterChange: (v: string) => void;
   onAddMaterial: () => void;
   onEditMaterial: (m: Material) => void;
+  selectedMatId?: string | null;
 }
 
 export default function MfrAssortment({
   manufacturer, mfrMaterials, filteredMfrMaterials,
   groupedByType, ungrouped,
   matSearch, catFilter, allCategories, allTypesFirstId,
-  onMatSearchChange, onCatFilterChange, onAddMaterial, onEditMaterial,
+  onMatSearchChange, onCatFilterChange, onAddMaterial, onEditMaterial, selectedMatId,
 }: Props) {
   const store = useStore();
 
@@ -105,9 +106,8 @@ export default function MfrAssortment({
               </div>
               {catMats.map(m => (
                 <MaterialRow key={m.id} material={m} currency={store.settings.currency}
-                  onEdit={() => onEditMaterial(m)}
-                  onDelete={() => deleteMaterial(m.id)}
-                />
+                  onEdit={() => onEditMaterial(m)} onDelete={() => deleteMaterial(m.id)}
+                  onRowClick={() => onEditMaterial(m)} highlighted={selectedMatId === m.id} />
               ))}
             </div>
           ))}
@@ -121,9 +121,8 @@ export default function MfrAssortment({
               )}
               {uncategorized.map(m => (
                 <MaterialRow key={m.id} material={m} currency={store.settings.currency}
-                  onEdit={() => onEditMaterial(m)}
-                  onDelete={() => deleteMaterial(m.id)}
-                />
+                  onEdit={() => onEditMaterial(m)} onDelete={() => deleteMaterial(m.id)}
+                  onRowClick={() => onEditMaterial(m)} highlighted={selectedMatId === m.id} />
               ))}
             </div>
           )}
@@ -138,9 +137,8 @@ export default function MfrAssortment({
           <div>
             {ungrouped.map(m => (
               <MaterialRow key={m.id} material={m} currency={store.settings.currency}
-                onEdit={() => onEditMaterial(m)}
-                onDelete={() => deleteMaterial(m.id)}
-              />
+                onEdit={() => onEditMaterial(m)} onDelete={() => deleteMaterial(m.id)}
+                onRowClick={() => onEditMaterial(m)} highlighted={selectedMatId === m.id} />
             ))}
           </div>
         </div>

@@ -47,8 +47,9 @@ function getPriceAgeDays(priceUpdatedAt?: string): number | null {
   return Math.floor((now.getTime() - d.getTime()) / 86400000);
 }
 
-export function MaterialRow({ material, onEdit, onDelete }: {
+export function MaterialRow({ material, onEdit, onDelete, onRowClick, highlighted }: {
   material: Material; onEdit: () => void; onDelete: () => void; currency?: string;
+  onRowClick?: () => void; highlighted?: boolean;
 }) {
   const [editingPrice, setEditingPrice] = useState(false);
   const [priceVal, setPriceVal] = useState('');
@@ -75,7 +76,11 @@ export function MaterialRow({ material, onEdit, onDelete }: {
   return (
     <>
       <div
+        onClick={onRowClick}
         className={`grid items-center px-4 py-2.5 border-b border-[hsl(220,12%,14%)] transition-colors text-sm group ${
+          onRowClick ? 'cursor-pointer' : ''
+        } ${
+          highlighted ? 'bg-[hsl(220,12%,15%)] border-l-2 border-l-gold/50' :
           material.archived ? 'opacity-40 bg-[hsl(220,12%,10%)]' : 'hover:bg-[hsl(220,12%,12%)]'
         }`}
         style={{ gridTemplateColumns: '2fr 0.7fr 1fr 0.7fr 1fr 60px' }}
@@ -141,7 +146,7 @@ export function MaterialRow({ material, onEdit, onDelete }: {
         </div>
 
         {/* Действия */}
-        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity justify-end">
+        <div className="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity justify-end" onClick={e => e.stopPropagation()}>
           <button
             onClick={() => updateMaterial(material.id, { archived: !material.archived })}
             title={material.archived ? 'Восстановить' : 'Архивировать'}
