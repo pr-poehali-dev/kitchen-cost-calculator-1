@@ -43,7 +43,7 @@ export default function DocTemplateEditor({
   template, saving, editingBlock,
   onUpdate, onSave, onDelete, onSetDefault, onPreview, onEditBlock,
 }: Props) {
-  const updateBlock = (blockId: string, field: keyof Block, value: string | boolean) => {
+  const updateBlock = (blockId: string, field: keyof Block, value: string | boolean | number | undefined) => {
     onUpdate({
       ...template,
       blocks: template.blocks.map(b => b.id === blockId ? { ...b, [field]: value } : b),
