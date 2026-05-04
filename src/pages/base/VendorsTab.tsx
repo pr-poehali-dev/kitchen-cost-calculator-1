@@ -9,6 +9,7 @@ import VendorSidebar from './vendors/VendorSidebar';
 import VendorHeroCard from './vendors/VendorHeroCard';
 import VendorAssortment from './vendors/VendorAssortment';
 import VendorEditSidebar from './vendors/VendorEditSidebar';
+import MaterialSidebar from './materials/MaterialSidebar';
 
 interface Props {
   selectedId: string | null;
@@ -20,6 +21,7 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
   const catalog = useCatalog();
   const [editingVendor, setEditingVendor] = useState<Partial<Vendor> | null>(null);
   const [editSidebarId, setEditSidebarId] = useState<string | null>(null);
+  const [matSidebarId, setMatSidebarId] = useState<string | null>(null);
   const [editingMaterial, setEditingMaterial] = useState<Partial<Material> | null>(null);
   const [expandedMfr, setExpandedMfr] = useState<Record<string, boolean>>({});
   const [sideSearch, setSideSearch] = useState('');
@@ -124,7 +126,7 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
               onSearchChange={setMatSearch}
               onToggleMfr={toggleMfr}
               onAddMaterial={handleAddMaterial}
-              onEditMaterial={m => setEditingMaterial(m)}
+              onEditMaterial={m => setMatSidebarId(prev => prev === m.id ? null : m.id)}
             />
           </div>
         ) : (
@@ -142,6 +144,14 @@ export default function VendorsTab({ selectedId, onSelect }: Props) {
             vendorId={editSidebarId}
             onClose={() => setEditSidebarId(null)}
             onDeleted={() => onSelect(null)}
+          />
+        )}
+
+        {/* Material Sidebar */}
+        {matSidebarId && (
+          <MaterialSidebar
+            materialId={matSidebarId}
+            onClose={() => setMatSidebarId(null)}
           />
         )}
       </div>
