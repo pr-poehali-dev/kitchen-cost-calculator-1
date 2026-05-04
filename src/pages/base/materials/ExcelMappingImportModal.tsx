@@ -36,7 +36,8 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
   const [manufacturerId, setManufacturerId] = useState(catalog.manufacturers[0]?.id || '');
   const [headerRow, setHeaderRow] = useState(true);
   const [importing, setImporting] = useState(false);
-  const [result, setResult] = useState<{ created: number; skipped: number } | null>(null);
+  const [updateExisting, setUpdateExisting] = useState(false);
+  const [result, setResult] = useState<{ created: number; skipped: number; updated: number } | null>(null);
 
   const handleFile = (file: File) => {
     const reader = new FileReader();
@@ -74,7 +75,7 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
     if (!mapping.includes('name') || !mapping.includes('basePrice')) return;
     setImporting(true);
 
-    let created = 0; let skipped = 0;
+    let created = 0, skipped = 0, updated = 0;
     const today = new Date().toISOString().slice(0, 10);
 
     const findManufacturer = (val: string) => {
@@ -122,11 +123,23 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
       const resolvedCategory = catRaw ? findCategory(catRaw, resolvedTypeId) : null;
 
       const article = get('article');
-      const exists = article
-        ? catalog.materials.some(m => m.article === article)
-        : catalog.materials.some(m => m.name === name && m.typeId === resolvedTypeId);
+      const existingMat = article
+        ? catalog.materials.find(m => m.article === article)
+        : catalog.materials.find(m => m.name === name && m.typeId === resolvedTypeId);
 
-      if (exists) { skipped++; return; }
+      if (existingMat) {
+        if (updateExisting) {
+          newMaterials.push({
+            ...existingMat,
+            basePrice: price,
+            priceUpdatedAt: today,
+          });
+          updated++;
+        } else {
+          skipped++;
+        }
+        return;
+      }
 
       const thickness = parseFloat(get('thickness'));
       newMaterials.push({
@@ -150,7 +163,7 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
       await bulkUpsertMaterials(newMaterials);
     }
 
-    setResult({ created, skipped });
+    setResult({ created, skipped, updated });
     setImporting(false);
   };
 
@@ -167,12 +180,12 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
         <div className="overflow-auto scrollbar-thin flex-1 px-5 py-4 space-y-4">
           {result ? (
             <div className="space-y-4">
-              <div className={`flex items-center gap-3 px-4 py-3 rounded-lg ${result.created > 0 ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-amber-400/10 border border-amber-400/30'}`}>
-                <Icon name={result.created > 0 ? 'CheckCircle' : 'AlertCircle'} size={18} className={result.created > 0 ? 'text-emerald-400' : 'text-amber-400'} />
-                <div className="text-sm">
-                  <div className={result.created > 0 ? 'text-emerald-400 font-medium' : 'text-amber-400'}>
-                    {result.created > 0 ? `Импортировано ${result.created} материалов` : 'Ничего не импортировано'}
-                  </div>
+              <div className={`flex items-center gap-3 px-4 py-3 rounded-lg ${(result.created > 0 || result.updated > 0) ? 'bg-emerald-500/10 border border-emerald-500/30' : 'bg-amber-400/10 border border-amber-400/30'}`}>
+                <Icon name={(result.created > 0 || result.updated > 0) ? 'CheckCircle' : 'AlertCircle'} size={18} className={(result.created > 0 || result.updated > 0) ? 'text-emerald-400' : 'text-amber-400'} />
+                <div className="text-sm space-y-0.5">
+                  {result.created > 0 && <div className="text-emerald-400 font-medium">Добавлено новых: {result.created}</div>}
+                  {result.updated > 0 && <div className="text-emerald-400 font-medium">Обновлено цен: {result.updated}</div>}
+                  {result.created === 0 && result.updated === 0 && <div className="text-amber-400">Ничего не импортировано</div>}
                   {result.skipped > 0 && <div className="text-[hsl(var(--text-muted))]">Пропущено (дубликаты / ошибки): {result.skipped}</div>}
                 </div>
               </div>
@@ -285,6 +298,20 @@ export default function ExcelMappingImportModal({ onClose }: Props) {
                       Назначьте колонки «Наименование» и «Цена закупочная» для импорта
                     </div>
                   )}
+
+                  {/* Опция обновления */}
+                  <label className="flex items-center gap-2.5 cursor-pointer select-none px-3 py-2.5 rounded bg-[hsl(220,12%,14%)] border border-border hover:border-gold/40 transition-colors">
+                    <div
+                      onClick={() => setUpdateExisting(v => !v)}
+                      className={`w-8 h-4 rounded-full transition-colors shrink-0 relative ${updateExisting ? 'bg-gold' : 'bg-[hsl(220,12%,22%)]'}`}
+                    >
+                      <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-transform ${updateExisting ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                    </div>
+                    <div>
+                      <div className="text-xs font-medium text-foreground">Обновить цены у существующих</div>
+                      <div className="text-[11px] text-[hsl(var(--text-muted))]">Если материал уже есть — обновить только цену, не создавать дубль</div>
+                    </div>
+                  </label>
 
                   <div className="flex gap-2">
                     <button
