@@ -230,7 +230,6 @@ export default function SettingsCompanySection() {
             Загрузите изображения печати и подписи директора — они будут вставляться в блок реквизитов документов. Рекомендуется PNG с прозрачным фоном.
           </p>
 
-          {/* Строка: иконка | превью | название + кнопки | тоггл */}
           {([
             {
               label: 'Печать организации',
@@ -255,61 +254,57 @@ export default function SettingsCompanySection() {
               onDelete: () => store.updateSettings({ company: { ...company, signatureUrl: '', useSignature: false } }),
             },
           ] as const).map(item => (
-            <div key={item.label} className="p-4 bg-[hsl(220,12%,14%)] rounded-lg border border-border">
-              <div className="flex items-center gap-3 min-w-0">
-                {/* Превью */}
-                <div className="w-12 h-12 rounded border border-dashed border-border bg-[hsl(220,12%,12%)] flex items-center justify-center shrink-0 overflow-hidden">
-                  {item.url
-                    ? <img src={item.url} alt={item.label} className="w-full h-full object-contain" />
-                    : <Icon name={item.icon} size={18} className="text-[hsl(var(--text-muted))]" />
-                  }
-                </div>
-
-                {/* Название + кнопки */}
-                <div className="flex-1 min-w-0 space-y-1.5">
-                  <span className="text-sm font-medium block">{item.label}</span>
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <input
-                      ref={item.ref}
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      className="hidden"
-                      onChange={e => { const f = e.target.files?.[0]; if (f) item.onUpload(f); e.target.value = ''; }}
-                    />
-                    <button
-                      type="button"
-                      onClick={() => item.ref.current?.click()}
-                      disabled={item.uploading}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-gold hover:text-gold transition-colors disabled:opacity-50"
-                    >
-                      {item.uploading ? <Icon name="Loader" size={11} className="animate-spin" /> : <Icon name="Upload" size={11} />}
-                      {item.uploading ? 'Загружаю...' : 'Загрузить'}
-                    </button>
-                    {item.url
-                      ? (
-                        <button
-                          type="button"
-                          onClick={item.onDelete}
-                          className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-destructive hover:text-destructive transition-colors"
-                        >
-                          <Icon name="Trash2" size={11} /> Удалить
-                        </button>
-                      )
-                      : <span className="text-xs text-[hsl(var(--text-muted))]">PNG с прозрачным фоном, до 5 МБ</span>
-                    }
-                  </div>
-                </div>
-
-                {/* Тоггл */}
-                <div className="flex items-center gap-2 shrink-0 ml-2">
-                  <span className="text-xs text-[hsl(var(--text-muted))]">{item.enabled ? 'Вкл' : 'Выкл'}</span>
+            <div key={item.label} className="rounded-lg border border-border bg-[hsl(220,12%,14%)] overflow-hidden">
+              {/* Шапка строки: название + тоггл */}
+              <div className="flex items-center justify-between px-3 py-2.5 border-b border-[hsl(220,12%,18%)]">
+                <span className="text-sm font-medium">{item.label}</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-[hsl(var(--text-muted))]">{item.enabled ? 'Включена' : 'Выключена'}</span>
                   <button
                     type="button"
                     onClick={item.onToggle}
-                    className={`w-9 h-5 rounded-full transition-colors relative ${item.enabled ? 'bg-gold' : 'bg-[hsl(220,12%,26%)]'}`}
+                    className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${item.enabled ? 'bg-gold' : 'bg-[hsl(220,12%,26%)]'}`}
                   >
                     <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${item.enabled ? 'translate-x-4' : 'translate-x-0.5'}`} />
                   </button>
+                </div>
+              </div>
+              {/* Тело: превью + кнопки */}
+              <div className="flex items-center gap-3 px-3 py-3">
+                <div className="w-10 h-10 rounded border border-dashed border-border bg-[hsl(220,12%,12%)] flex items-center justify-center shrink-0 overflow-hidden">
+                  {item.url
+                    ? <img src={item.url} alt={item.label} className="w-full h-full object-contain" />
+                    : <Icon name={item.icon} size={16} className="text-[hsl(var(--text-muted))]" />
+                  }
+                </div>
+                <input
+                  ref={item.ref}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp"
+                  className="hidden"
+                  onChange={e => { const f = e.target.files?.[0]; if (f) item.onUpload(f); e.target.value = ''; }}
+                />
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => item.ref.current?.click()}
+                    disabled={item.uploading}
+                    className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-gold hover:text-gold transition-colors disabled:opacity-50"
+                  >
+                    {item.uploading ? <Icon name="Loader" size={11} className="animate-spin" /> : <Icon name="Upload" size={11} />}
+                    {item.uploading ? 'Загружаю...' : 'Загрузить'}
+                  </button>
+                  {item.url ? (
+                    <button
+                      type="button"
+                      onClick={item.onDelete}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-destructive hover:text-destructive transition-colors"
+                    >
+                      <Icon name="Trash2" size={11} /> Удалить
+                    </button>
+                  ) : (
+                    <span className="text-xs text-[hsl(var(--text-muted))]">PNG с прозрачным фоном, до 5 МБ</span>
+                  )}
                 </div>
               </div>
             </div>
