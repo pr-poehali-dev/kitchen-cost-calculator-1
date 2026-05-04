@@ -70,7 +70,7 @@ def row_to_dict(row, cur):
 
 def list_manufacturers(conn, user_id):
     cur = conn.cursor()
-    cur.execute('SELECT * FROM catalog_manufacturers WHERE user_id = %s ORDER BY name ASC', (user_id,))
+    cur.execute('SELECT * FROM catalog_manufacturers WHERE user_id = %s AND archived = false ORDER BY name ASC', (user_id,))
     rows = [row_to_dict(r, cur) for r in cur.fetchall()]
     return [_mfr_to_api(r) for r in rows]
 
