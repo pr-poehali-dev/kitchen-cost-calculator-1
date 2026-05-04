@@ -8,7 +8,7 @@ export function ClientCalcSection({ client, onChange, onOpenCalc, onGoToDocument
   client: Client;
   onChange: (f: keyof Client, v: unknown) => void;
   onOpenCalc?: (projectId?: string) => void;
-  onGoToDocuments?: () => void | Promise<void>;
+  onGoToDocuments?: (patch: { products: { id: string; name: string; qty: number }[]; total_amount: number }) => void;
 }) {
   const store = useStore();
   const linked = store.projects.filter(p => p.clientId === client.id);
@@ -48,9 +48,7 @@ export function ClientCalcSection({ client, onChange, onOpenCalc, onGoToDocument
                 ? products
                 : [{ id: p.id, name: p.object || 'Изделие', qty: 1 }];
 
-              onChange('products', finalProducts);
-              if (total > 0) onChange('total_amount', total);
-              onGoToDocuments?.();
+              onGoToDocuments?.({ products: finalProducts, total_amount: total });
             };
 
             return (

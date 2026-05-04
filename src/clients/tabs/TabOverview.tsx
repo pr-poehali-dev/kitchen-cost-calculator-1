@@ -12,7 +12,7 @@ export function TabOverview({ client, onChange, onStatusChange, onOpenCalc, onGo
   onChange: (f: keyof Client, v: unknown) => void;
   onStatusChange: (s: ClientStatus) => void;
   onOpenCalc?: (projectId?: string) => void;
-  onGoToDocuments?: () => void | Promise<void>;
+  onGoToDocuments?: (patch: { products: { id: string; name: string; qty: number }[]; total_amount: number }) => void;
 }) {
   const today = new Date().toISOString().slice(0, 10);
   const hasReminder = client.reminder_date && client.reminder_date >= today;
