@@ -12,7 +12,9 @@ interface BoyardItem {
   name: string;
   category: string;
   type_id: string;
+  price_opt: number;
   price_retail: number;
+  price: number;
   unit: string;
 }
 
@@ -77,7 +79,7 @@ export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
           if (!item) continue;
 
           const currentPrice = variant.basePrice;
-          const newPrice = item.price_retail;
+          const newPrice = item.price_opt > 0 ? item.price_opt : (item.price ?? item.price_retail);
 
           if (Math.round(currentPrice) !== Math.round(newPrice)) {
             result.push({
@@ -151,7 +153,7 @@ export default function BoyardPriceModal({ onClose }: { onClose: () => void }) {
         {!changed && !loading && allItems.length === 0 && (
           <>
             <p className="text-xs text-[hsl(var(--text-muted))]">
-              Загрузит актуальный прайс BOYARD и сравнит розничные цены в рублях с текущими в базе.
+              Загрузит актуальный прайс BOYARD и сравнит оптовые цены в рублях с текущими в базе.
             </p>
             {error && (
               <div className="text-xs text-destructive bg-destructive/10 border border-destructive/20 rounded px-3 py-2 flex items-start gap-2">

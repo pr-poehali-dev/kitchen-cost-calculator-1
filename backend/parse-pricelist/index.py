@@ -28,7 +28,7 @@ SKAT_CATEGORIES = ['1 кат', '2 кат', '3 кат', '4 кат', '5 кат']
 BOYARD_SHEET_ID = '1RF3LtsvI51OI8rApV5tksnr4Ne-l1AHHSAeZ0rlQlUc'
 BOYARD_GID      = '1875668796'
 
-# Ключевые слова верхнего уровня → тип материала
+# Ключевые слова верхнего уровня → тип материала (все Boyard — Фурнитура mt10)
 BOYARD_ROOT_TYPES = {
     'крючки':        'mt10',
     'петли':         'mt10',
@@ -43,9 +43,9 @@ BOYARD_ROOT_TYPES = {
     'замки':         'mt10',
     'подъём':        'mt10',
     'аксессуар':     'mt10',
-    'рейлинг':       'mt11',
-    'профил':        'mt11',
-    'кромка':        'mt12',
+    'рейлинг':       'mt10',
+    'профил':        'mt10',
+    'кромка':        'mt10',
 }
 
 def boyard_type(name: str) -> str:
@@ -427,7 +427,7 @@ def parse_skat(csv_text: str, category: str = '1 кат') -> list:
 # ─── Парсер BOYARD ────────────────────────────────────────────────────────────
 def parse_boyard(csv_text: str) -> dict:
     """
-    Парсит прайс BOYARD. Розница в рублях (col index 5).
+    Парсит прайс BOYARD. Опт в рублях (col index 3), розница (col index 5) — резерв.
     Иерархия: корневая категория (Крючки, Петли...) → подкатегории.
     category = самая конкретная подсекция, type_id = от корневой.
     """
@@ -503,9 +503,9 @@ def parse_boyard(csv_text: str) -> dict:
             if not header_passed:
                 continue
 
-            price = parse_price(g(5))   # розница руб
-            if price <= 0:
-                price = parse_price(g(3))  # опт руб запасной
+            price_opt = parse_price(g(3))     # опт руб — основная цена
+            price_retail = parse_price(g(5)) # розница руб — резерв
+            price = price_opt if price_opt > 0 else price_retail
             if price <= 0:
                 continue
 
@@ -522,7 +522,9 @@ def parse_boyard(csv_text: str) -> dict:
                 'name': col1,
                 'category': cat,
                 'type_id': boyard_type(type_cat),
-                'price_retail': round(price, 2),
+                'price_opt': round(price_opt, 2),
+                'price_retail': round(price_retail, 2),
+                'price': round(price, 2),
                 'unit': 'шт',
             })
 

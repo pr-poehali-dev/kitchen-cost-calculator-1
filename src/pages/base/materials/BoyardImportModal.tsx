@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useCatalog, bulkUpsertMaterials, loadCatalog, addManufacturer, deleteMaterial } from '@/hooks/useCatalog';
+import { useCatalog, bulkUpsertMaterials, loadCatalog, addManufacturer, deleteMaterial, deleteManufacturer } from '@/hooks/useCatalog';
 import Icon from '@/components/ui/icon';
 import { Modal } from '../BaseShared';
 import func2url from '../../../../backend/func2url.json';
@@ -22,7 +22,9 @@ interface BoyardItem {
   name: string;
   category: string;
   type_id: string;
+  price_opt: number;
   price_retail: number;
+  price: number;
   unit: string;
 }
 
@@ -75,19 +77,36 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
   const handleImport = async () => {
     setImporting(true);
 
-    // Находим или создаём производителя BOYARD в каталоге
-    let mfrId: string;
-    const existingMfr = catalog.manufacturers.find(m => m.name.toLowerCase() === 'boyard' &&
-      catalog.materials.some(mat => mat.manufacturerId === m.id && mat.article?.startsWith('boyard__group__'))
-    ) ?? catalog.manufacturers.find(m => m.name.toLowerCase() === 'boyard');
+    // Находим производителя BOYARD и удаляем всех пустых дублей
+    const allBoyardMfrs = catalog.manufacturers.filter(
+      m => m.name.toLowerCase().trim() === 'boyard'
+    );
+    const mfrWithMaterials = allBoyardMfrs.find(
+      m => catalog.materials.some(mat => mat.manufacturerId === m.id)
+    );
+    const emptyBoyardMfrs = allBoyardMfrs.filter(
+      m => !catalog.materials.some(mat => mat.manufacturerId === m.id)
+    );
+    // Если есть производитель с материалами — удаляем всех пустых
+    // Если нет — оставляем первого пустого для использования, остальных удаляем
+    const toDeleteMfrs = mfrWithMaterials
+      ? emptyBoyardMfrs
+      : emptyBoyardMfrs.slice(1);
+    for (const m of toDeleteMfrs) {
+      await deleteManufacturer(m.id);
+    }
 
-    if (existingMfr) {
-      mfrId = existingMfr.id;
+    // Определяем итогового производителя (его id) — до перезагрузки каталога
+    let mfrId: string;
+    if (mfrWithMaterials) {
+      mfrId = mfrWithMaterials.id;
+    } else if (emptyBoyardMfrs.length > 0) {
+      mfrId = emptyBoyardMfrs[0].id;
     } else {
       const newMfr = await addManufacturer({
         name: 'BOYARD',
         note: 'Производитель фурнитуры',
-        materialTypeIds: ['mt10', 'mt11', 'mt12'],
+        materialTypeIds: ['mt10'],
         contact: '', phone: '', email: '', telegram: '', website: '',
       });
       mfrId = newMfr.id;
@@ -109,23 +128,24 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
       const first = group[0];
       const gKey = boyardGroupKey(name);
       const existingInCatalog = catalog.materials.find(m => m.article === gKey);
+      const bestPrice = (item: BoyardItem) => item.price_opt > 0 ? item.price_opt : item.price ?? item.price_retail;
       return {
         id: existingInCatalog?.id ?? `m${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
         name,
         manufacturerId: mfrId,
         vendorId: BOYARD_VENDOR_ID,
-        typeId: first.type_id,
+        typeId: 'mt10',  // Всегда Фурнитура
         article: gKey,
         unit: 'шт' as const,
-        basePrice: group[0].price_retail,
+        basePrice: bestPrice(group[0]),
         priceUpdatedAt: today,
         priceHistory: existingInCatalog?.priceHistory ?? [],
         variants: group.map(item => ({
           id: boyardVariantId(item.article),
           article: item.article,
           size: item.article,
-          params: 'розница',
-          basePrice: item.price_retail,
+          params: 'опт',
+          basePrice: bestPrice(item),
         })),
       };
     });
@@ -176,7 +196,7 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
                 <p>• Производитель <span className="text-gold font-medium">BOYARD</span>, поставщик <span className="text-gold font-medium">Специалист</span></p>
                 <p>• Позиции группируются по названию: одно название — один материал</p>
                 <p>• Разные артикулы одного товара (размеры) — варианты внутри материала</p>
-                <p>• Цена: <span className="text-gold font-medium">розница в рублях</span> на дату прайса</p>
+                <p>• Цена: <span className="text-gold font-medium">оптовая в рублях</span> на дату прайса</p>
               </div>
             </div>
             <p className="text-xs text-[hsl(var(--text-muted))]">
