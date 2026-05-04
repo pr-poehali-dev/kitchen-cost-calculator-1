@@ -48,6 +48,8 @@ export interface Block {
   align?: BlockAlign;
   marginTop?: number;
   marginBottom?: number;
+  // Для таблиц: ширины колонок в процентах (сумма = 100)
+  colWidths?: number[];
 }
 
 export interface Template {
@@ -151,6 +153,9 @@ export function buildPreviewHtml(template: Template): string {
       const header = rows[0].split(';');
       const body = rows.slice(1);
       const tFontSize = b.fontSize ?? globalFontSize;
+      const colWidths: number[] = b.colWidths && b.colWidths.length === header.length
+        ? b.colWidths
+        : header.map(() => Math.round(100 / header.length));
       const tStyle = [
         b.bold      ? 'font-weight:bold'          : '',
         b.italic    ? 'font-style:italic'         : '',
@@ -158,9 +163,11 @@ export function buildPreviewHtml(template: Template): string {
         mt ? `margin-top:${mt}`    : 'margin-top:6px',
         mb ? `margin-bottom:${mb}` : 'margin-bottom:6px',
       ].filter(Boolean).join(';');
-      return `<table style="width:100%;border-collapse:collapse;font-size:${tFontSize}pt;${tStyle}">
-        <tr>${header.map(h => `<th style="border:1px solid #000;padding:3px 5px;background:#f0f0f0;font-weight:bold">${h}</th>`).join('')}</tr>
-        ${body.map(r => `<tr>${r.split(';').map(c => `<td style="border:1px solid #000;padding:3px 5px">${c}</td>`).join('')}</tr>`).join('')}
+      const colgroup = colWidths.map(w => `<col style="width:${w}%"/>`).join('');
+      return `<table style="width:100%;border-collapse:collapse;font-size:${tFontSize}pt;table-layout:fixed;${tStyle}">
+        <colgroup>${colgroup}</colgroup>
+        <tr>${header.map(h => `<th style="border:1px solid #000;padding:3px 5px;background:#f0f0f0;font-weight:bold;word-break:break-word">${h}</th>`).join('')}</tr>
+        ${body.map(r => `<tr>${r.split(';').map(c => `<td style="border:1px solid #000;padding:3px 5px;word-break:break-word">${c}</td>`).join('')}</tr>`).join('')}
       </table>`;
     }
     // paragraph и прочие
