@@ -125,15 +125,23 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
     const materialsToUpsert = Array.from(grouped.entries()).map(([name, group]) => {
       const first = group[0];
       const gKey = boyardGroupKey(name);
-      const existingInCatalog = catalog.materials.find(m => m.article === gKey);
+      // Ищем существующий материал: сначала по gKey (старый формат), потом по артикулу первого варианта
+      const existingInCatalog =
+        catalog.materials.find(m => m.article === gKey) ??
+        catalog.materials.find(m =>
+          m.manufacturerId === mfrId &&
+          m.variants?.some(v => v.article === first.article || v.size === first.article)
+        );
       const bestPrice = (item: BoyardItem) => item.price;
+      // Реальный артикул: если один вариант — его артикул; если несколько — артикул первого
+      const realArticle = first.article;
       return {
         id: existingInCatalog?.id ?? `m${Date.now()}${Math.random().toString(36).slice(2, 6)}`,
         name,
         manufacturerId: mfrId,
         vendorId: BOYARD_VENDOR_ID,
-        typeId: 'mt10',  // Всегда Фурнитура
-        article: gKey,
+        typeId: 'mt10',
+        article: realArticle,
         unit: 'шт' as const,
         basePrice: bestPrice(group[0]),
         priceUpdatedAt: today,
@@ -148,7 +156,7 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
       };
     });
 
-    const created = materialsToUpsert.filter(m => !catalog.materials.find(e => e.article === m.article)).length;
+    const created = materialsToUpsert.filter(m => !catalog.materials.find(e => e.id === m.id)).length;
     const updated = materialsToUpsert.length - created;
 
     await bulkUpsertMaterials(materialsToUpsert as import('@/store/types').Material[]);
@@ -174,8 +182,21 @@ export default function BoyardImportModal({ onClose }: { onClose: () => void }) 
 
   // Общая статистика
   const totalNames = new Set(items.map(i => i.name)).size;
-  const existingKeys = new Set(catalog.materials.map(m => m.article).filter(Boolean));
-  const toCreate = Array.from(new Set(items.map(i => i.name))).filter(name => !existingKeys.has(boyardGroupKey(name))).length;
+  // Уникальные артикулы уже в каталоге (и по gKey для совместимости со старым форматом)
+  const existingArticles = new Set(catalog.materials.map(m => m.article).filter(Boolean));
+  const boyardMfrId = catalog.manufacturers.find(m => m.name.toLowerCase().trim() === 'boyard')?.id;
+  const existingVariantArticles = new Set(
+    catalog.materials
+      .filter(m => m.manufacturerId === boyardMfrId)
+      .flatMap(m => m.variants?.map(v => v.article || v.size).filter(Boolean) ?? [])
+  );
+  const toCreate = Array.from(new Set(items.map(i => ({ name: i.name, article: i.article }))
+    .filter((v, idx, arr) => arr.findIndex(x => x.name === v.name) === idx)
+  )).filter(({ name, article }) =>
+    !existingArticles.has(boyardGroupKey(name)) &&
+    !existingArticles.has(article) &&
+    !existingVariantArticles.has(article)
+  ).length;
   const toUpdate = totalNames - toCreate;
 
   const typeNames: Record<string, string> = {
