@@ -5,6 +5,7 @@ import type { ClientsFilter } from './useClients';
 import { CLIENT_STATUSES, clientFullName, emptyClient } from './types';
 import type { Client, ClientStatus } from './types';
 import ClientCard from './ClientCard';
+import ClientQuickPanel from './ClientQuickPanel';
 import { ClientsListSkeleton } from '@/components/Skeleton';
 import { ClientRow, KanbanColumn } from './list/ClientListItems';
 import { ClientsToolbar } from './list/ClientsToolbar';
@@ -20,7 +21,8 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
   const [view, setView] = useState<View>('list');
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<ClientStatus | 'all'>('all');
-  const [selectedId, setSelectedId] = useState<string | null>(openClientId ?? null);
+  const [panelId, setPanelId] = useState<string | null>(null);
+  const [fullCardId, setFullCardId] = useState<string | null>(openClientId ?? null);
   const [creating, setCreating] = useState(false);
   const [sortField, setSortField] = useState<SortField>('created_at');
   const [sortDir, setSortDir] = useState<SortDir>('desc');
@@ -134,7 +136,7 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
     setCreating(true);
     const id = await createClient(emptyClient());
     setCreating(false);
-    if (id) setSelectedId(id);
+    if (id) setFullCardId(id);
   };
 
   // Для канбана клиенты уже загружены через loadAll без пагинации
@@ -145,114 +147,134 @@ export default function ClientsPage({ openClientId }: { openClientId?: string | 
 
   if (loading && clients.length === 0) return <ClientsListSkeleton />;
 
-  if (selectedId) {
-    return <ClientCard clientId={selectedId} onBack={() => { setSelectedId(null); fetchClients(buildFilter(), page); }} />;
+  if (fullCardId) {
+    return <ClientCard clientId={fullCardId} onBack={() => { setFullCardId(null); setPanelId(null); fetchClients(buildFilter(), page); }} />;
   }
 
   const showCounter = !!(search || filterStatus !== 'all' || hasAdvancedFilters || selectedIds.size > 0) && !loading;
 
   return (
-    <div className="flex flex-col h-full animate-fade-in">
-      <ClientsToolbar
-        clientsCount={total}
-        loading={loading}
-        view={view}
-        onViewChange={(v) => { setView(v); }}
-        filteredClients={filteredForExport}
-        creating={creating}
-        onCreate={handleCreate}
-      />
-
-      <ClientsSearchBar
-        search={search}
-        onSearchChange={setSearch}
-        filterStatus={filterStatus}
-        onFilterStatusChange={setFilterStatus}
-        showFilters={showFilters}
-        onToggleFilters={() => setShowFilters(v => !v)}
-        hasAdvancedFilters={hasAdvancedFilters}
-        sortField={sortField}
-        sortDir={sortDir}
-        showSortMenu={showSortMenu}
-        onToggleSortMenu={() => setShowSortMenu(v => !v)}
-        onCloseSortMenu={() => setShowSortMenu(false)}
-        onSort={handleSort}
-      />
-
-      {showFilters && (
-        <ClientsAdvancedFilters
-          filterDesigner={filterDesigner} onFilterDesignerChange={setFilterDesigner}
-          filterMeasurer={filterMeasurer} onFilterMeasurerChange={setFilterMeasurer}
-          filterDateFrom={filterDateFrom} onFilterDateFromChange={setFilterDateFrom}
-          filterDateTo={filterDateTo} onFilterDateToChange={setFilterDateTo}
-          filterDeliveryFrom={filterDeliveryFrom} onFilterDeliveryFromChange={setFilterDeliveryFrom}
-          filterDeliveryTo={filterDeliveryTo} onFilterDeliveryToChange={setFilterDeliveryTo}
-          filterAmountMin={filterAmountMin} onFilterAmountMinChange={setFilterAmountMin}
-          filterAmountMax={filterAmountMax} onFilterAmountMaxChange={setFilterAmountMax}
-          designers={allDesigners} measurers={allMeasurers}
-          hasAdvancedFilters={hasAdvancedFilters}
-          onClearFilters={clearFilters}
+    <div className="flex h-full animate-fade-in overflow-hidden">
+      {/* Основная колонка: тулбар + список */}
+      <div className="flex flex-col flex-1 min-w-0 h-full overflow-hidden">
+        <ClientsToolbar
+          clientsCount={total}
+          loading={loading}
+          view={view}
+          onViewChange={(v) => { setView(v); }}
+          filteredClients={filteredForExport}
+          creating={creating}
+          onCreate={handleCreate}
         />
-      )}
 
-      <ClientsCounter
-        totalCount={total}
-        filteredCount={clients.length}
-        showCounter={showCounter}
-        selectedIds={selectedIds}
-        showBulkMenu={showBulkMenu}
-        bulkLoading={bulkLoading}
-        onToggleBulkMenu={() => setShowBulkMenu(v => !v)}
-        onCloseBulkMenu={() => setShowBulkMenu(false)}
-        onBulkStatus={handleBulkStatus}
-        onClearSelection={() => setSelectedIds(new Set())}
-      />
+        <ClientsSearchBar
+          search={search}
+          onSearchChange={setSearch}
+          filterStatus={filterStatus}
+          onFilterStatusChange={setFilterStatus}
+          showFilters={showFilters}
+          onToggleFilters={() => setShowFilters(v => !v)}
+          hasAdvancedFilters={hasAdvancedFilters}
+          sortField={sortField}
+          sortDir={sortDir}
+          showSortMenu={showSortMenu}
+          onToggleSortMenu={() => setShowSortMenu(v => !v)}
+          onCloseSortMenu={() => setShowSortMenu(false)}
+          onSort={handleSort}
+        />
 
-      {/* Content */}
-      <div className="flex-1 overflow-auto scrollbar-thin">
-        {clients.length === 0 && !loading ? (
-          <div className="flex flex-col items-center justify-center h-full gap-4">
-            <Icon name="Users" size={32} className="text-[hsl(var(--text-muted))]" />
-            <p className="text-[hsl(var(--text-muted))] text-sm">{search || filterStatus !== 'all' || hasAdvancedFilters ? 'Нет клиентов по фильтру' : 'Нет клиентов. Создайте первого!'}</p>
-            {!search && filterStatus === 'all' && !hasAdvancedFilters && (
-              <button onClick={handleCreate} className="flex items-center gap-2 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90">
-                <Icon name="Plus" size={14} /> Новый клиент
-              </button>
-            )}
-          </div>
-        ) : view === 'list' ? (
-          <div>
-            <div className="flex items-center gap-3 px-5 py-2 border-b border-border bg-[hsl(220,14%,10%)]">
-              <div onClick={toggleSelectAll} className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${selectedIds.size === clients.length && clients.length > 0 ? 'bg-gold border-gold' : 'border-border hover:border-gold/50'}`}>
-                {selectedIds.size === clients.length && clients.length > 0 && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
-                {selectedIds.size > 0 && selectedIds.size < clients.length && <Icon name="Minus" size={10} className="text-gold" />}
-              </div>
-              <span className="text-xs text-[hsl(var(--text-muted))]">Выбрать все ({clients.length})</span>
+        {showFilters && (
+          <ClientsAdvancedFilters
+            filterDesigner={filterDesigner} onFilterDesignerChange={setFilterDesigner}
+            filterMeasurer={filterMeasurer} onFilterMeasurerChange={setFilterMeasurer}
+            filterDateFrom={filterDateFrom} onFilterDateFromChange={setFilterDateFrom}
+            filterDateTo={filterDateTo} onFilterDateToChange={setFilterDateTo}
+            filterDeliveryFrom={filterDeliveryFrom} onFilterDeliveryFromChange={setFilterDeliveryFrom}
+            filterDeliveryTo={filterDeliveryTo} onFilterDeliveryToChange={setFilterDeliveryTo}
+            filterAmountMin={filterAmountMin} onFilterAmountMinChange={setFilterAmountMin}
+            filterAmountMax={filterAmountMax} onFilterAmountMaxChange={setFilterAmountMax}
+            designers={allDesigners} measurers={allMeasurers}
+            hasAdvancedFilters={hasAdvancedFilters}
+            onClearFilters={clearFilters}
+          />
+        )}
+
+        <ClientsCounter
+          totalCount={total}
+          filteredCount={clients.length}
+          showCounter={showCounter}
+          selectedIds={selectedIds}
+          showBulkMenu={showBulkMenu}
+          bulkLoading={bulkLoading}
+          onToggleBulkMenu={() => setShowBulkMenu(v => !v)}
+          onCloseBulkMenu={() => setShowBulkMenu(false)}
+          onBulkStatus={handleBulkStatus}
+          onClearSelection={() => setSelectedIds(new Set())}
+        />
+
+        {/* Content */}
+        <div className="flex-1 overflow-auto scrollbar-thin">
+          {clients.length === 0 && !loading ? (
+            <div className="flex flex-col items-center justify-center h-full gap-4">
+              <Icon name="Users" size={32} className="text-[hsl(var(--text-muted))]" />
+              <p className="text-[hsl(var(--text-muted))] text-sm">{search || filterStatus !== 'all' || hasAdvancedFilters ? 'Нет клиентов по фильтру' : 'Нет клиентов. Создайте первого!'}</p>
+              {!search && filterStatus === 'all' && !hasAdvancedFilters && (
+                <button onClick={handleCreate} className="flex items-center gap-2 px-4 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90">
+                  <Icon name="Plus" size={14} /> Новый клиент
+                </button>
+              )}
             </div>
-            {clients.map(c => (
-              <ClientRow key={c.id} client={c}
-                selected={selectedIds.has(c.id)}
-                onSelect={e => toggleSelect(e, c.id)}
-                onClick={() => setSelectedId(c.id)} />
-            ))}
-          </div>
-        ) : (
-          <div className="p-3 md:p-6 flex gap-3 md:gap-4 overflow-x-auto">
-            {CLIENT_STATUSES.filter(s => s.id !== 'archive').map(s => (
-              <KanbanColumn key={s.id} status={s} clients={kanbanClients.filter(c => c.status === s.id)} onClient={c => setSelectedId(c.id)} />
-            ))}
-          </div>
+          ) : view === 'list' ? (
+            <div>
+              <div className="flex items-center gap-3 px-5 py-2 border-b border-border bg-[hsl(220,14%,10%)]">
+                <div onClick={toggleSelectAll} className={`w-4 h-4 rounded border flex items-center justify-center cursor-pointer transition-colors ${selectedIds.size === clients.length && clients.length > 0 ? 'bg-gold border-gold' : 'border-border hover:border-gold/50'}`}>
+                  {selectedIds.size === clients.length && clients.length > 0 && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
+                  {selectedIds.size > 0 && selectedIds.size < clients.length && <Icon name="Minus" size={10} className="text-gold" />}
+                </div>
+                <span className="text-xs text-[hsl(var(--text-muted))]">Выбрать все ({clients.length})</span>
+              </div>
+              {clients.map(c => (
+                <ClientRow
+                  key={c.id}
+                  client={c}
+                  selected={selectedIds.has(c.id)}
+                  highlighted={panelId === c.id}
+                  onSelect={e => toggleSelect(e, c.id)}
+                  onClick={() => setPanelId(prev => prev === c.id ? null : c.id)}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="p-3 md:p-6 flex gap-3 md:gap-4 overflow-x-auto">
+              {CLIENT_STATUSES.filter(s => s.id !== 'archive').map(s => (
+                <KanbanColumn key={s.id} status={s} clients={kanbanClients.filter(c => c.status === s.id)} onClient={c => setPanelId(c.id)} />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {view === 'list' && (
+          <ClientsPagination
+            page={page}
+            pages={pages}
+            total={total}
+            perPage={PER_PAGE}
+            loading={loading}
+            onPage={handlePage}
+          />
         )}
       </div>
 
-      {view === 'list' && (
-        <ClientsPagination
-          page={page}
-          pages={pages}
-          total={total}
-          perPage={PER_PAGE}
-          loading={loading}
-          onPage={handlePage}
+      {/* Боковая панель клиента */}
+      {panelId && (
+        <ClientQuickPanel
+          clientId={panelId}
+          onClose={() => setPanelId(null)}
+          onOpen={id => setFullCardId(id)}
+          onStatusChange={async (id, status) => {
+            await updateStatus(id, status);
+            fetchClients(buildFilter(), page);
+          }}
         />
       )}
     </div>

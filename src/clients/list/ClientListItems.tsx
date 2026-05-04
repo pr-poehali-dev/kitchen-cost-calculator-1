@@ -29,18 +29,21 @@ export function DeliveryBadge({ date }: { date: string }) {
 }
 
 // ── Строка клиента в списке ─────────────────────────────────────
-export function ClientRow({ client, selected, onSelect, onClick }: {
-  client: Client; selected: boolean;
+export function ClientRow({ client, selected, highlighted, onSelect, onClick }: {
+  client: Client; selected: boolean; highlighted?: boolean;
   onSelect: (e: React.MouseEvent) => void; onClick: () => void;
 }) {
   const name = clientFullName(client);
   const hasReminder = client.reminder_date && client.reminder_date >= new Date().toISOString().slice(0, 10);
   return (
     <div
-      className={`flex items-center gap-3 px-5 py-3.5 border-b border-border cursor-pointer transition-colors group ${selected ? 'bg-gold/5' : 'hover:bg-[hsl(220,12%,13%)]'}`}
+      onClick={onClick}
+      className={`flex items-center gap-3 px-5 py-3.5 border-b border-border cursor-pointer transition-colors group ${
+        highlighted ? 'bg-[hsl(220,12%,15%)] border-l-2 border-l-gold/50' : selected ? 'bg-gold/5' : 'hover:bg-[hsl(220,12%,13%)]'
+      }`}
     >
       <div
-        onClick={onSelect}
+        onClick={e => { e.stopPropagation(); onSelect(e); }}
         className={`w-4 h-4 rounded-[4px] flex items-center justify-center shrink-0 transition-all duration-150 cursor-pointer ${
           selected
             ? 'bg-gold shadow-[0_0_0_1px_hsl(var(--gold))]'
@@ -49,10 +52,10 @@ export function ClientRow({ client, selected, onSelect, onClick }: {
       >
         {selected && <Icon name="Check" size={9} className="text-[hsl(220,16%,8%)] stroke-[3]" />}
       </div>
-      <div className="w-8 h-8 rounded-full bg-gold/10 flex items-center justify-center shrink-0" onClick={onClick}>
+      <div className="w-8 h-8 rounded-full bg-gold/10 flex items-center justify-center shrink-0">
         <span className="text-gold text-xs font-bold">{(client.last_name?.[0] || client.first_name?.[0] || '?').toUpperCase()}</span>
       </div>
-      <div className="flex-1 min-w-0" onClick={onClick}>
+      <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2 flex-wrap">
           <div className="text-sm font-medium text-foreground truncate">{name}</div>
           {client.tags?.slice(0, 2).map(tag => (
@@ -69,13 +72,13 @@ export function ClientRow({ client, selected, onSelect, onClick }: {
           {client.designer && <span className="text-[hsl(var(--text-muted))]">· {client.designer}</span>}
         </div>
       </div>
-      <div className="hidden sm:flex items-center gap-3 shrink-0" onClick={onClick}>
+      <div className="hidden sm:flex items-center gap-3 shrink-0">
         {client.total_amount > 0 && <span className="text-sm font-medium text-foreground">{client.total_amount.toLocaleString('ru')} ₽</span>}
         {hasReminder && <div title={`Напоминание: ${client.reminder_date}`}><Icon name="Bell" size={14} className="text-amber-400" /></div>}
         <StatusBadge status={client.status as ClientStatus} />
         <DeliveryBadge date={client.delivery_date} />
       </div>
-      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[hsl(var(--text-muted))] group-hover:text-gold group-hover:bg-gold/10 transition-all shrink-0" onClick={onClick}>
+      <div className="w-6 h-6 rounded-full flex items-center justify-center text-[hsl(var(--text-muted))] group-hover:text-gold group-hover:bg-gold/10 transition-all shrink-0">
         <Icon name="ChevronRight" size={13} />
       </div>
     </div>
