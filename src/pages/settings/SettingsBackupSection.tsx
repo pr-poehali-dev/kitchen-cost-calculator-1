@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useStore } from '@/store/useStore';
+import { useAuth } from '@/auth/useAuth';
 import Icon from '@/components/ui/icon';
+import { API_URLS } from '@/config/api';
 
 function Section({ title, children, danger = false }: { title: string; children: React.ReactNode; danger?: boolean }) {
   return (
@@ -17,12 +19,20 @@ interface Props {
 
 export default function SettingsBackupSection({ onExportBackup }: Props) {
   const store = useStore();
-  const [confirmReset, setConfirmReset] = useState(false);
-  const [confirmResetStep2, setConfirmResetStep2] = useState(false);
-  const [confirmResetWord, setConfirmResetWord] = useState('');
+  const { state: authState } = useAuth();
+  const user = authState.status === 'authenticated' ? authState.user : null;
+  const isAdmin = user?.role === 'admin';
+
   const [importError, setImportError] = useState('');
   const [importOk, setImportOk] = useState(false);
   const [pendingImportData, setPendingImportData] = useState<Record<string, unknown> | null>(null);
+
+  // Состояние модалки сброса
+  const [showResetModal, setShowResetModal] = useState(false);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetError, setResetError] = useState('');
+  const [resetChecking, setResetChecking] = useState(false);
+  const passwordRef = useRef<HTMLInputElement>(null);
 
   const handleImportBackup = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -65,6 +75,37 @@ export default function SettingsBackupSection({ onExportBackup }: Props) {
     setPendingImportData(null);
     setImportOk(true);
     setTimeout(() => setImportOk(false), 3000);
+  };
+
+  const openResetModal = () => {
+    setResetPassword('');
+    setResetError('');
+    setShowResetModal(true);
+    setTimeout(() => passwordRef.current?.focus(), 50);
+  };
+
+  const handleResetConfirm = async () => {
+    if (!resetPassword.trim() || !user) return;
+    setResetChecking(true);
+    setResetError('');
+    try {
+      const res = await fetch(`${API_URLS.auth}/?action=login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ login: user.login, password: resetPassword }),
+      });
+      if (!res.ok) {
+        setResetError('Неверный пароль');
+        setResetChecking(false);
+        return;
+      }
+      // Пароль верный — сбрасываем
+      localStorage.clear();
+      window.location.reload();
+    } catch {
+      setResetError('Ошибка соединения, попробуйте снова');
+      setResetChecking(false);
+    }
   };
 
   return (
@@ -119,72 +160,89 @@ export default function SettingsBackupSection({ onExportBackup }: Props) {
             <div className="text-sm text-foreground">Сбросить все данные</div>
             <div className="text-xs text-[hsl(var(--text-muted))] mt-0.5">Удалит все проекты, материалы, услуги и расходы</div>
           </div>
-          {!confirmReset && (
+          {isAdmin ? (
             <button
-              onClick={() => { setConfirmReset(true); setConfirmResetStep2(false); setConfirmResetWord(''); }}
+              onClick={openResetModal}
               className="px-4 py-2 border border-destructive text-destructive rounded text-sm hover:bg-destructive hover:text-white transition-colors shrink-0"
             >
               Сбросить
             </button>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs text-[hsl(var(--text-muted))] shrink-0">
+              <Icon name="Lock" size={13} />
+              Только для администратора
+            </div>
           )}
         </div>
+      </Section>
 
-        {confirmReset && !confirmResetStep2 && (
-          <div className="mt-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg space-y-3">
-            <div className="flex items-start gap-2.5">
-              <Icon name="AlertTriangle" size={16} className="text-destructive mt-0.5 shrink-0" />
-              <div className="text-sm text-foreground">
-                Это удалит <span className="font-semibold text-destructive">все данные без возможности восстановления</span>. Вы уверены?
+      {/* Модалка: подтверждение сброса паролем */}
+      {showResetModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+          <div className="bg-[hsl(220,14%,11%)] border border-destructive/40 rounded-xl w-full max-w-sm mx-4 shadow-2xl overflow-hidden">
+            {/* Шапка */}
+            <div className="flex items-center gap-3 px-5 py-4 border-b border-border">
+              <div className="w-8 h-8 rounded-full bg-destructive/15 flex items-center justify-center shrink-0">
+                <Icon name="ShieldAlert" size={15} className="text-destructive" />
+              </div>
+              <div>
+                <div className="text-sm font-semibold text-foreground">Подтверждение сброса</div>
+                <div className="text-xs text-[hsl(var(--text-muted))]">Требуется пароль администратора</div>
               </div>
             </div>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setConfirmResetStep2(true)}
-                className="px-4 py-2 bg-destructive text-white rounded text-sm hover:opacity-90"
-              >
-                Да, хочу сбросить
-              </button>
-              <button
-                onClick={() => { setConfirmReset(false); setConfirmResetWord(''); }}
-                className="px-4 py-2 border border-border text-[hsl(var(--text-dim))] rounded text-sm hover:text-foreground"
-              >
-                Отмена
-              </button>
-            </div>
-          </div>
-        )}
 
-        {confirmReset && confirmResetStep2 && (
-          <div className="mt-4 p-4 bg-destructive/10 border border-destructive/40 rounded-lg space-y-3">
-            <div className="text-sm text-foreground">
-              Введите <span className="font-mono font-bold text-destructive">СБРОС</span> для подтверждения:
+            {/* Тело */}
+            <div className="px-5 py-4 space-y-4">
+              <div className="flex items-start gap-2 p-3 bg-destructive/10 border border-destructive/25 rounded-lg">
+                <Icon name="AlertTriangle" size={14} className="text-destructive mt-0.5 shrink-0" />
+                <p className="text-xs text-foreground leading-relaxed">
+                  Будут удалены <span className="font-semibold text-destructive">все данные</span> — проекты, материалы, услуги, расходы. Действие необратимо.
+                </p>
+              </div>
+
+              <div>
+                <label className="text-xs text-[hsl(var(--text-muted))] uppercase tracking-wider mb-1.5 block">
+                  Пароль пользователя <span className="normal-case font-mono text-foreground">{user?.login}</span>
+                </label>
+                <input
+                  ref={passwordRef}
+                  type="password"
+                  value={resetPassword}
+                  onChange={e => { setResetPassword(e.target.value); setResetError(''); }}
+                  onKeyDown={e => e.key === 'Enter' && handleResetConfirm()}
+                  placeholder="Введите пароль..."
+                  className="w-full bg-[hsl(220,12%,16%)] border border-border rounded px-3 py-2 text-sm text-foreground outline-none focus:border-destructive transition-colors"
+                />
+                {resetError && (
+                  <div className="flex items-center gap-1.5 mt-1.5 text-xs text-destructive">
+                    <Icon name="AlertCircle" size={12} /> {resetError}
+                  </div>
+                )}
+              </div>
             </div>
-            <input
-              type="text"
-              value={confirmResetWord}
-              onChange={e => setConfirmResetWord(e.target.value)}
-              placeholder="СБРОС"
-              className="w-full px-3 py-2 bg-[hsl(220,14%,8%)] border border-destructive/40 rounded text-sm text-foreground placeholder:text-[hsl(var(--text-muted))] focus:outline-none focus:border-destructive font-mono"
-              autoFocus
-            />
-            <div className="flex gap-2">
+
+            {/* Футер */}
+            <div className="flex gap-2 px-5 py-4 border-t border-border">
               <button
-                onClick={() => { localStorage.clear(); window.location.reload(); }}
-                disabled={confirmResetWord !== 'СБРОС'}
-                className="px-4 py-2 bg-destructive text-white rounded text-sm hover:opacity-90 disabled:opacity-30 disabled:cursor-not-allowed transition-opacity"
+                onClick={handleResetConfirm}
+                disabled={!resetPassword.trim() || resetChecking}
+                className="flex-1 flex items-center justify-center gap-2 py-2 bg-destructive text-white rounded text-sm font-medium hover:opacity-90 disabled:opacity-40 disabled:cursor-not-allowed transition-opacity"
               >
-                Удалить всё
+                {resetChecking
+                  ? <><Icon name="Loader" size={13} className="animate-spin" /> Проверяю...</>
+                  : <><Icon name="Trash2" size={13} /> Удалить все данные</>
+                }
               </button>
               <button
-                onClick={() => { setConfirmReset(false); setConfirmResetStep2(false); setConfirmResetWord(''); }}
-                className="px-4 py-2 border border-border text-[hsl(var(--text-dim))] rounded text-sm hover:text-foreground"
+                onClick={() => setShowResetModal(false)}
+                className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground transition-colors"
               >
                 Отмена
               </button>
             </div>
           </div>
-        )}
-      </Section>
+        </div>
+      )}
 
       {/* Диалог подтверждения импорта */}
       {pendingImportData && (
@@ -203,35 +261,24 @@ export default function SettingsBackupSection({ onExportBackup }: Props) {
             </div>
             <div className="bg-[hsl(220,12%,14%)] rounded border border-border p-3 text-xs text-[hsl(var(--text-muted))] space-y-1">
               <div className="text-foreground font-medium mb-1.5">Будет загружено:</div>
-              {[
-                ['Материалы',       (pendingImportData.materials     as unknown[])?.length],
-                ['Проекты',         (pendingImportData.projects      as unknown[])?.length],
-                ['Производители',   (pendingImportData.manufacturers as unknown[])?.length],
-                ['Шаблоны блоков',  (pendingImportData.savedBlocks   as unknown[])?.length],
-              ].map(([label, count]) => count !== undefined && (
-                <div key={label as string} className="flex justify-between">
+              {([
+                ['Материалы', (pendingImportData.materials as unknown[])?.length],
+                ['Производители', (pendingImportData.manufacturers as unknown[])?.length],
+                ['Поставщики', (pendingImportData.vendors as unknown[])?.length],
+                ['Услуги', (pendingImportData.services as unknown[])?.length],
+                ['Проекты', (pendingImportData.projects as unknown[])?.length],
+              ] as [string, number | undefined][]).map(([label, count]) => count !== undefined && (
+                <div key={label} className="flex justify-between">
                   <span>{label}</span>
-                  <span className="text-foreground font-medium">{count as number} шт.</span>
+                  <span className="text-foreground font-medium">{count}</span>
                 </div>
               ))}
-              {(pendingImportData.exportedAt as string) && (
-                <div className="flex justify-between pt-1 border-t border-border mt-1">
-                  <span>Дата копии</span>
-                  <span className="text-foreground">{new Date(pendingImportData.exportedAt as string).toLocaleDateString('ru-RU')}</span>
-                </div>
-              )}
             </div>
             <div className="flex gap-2">
-              <button
-                onClick={confirmImport}
-                className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-semibold hover:opacity-90"
-              >
-                Восстановить
+              <button onClick={confirmImport} className="flex-1 py-2 bg-gold text-[hsl(220,16%,8%)] rounded text-sm font-medium hover:opacity-90">
+                Загрузить и заменить
               </button>
-              <button
-                onClick={() => setPendingImportData(null)}
-                className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground"
-              >
+              <button onClick={() => setPendingImportData(null)} className="px-4 py-2 border border-border rounded text-sm text-[hsl(var(--text-dim))] hover:text-foreground">
                 Отмена
               </button>
             </div>
