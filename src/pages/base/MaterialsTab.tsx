@@ -90,7 +90,7 @@ export default function MaterialsTab({ matTypeFilter, onFilterChange, initialSea
   }, [mfrFiltered, vendorFilter]);
 
   const visibleManufacturers = useMemo(() => {
-    const ids = new Set((Array.isArray(catFiltered) ? catFiltered : []).map(m => m.manufacturerId));
+    const ids = new Set((Array.isArray(catFiltered) ? catFiltered : []).map(m => m.manufacturerId).filter(Boolean));
     return (catalog.manufacturers ?? []).filter(m => ids.has(m.id));
   }, [catFiltered, catalog.manufacturers]);
 
