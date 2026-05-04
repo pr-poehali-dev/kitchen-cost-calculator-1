@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/store/useStore';
 import type { CompanyInfo } from '@/store/types';
 import Icon from '@/components/ui/icon';
@@ -31,9 +31,17 @@ export default function SettingsCompanySection() {
   const [uploadingStamp, setUploadingStamp] = useState(false);
   const [uploadingSig, setUploadingSig] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const stampRef = useRef<HTMLInputElement>(null);
   const sigRef = useRef<HTMLInputElement>(null);
   const logoRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (!previewUrl) return;
+    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') setPreviewUrl(null); };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [previewUrl]);
 
   const company: CompanyInfo = store.settings.company || { name: '' };
   const upd = (field: keyof CompanyInfo, value: string | boolean) =>
@@ -199,7 +207,7 @@ export default function SettingsCompanySection() {
               </button>
             </div>
             <div className="flex items-center gap-3 px-3 py-3">
-              <div className="w-16 h-10 rounded border border-dashed border-border bg-[hsl(220,12%,12%)] flex items-center justify-center shrink-0 overflow-hidden">
+              <div className="w-10 h-10 rounded border border-dashed border-border bg-[hsl(220,12%,12%)] flex items-center justify-center shrink-0 overflow-hidden">
                 {company.logoUrl
                   ? <img src={company.logoUrl} alt="Логотип" className="w-full h-full object-contain p-0.5" />
                   : <Icon name="ImageIcon" size={16} className="text-[hsl(var(--text-muted))]" />
@@ -213,13 +221,20 @@ export default function SettingsCompanySection() {
                   {uploadingLogo ? <Icon name="Loader" size={11} className="animate-spin" /> : <Icon name="Upload" size={11} />}
                   {uploadingLogo ? 'Загружаю...' : 'Загрузить'}
                 </button>
-                {company.logoUrl
-                  ? <button type="button" onClick={() => store.updateSettings({ company: { ...company, logoUrl: '', useLogo: false } })}
+                {company.logoUrl ? (
+                  <>
+                    <button type="button" onClick={() => setPreviewUrl(company.logoUrl!)}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-gold hover:text-gold transition-colors">
+                      <Icon name="Eye" size={11} /> Просмотр
+                    </button>
+                    <button type="button" onClick={() => store.updateSettings({ company: { ...company, logoUrl: '', useLogo: false } })}
                       className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-destructive hover:text-destructive transition-colors">
                       <Icon name="Trash2" size={11} /> Удалить
                     </button>
-                  : <span className="text-xs text-[hsl(var(--text-muted))]">PNG, JPG, SVG — до 5 МБ</span>
-                }
+                  </>
+                ) : (
+                  <span className="text-xs text-[hsl(var(--text-muted))]">PNG, JPG, SVG — до 5 МБ</span>
+                )}
               </div>
             </div>
           </div>
@@ -284,13 +299,16 @@ export default function SettingsCompanySection() {
                     {item.uploading ? 'Загружаю...' : 'Загрузить'}
                   </button>
                   {item.url ? (
-                    <button
-                      type="button"
-                      onClick={item.onDelete}
-                      className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-destructive hover:text-destructive transition-colors"
-                    >
-                      <Icon name="Trash2" size={11} /> Удалить
-                    </button>
+                    <>
+                      <button type="button" onClick={() => setPreviewUrl(item.url!)}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-gold hover:text-gold transition-colors">
+                        <Icon name="Eye" size={11} /> Просмотр
+                      </button>
+                      <button type="button" onClick={item.onDelete}
+                        className="flex items-center gap-1.5 px-2.5 py-1 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-destructive hover:text-destructive transition-colors">
+                        <Icon name="Trash2" size={11} /> Удалить
+                      </button>
+                    </>
                   ) : (
                     <span className="text-xs text-[hsl(var(--text-muted))]">PNG с прозрачным фоном, до 5 МБ</span>
                   )}
@@ -335,6 +353,28 @@ export default function SettingsCompanySection() {
           </button>
         </div>
       </Section>
+
+      {/* Модалка просмотра изображения */}
+      {previewUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm"
+          onClick={() => setPreviewUrl(null)}
+        >
+          <div className="relative max-w-2xl max-h-[80vh] p-4" onClick={e => e.stopPropagation()}>
+            <button
+              onClick={() => setPreviewUrl(null)}
+              className="absolute -top-2 -right-2 w-8 h-8 rounded-full bg-[hsl(220,14%,16%)] border border-border flex items-center justify-center text-[hsl(var(--text-muted))] hover:text-foreground z-10"
+            >
+              <Icon name="X" size={14} />
+            </button>
+            <img
+              src={previewUrl}
+              alt="Просмотр"
+              className="max-w-full max-h-[75vh] object-contain rounded-lg shadow-2xl bg-[hsl(220,12%,14%)] p-4"
+            />
+          </div>
+        </div>
+      )}
     </>
   );
 }
