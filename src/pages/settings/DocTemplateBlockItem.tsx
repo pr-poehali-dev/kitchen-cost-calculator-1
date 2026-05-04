@@ -50,6 +50,36 @@ function TypographyRow({ block, onUpdate }: {
         />
       </div>
 
+      {/* Отступ сверху / снизу */}
+      <div className="flex items-center gap-1.5">
+        <label className="text-[10px] text-[hsl(var(--text-muted))] shrink-0">↑ мм</label>
+        <input
+          type="number"
+          min={0} max={50} step={1}
+          placeholder="—"
+          value={block.marginTop ?? ''}
+          onChange={e => {
+            const v = e.target.value;
+            onUpdate('marginTop', v === '' ? undefined : parseFloat(v));
+          }}
+          className="w-12 bg-[hsl(220,14%,12%)] border border-border rounded px-1.5 py-0.5 text-xs text-foreground text-center"
+        />
+      </div>
+      <div className="flex items-center gap-1.5">
+        <label className="text-[10px] text-[hsl(var(--text-muted))] shrink-0">↓ мм</label>
+        <input
+          type="number"
+          min={0} max={50} step={1}
+          placeholder="—"
+          value={block.marginBottom ?? ''}
+          onChange={e => {
+            const v = e.target.value;
+            onUpdate('marginBottom', v === '' ? undefined : parseFloat(v));
+          }}
+          className="w-12 bg-[hsl(220,14%,12%)] border border-border rounded px-1.5 py-0.5 text-xs text-foreground text-center"
+        />
+      </div>
+
       {/* Жирный / курсив / подчёркивание */}
       <div className="flex items-center gap-1">
         <button
@@ -209,13 +239,15 @@ export default function DocTemplateBlockItem({
         <span className="flex-1 text-xs text-foreground truncate">{block.label}</span>
 
         {/* Индикаторы активных стилей */}
-        {(block.bold || block.italic || block.underline || block.fontSize || block.align) && (
+        {(block.bold || block.italic || block.underline || block.fontSize || block.align || block.marginTop != null || block.marginBottom != null) && (
           <span className="text-[10px] text-[hsl(var(--text-muted))] shrink-0 flex items-center gap-0.5">
             {block.fontSize && <span>{block.fontSize}pt</span>}
             {block.bold && <span className="font-bold">B</span>}
             {block.italic && <span className="italic">I</span>}
             {block.underline && <span className="underline">U</span>}
             {block.align && block.align !== 'justify' && <span>{({left:'←',center:'⊡',right:'→'})[block.align]}</span>}
+            {block.marginTop != null && <span>↑{block.marginTop}</span>}
+            {block.marginBottom != null && <span>↓{block.marginBottom}</span>}
           </span>
         )}
 

@@ -44,6 +44,8 @@ export interface Block {
   italic?: boolean;
   underline?: boolean;
   align?: BlockAlign;
+  marginTop?: number;
+  marginBottom?: number;
 }
 
 export interface Template {
@@ -58,11 +60,13 @@ export interface Template {
 // Строит inline-style для блока на основе его типографики и глобального fontSize
 export function blockStyle(b: Block, globalFontSize: number): string {
   const parts: string[] = [];
-  if (b.fontSize)   parts.push(`font-size:${b.fontSize}pt`);
-  if (b.bold)       parts.push('font-weight:bold');
-  if (b.italic)     parts.push('font-style:italic');
-  if (b.underline)  parts.push('text-decoration:underline');
-  if (b.align)      parts.push(`text-align:${b.align}`);
+  if (b.fontSize)        parts.push(`font-size:${b.fontSize}pt`);
+  if (b.bold)            parts.push('font-weight:bold');
+  if (b.italic)          parts.push('font-style:italic');
+  if (b.underline)       parts.push('text-decoration:underline');
+  if (b.align)           parts.push(`text-align:${b.align}`);
+  if (b.marginTop)       parts.push(`margin-top:${b.marginTop}mm`);
+  if (b.marginBottom)    parts.push(`margin-bottom:${b.marginBottom}mm`);
   // Для таблицы font-size нужен отдельно
   if (!b.fontSize && b.type === 'table') parts.push(`font-size:${globalFontSize}pt`);
   return parts.join(';');
@@ -102,23 +106,33 @@ export function buildPreviewHtml(template: Template): string {
       const hStyle = blockStyle({ ...b, align: b.align ?? 'center' }, globalFontSize) || 'text-align:center;font-size:8.5pt';
       return `<p style="${hStyle}">${text}</p>`;
     }
+    const mt = b.marginTop    != null ? `${b.marginTop}mm`    : null;
+    const mb = b.marginBottom != null ? `${b.marginBottom}mm` : null;
+
     if (b.type === 'section') {
       const sStyle = [
         'font-weight:bold',
         `text-align:${b.align ?? 'center'}`,
-        b.fontSize ? `font-size:${b.fontSize}pt` : '',
-        b.italic ? 'font-style:italic' : '',
-        b.underline ? 'text-decoration:underline' : '',
+        b.fontSize  ? `font-size:${b.fontSize}pt`       : '',
+        b.italic    ? 'font-style:italic'               : '',
+        b.underline ? 'text-decoration:underline'       : '',
+        `margin-top:${mt ?? '8px'}`,
+        `margin-bottom:${mb ?? '3px'}`,
       ].filter(Boolean).join(';');
-      return `<p style="margin:8px 0 3px;${sStyle}">${text}</p>`;
+      return `<p style="${sStyle}">${text}</p>`;
     }
-    if (b.type === 'divider') return `<hr style="border:none;border-top:1px solid #000;margin:8px 0"/>`;
-    if (b.type === 'spacer')  return `<div style="height:${b.content || 20}px"></div>`;
+    if (b.type === 'divider') {
+      const dStyle = `border:none;border-top:1px solid #000;${mt ? `margin-top:${mt};` : 'margin-top:8px;'}${mb ? `margin-bottom:${mb}` : 'margin-bottom:8px'}`;
+      return `<hr style="${dStyle}"/>`;
+    }
+    if (b.type === 'spacer')  return `<div style="height:${b.content || 20}px${mt ? `;margin-top:${mt}` : ''}${mb ? `;margin-bottom:${mb}` : ''}"></div>`;
     if (b.type === 'lines') {
       const count = parseInt(b.content) || 6;
-      return Array(count).fill(0).map(() =>
+      const wrapStyle = `${mt ? `margin-top:${mt};` : ''}${mb ? `margin-bottom:${mb}` : ''}`;
+      const lines = Array(count).fill(0).map(() =>
         `<div style="border-bottom:1px solid #000;height:22px;margin-bottom:4px"></div>`
       ).join('');
+      return wrapStyle ? `<div style="${wrapStyle}">${lines}</div>` : lines;
     }
     if (b.type === 'table') {
       const rows = b.content.split('\n').filter(r => r.trim());
@@ -127,17 +141,24 @@ export function buildPreviewHtml(template: Template): string {
       const body = rows.slice(1);
       const tFontSize = b.fontSize ?? globalFontSize;
       const tStyle = [
-        b.bold      ? 'font-weight:bold'        : '',
-        b.italic    ? 'font-style:italic'       : '',
+        b.bold      ? 'font-weight:bold'          : '',
+        b.italic    ? 'font-style:italic'         : '',
         b.underline ? 'text-decoration:underline' : '',
+        mt ? `margin-top:${mt}`    : 'margin-top:6px',
+        mb ? `margin-bottom:${mb}` : 'margin-bottom:6px',
       ].filter(Boolean).join(';');
-      return `<table style="width:100%;border-collapse:collapse;margin:6px 0;font-size:${tFontSize}pt${tStyle ? ';' + tStyle : ''}">
+      return `<table style="width:100%;border-collapse:collapse;font-size:${tFontSize}pt;${tStyle}">
         <tr>${header.map(h => `<th style="border:1px solid #000;padding:3px 5px;background:#f0f0f0;font-weight:bold">${h}</th>`).join('')}</tr>
         ${body.map(r => `<tr>${r.split(';').map(c => `<td style="border:1px solid #000;padding:3px 5px">${c}</td>`).join('')}</tr>`).join('')}
       </table>`;
     }
     // paragraph и прочие
-    return `<p${styleAttr}>${text}</p>`;
+    const pStyle = [
+      style,
+      mt ? `margin-top:${mt}`    : '',
+      mb ? `margin-bottom:${mb}` : '',
+    ].filter(Boolean).join(';');
+    return `<p${pStyle ? ` style="${pStyle}"` : ''}>${text}</p>`;
   }).join('\n');
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8">
