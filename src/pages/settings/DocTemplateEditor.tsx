@@ -22,6 +22,7 @@ const ADD_BLOCK_TYPES = [
   { type: 'spacer',    label: 'Отступ',  icon: 'ArrowUpDown' },
   { type: 'lines',     label: 'Линии',   icon: 'SeparatorHorizontal' },
   { type: 'table',     label: 'Таблица', icon: 'Table' },
+  { type: 'image',     label: 'Фото',    icon: 'Image' },
 ] as const;
 
 const BLOCK_DEFAULTS: Record<string, Partial<Block>> = {
@@ -31,6 +32,7 @@ const BLOCK_DEFAULTS: Record<string, Partial<Block>> = {
   spacer:    { label: 'Отступ',             content: '20' },
   lines:     { label: 'Линии для записей',  content: '6' },
   table:     { label: 'Таблица',            content: 'Колонка 1;Колонка 2;Колонка 3\nЗначение 1;Значение 2;Значение 3' },
+  image:     { label: 'Фото проекта',       content: '' },
 };
 
 const SETTINGS_SLIDERS = [

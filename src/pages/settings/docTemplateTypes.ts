@@ -128,6 +128,15 @@ export function buildPreviewHtml(template: Template): string {
       return `<hr style="${dStyle}"/>`;
     }
     if (b.type === 'spacer')  return `<div style="height:${b.content || 20}px${mt ? `;margin-top:${mt}` : ''}${mb ? `;margin-bottom:${mb}` : ''}"></div>`;
+    if (b.type === 'image') {
+      const url = b.content || '';
+      const w = (b as Block & { imageWidth?: number }).imageWidth;
+      const align = b.align ?? 'center';
+      const wStyle = w ? `max-width:${w}mm;` : 'max-width:100%;';
+      const wrapStyle = `text-align:${align};${mt ? `margin-top:${mt};` : 'margin-top:6px;'}${mb ? `margin-bottom:${mb}` : 'margin-bottom:6px'}`;
+      if (!url) return `<div style="${wrapStyle};border:1px dashed #ccc;padding:20px;color:#999;font-size:9pt">[ Фото технического проекта ]</div>`;
+      return `<div style="${wrapStyle}"><img src="${url}" style="${wStyle}max-height:180mm;object-fit:contain;" /></div>`;
+    }
     if (b.type === 'lines') {
       const count = parseInt(b.content) || 6;
       const wrapStyle = `${mt ? `margin-top:${mt};` : ''}${mb ? `margin-bottom:${mb}` : ''}`;

@@ -23,6 +23,7 @@ const ALIGN_OPTIONS: { value: BlockAlign; icon: string; title: string }[] = [
 
 const HAS_TYPOGRAPHY = ['paragraph', 'section', 'header', 'table'];
 const HAS_CONTENT    = ['paragraph', 'section', 'header'];
+const IMAGE_VAR      = '{{фото_проекта}}';
 
 function TypographyRow({ block, onUpdate }: {
   block: Block;
@@ -231,9 +232,10 @@ export default function DocTemplateBlockItem({
           block.type === 'spacer'   ? 'border-violet-500/40 text-violet-400 bg-violet-500/10' :
           block.type === 'lines'    ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10' :
           block.type === 'table'    ? 'border-orange-500/40 text-orange-400 bg-orange-500/10' :
+          block.type === 'image'    ? 'border-pink-500/40 text-pink-400 bg-pink-500/10' :
           'border-border text-[hsl(var(--text-muted))]'
         }`}>
-          {{ section:'раздел', header:'шапка', divider:'линия', spacer:'отступ', lines:'линии', table:'таблица', paragraph:'текст' }[block.type] || block.type}
+          {{ section:'раздел', header:'шапка', divider:'линия', spacer:'отступ', lines:'линии', table:'таблица', paragraph:'текст', image:'фото' }[block.type] || block.type}
         </span>
 
         <span className="flex-1 text-xs text-foreground truncate">{block.label}</span>
@@ -337,6 +339,45 @@ export default function DocTemplateBlockItem({
           {/* Разделитель */}
           {block.type === 'divider' && (
             <p className="text-[10px] text-[hsl(var(--text-muted))]">Горизонтальная линия — настройка не требуется.</p>
+          )}
+
+          {/* Фото */}
+          {block.type === 'image' && (
+            <div className="space-y-2">
+              <div>
+                <label className="text-[10px] text-[hsl(var(--text-muted))] block mb-1">URL изображения</label>
+                <div className="flex gap-2">
+                  <input
+                    type="text"
+                    value={block.content}
+                    onChange={e => onUpdate('content', e.target.value)}
+                    placeholder="https://... или оставь пустым для авто-подстановки из карточки"
+                    className="flex-1 bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1 text-xs text-foreground"
+                  />
+                </div>
+                <p className="text-[10px] text-[hsl(var(--text-muted))] mt-1">Если оставить пустым — в документе автоматически подставится фото из карточки клиента.</p>
+              </div>
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-1.5">
+                  <label className="text-[10px] text-[hsl(var(--text-muted))] shrink-0">Выравнивание</label>
+                  <div className="flex items-center gap-1">
+                    {ALIGN_OPTIONS.filter(a => a.value !== 'justify').map(({ value, icon, title }) => (
+                      <button
+                        key={value}
+                        onClick={() => onUpdate('align', block.align === value ? undefined : value)}
+                        className={`w-6 h-6 flex items-center justify-center rounded border text-[10px] transition-all ${block.align === value ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+                        title={title}
+                      >
+                        <Icon name={icon as Parameters<typeof Icon>[0]['name']} size={11} />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              {block.content && (
+                <img src={block.content} alt="preview" className="max-h-32 rounded border border-border object-contain" />
+              )}
+            </div>
           )}
         </div>
       )}
