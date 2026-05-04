@@ -54,8 +54,17 @@ export default function CalcSummary({
   const setMode = (m: DisplayMode) => { setDisplayMode(m); localStorage.setItem(MODE_STORAGE_KEY, m); };
   const setGrouping = (m: GroupingMode) => { setGroupingMode(m); localStorage.setItem(GROUPING_STORAGE_KEY, m); };
 
-  type SummaryRow = { id: string; label: string; value: number; pct?: number; sign?: '+' | '-'; color?: string; indent?: boolean; section?: 'materials' | 'types' | 'services' | 'expenses' };
-  const rows: SummaryRow[] = [];
+  type SummaryRow = {
+    id: string;
+    label: string;
+    value: number;
+    pct?: number;
+    sign?: '+' | '-';
+    color?: string;
+    indent?: boolean;
+    section?: 'materials' | 'types' | 'services' | 'expenses';
+  };
+
   const activeExp = allExpenses.filter(e => e.enabled !== false);
 
   const groupByGid = <T extends { groupId?: string }>(items: T[]) => {
@@ -66,107 +75,141 @@ export default function CalcSummary({
 
   const isClient = displayMode === 'client';
 
-  // ── Блоки / Статьи по типам материалов ────────────────────
-  if (!isClient) {
-    if (groupingMode === 'groups' || groupingMode === 'both') {
-      totals.blockExtras.forEach(b => {
-        if (b.base <= 0) return;
-        rows.push({ id: `block-${b.blockId}`, label: b.blockName, value: b.base, section: 'materials' });
-        if (b.extra > 0) {
-          rows.push({ id: `block-extra-${b.blockId}`, label: '+ надбавка на блок', value: b.extra, sign: '+', color: 'gold', indent: true, section: 'materials' });
-        }
+  // ── Строки для режима менеджера ────────────────────────────
+  const managerRows: SummaryRow[] = [];
+
+  if (groupingMode === 'groups' || groupingMode === 'both') {
+    totals.blockExtras.forEach(b => {
+      if (b.base <= 0) return;
+      managerRows.push({ id: `block-${b.blockId}`, label: b.blockName, value: b.base, section: 'materials' });
+      if (b.extra > 0) {
+        managerRows.push({ id: `block-extra-${b.blockId}`, label: '+ надбавка на блок', value: b.extra, sign: '+', color: 'gold', indent: true, section: 'materials' });
+      }
+    });
+  }
+
+  if (groupingMode === 'types' || groupingMode === 'both') {
+    const typeMap: Record<string, number> = {};
+    project.blocks.forEach(block => {
+      block.rows.forEach(row => {
+        if (!row.name.trim() || row.qty <= 0) return;
+        const typeId = row.typeId || '__other';
+        typeMap[typeId] = (typeMap[typeId] || 0) + row.price * row.qty;
       });
-    }
-
-    if (groupingMode === 'types' || groupingMode === 'both') {
-      // Считаем сумму по каждому типу материала
-      const typeMap: Record<string, number> = {};
-      project.blocks.forEach(block => {
-        block.rows.forEach(row => {
-          if (!row.name.trim() || row.qty <= 0) return;
-          const typeId = row.typeId || '__other';
-          typeMap[typeId] = (typeMap[typeId] || 0) + row.price * row.qty;
-        });
-      });
-
-      const totalMat = Object.values(typeMap).reduce((s, v) => s + v, 0);
-
-      const sortedTypes = Object.entries(typeMap)
-        .filter(([, v]) => v > 0)
-        .sort(([, a], [, b]) => b - a);
-
-      sortedTypes.forEach(([typeId, amount]) => {
-        const typeName = typeId === '__other'
-          ? 'Прочие материалы'
-          : store.getTypeName(typeId) || 'Прочие материалы';
-        const typeColor = typeId !== '__other'
-          ? store.getTypeById(typeId)?.color
-          : undefined;
+    });
+    const totalMat = Object.values(typeMap).reduce((s, v) => s + v, 0);
+    Object.entries(typeMap)
+      .filter(([, v]) => v > 0)
+      .sort(([, a], [, b]) => b - a)
+      .forEach(([typeId, amount]) => {
+        const typeName = typeId === '__other' ? 'Прочие материалы' : store.getTypeName(typeId) || 'Прочие материалы';
         const pct = totalMat > 0 ? Math.round(amount / totalMat * 100) : 0;
-        rows.push({
-          id: `type-${typeId}`,
-          label: typeName,
-          value: Math.round(amount),
-          pct,
-          color: typeColor ? undefined : undefined,
-          section: 'types',
-        });
+        managerRows.push({ id: `type-${typeId}`, label: typeName, value: Math.round(amount), pct, section: 'types' });
       });
-    }
   }
 
-  // ── Услуги ─────────────────────────────────────────────────
   if (totalServices > 0) {
-    rows.push({ id: 'services', label: 'Услуги', value: totalServices, section: 'services' });
+    managerRows.push({ id: 'services', label: 'Услуги', value: totalServices, section: 'services' });
   }
 
-  // ── Расходы/надбавки (только для менеджера) ────────────────
-  if (!isClient) {
-    if (totals.totalMarkupAmount !== 0) {
-      const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
-      Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
-        const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
-        const pct = grpItems.reduce((s, e) => s + e.value, 0);
-        const amt = Math.round(totals.base * pct / 100);
-        if (amt !== 0) {
-          const isDiscount = pct < 0;
-          const defaultLabel = isDiscount ? 'Скидка на итог' : 'Надбавка на итог';
-          rows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? defaultLabel} (${pct}%)`, value: Math.abs(amt), sign: amt > 0 ? '+' : '-', color: amt > 0 ? 'gold' : 'green', section: 'expenses' });
-        }
-      });
-    }
-
-    const baseForOverhead = totals.base + totals.totalMarkupAmount + totals.blockExtraTotal;
-
-    const percentItems = activeExp.filter(e => e.type === 'percent');
-    if (percentItems.length > 0) {
-      Object.entries(groupByGid(percentItems)).forEach(([gid, items]) => {
-        const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
-        const pct = items.reduce((s, e) => s + e.value, 0);
-        const amt = Math.round(items.reduce((s, e) => s + baseForOverhead * e.value / 100, 0));
-        if (amt > 0) rows.push({ id: `percent-${gid}`, label: `${grp?.name ?? 'Расходы'} (${pct}%)`, value: amt, sign: '+', color: 'blue', section: 'expenses' });
-      });
-    }
-
-    const fixedItems = activeExp.filter(e => e.type === 'fixed');
-    if (fixedItems.length > 0) {
-      Object.entries(groupByGid(fixedItems)).forEach(([gid, items]) => {
-        const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
-        const amt = items.reduce((s, e) => s + e.value, 0);
-        if (amt > 0) rows.push({ id: `fixed-${gid}`, label: grp?.name ?? 'Постоянные расходы', value: amt, sign: '+', section: 'expenses' });
-      });
-    }
+  if (totals.totalMarkupAmount !== 0) {
+    const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
+    Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
+      const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
+      const pct = grpItems.reduce((s, e) => s + e.value, 0);
+      const amt = Math.round(totals.base * pct / 100);
+      if (amt !== 0) {
+        const isDiscount = pct < 0;
+        const defaultLabel = isDiscount ? 'Скидка на итог' : 'Надбавка на итог';
+        managerRows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? defaultLabel} (${pct}%)`, value: Math.abs(amt), sign: amt > 0 ? '+' : '-', color: amt > 0 ? 'gold' : 'green', section: 'expenses' });
+      }
+    });
   }
 
+  const baseForOverhead = totals.base + totals.totalMarkupAmount + totals.blockExtraTotal;
+
+  const percentItems = activeExp.filter(e => e.type === 'percent');
+  if (percentItems.length > 0) {
+    Object.entries(groupByGid(percentItems)).forEach(([gid, items]) => {
+      const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
+      const pct = items.reduce((s, e) => s + e.value, 0);
+      const amt = Math.round(items.reduce((s, e) => s + baseForOverhead * e.value / 100, 0));
+      if (amt > 0) managerRows.push({ id: `percent-${gid}`, label: `${grp?.name ?? 'Расходы'} (${pct}%)`, value: amt, sign: '+', color: 'blue', section: 'expenses' });
+    });
+  }
+
+  const fixedItems = activeExp.filter(e => e.type === 'fixed');
+  if (fixedItems.length > 0) {
+    Object.entries(groupByGid(fixedItems)).forEach(([gid, items]) => {
+      const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
+      const amt = items.reduce((s, e) => s + e.value, 0);
+      if (amt > 0) managerRows.push({ id: `fixed-${gid}`, label: grp?.name ?? 'Постоянные расходы', value: amt, sign: '+', section: 'expenses' });
+    });
+  }
+
+  // ── Строки для режима клиента ──────────────────────────────
+  // Блоки материалов (каждый блок отдельно)
+  const clientRows: SummaryRow[] = [];
+
+  totals.blockExtras.forEach(b => {
+    if (b.base <= 0) return;
+    clientRows.push({ id: `client-block-${b.blockId}`, label: b.blockName, value: b.base, section: 'materials' });
+  });
+
+  if (totalServices > 0) {
+    clientRows.push({ id: 'client-services', label: 'Услуги', value: totalServices, section: 'services' });
+  }
+
+  // Статьи расходов для клиента — только надбавки/скидки на итог (без внутренних расходов)
+  if (totals.totalMarkupAmount !== 0) {
+    const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
+    Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
+      const grp = gid !== '__ug' ? groups.find(g => g.id === gid) : null;
+      const pct = grpItems.reduce((s, e) => s + e.value, 0);
+      const amt = Math.round(totals.base * pct / 100);
+      if (amt !== 0) {
+        const isDiscount = pct < 0;
+        const defaultLabel = isDiscount ? 'Скидка' : 'Надбавка';
+        clientRows.push({
+          id: `client-markup-${gid}`,
+          label: grp?.name ?? `${defaultLabel} (${Math.abs(pct)}%)`,
+          value: Math.abs(amt),
+          sign: amt > 0 ? '+' : '-',
+          color: amt < 0 ? 'green' : undefined,
+          section: 'expenses',
+        });
+      }
+    });
+  }
+
+  // ── Итоговые наборы с учётом скрытых строк ─────────────────
+  const rows = isClient ? clientRows : managerRows;
   const allRowIds = rows.map(r => r.id);
   const visibleRows = rows.filter(r => !hiddenRows.has(r.id));
 
-  // Разделители между секциями
-  const getSectionDivider = (row: (typeof rows)[0], i: number): boolean => {
+  const getSectionDivider = (row: SummaryRow, i: number): boolean => {
     if (i === 0) return false;
     const prev = visibleRows[i - 1];
-    if (!prev) return false;
-    return prev.section !== row.section;
+    return !!prev && prev.section !== row.section;
+  };
+
+  // ── Чекбокс-строка ─────────────────────────────────────────
+  const ToggleRow = ({ r }: { r: SummaryRow }) => {
+    const hidden = hiddenRows.has(r.id);
+    return (
+      <button
+        onClick={() => onToggleRow(r.id)}
+        className="flex items-center gap-2 w-full text-left text-xs hover:text-foreground transition-colors"
+      >
+        <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${!hidden ? 'bg-gold border-gold' : 'border-border'}`}>
+          {!hidden && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
+        </span>
+        <span className={`${r.indent ? 'pl-3' : ''} ${!hidden ? 'text-foreground' : 'text-[hsl(var(--text-muted))]'} flex-1 truncate`}>{r.label}</span>
+        <span className="ml-auto font-mono text-[hsl(var(--text-muted))] shrink-0">
+          {r.sign === '+' ? `+${fmt(r.value)}` : r.sign === '-' ? `-${fmt(r.value)}` : fmt(r.value)} {cur}
+        </span>
+      </button>
+    );
   };
 
   return (
@@ -237,116 +280,84 @@ export default function CalcSummary({
             </div>
           )}
 
-          {/* Видимость строк */}
-          {!isClient && rows.length > 0 && (
+          {/* Видимость строк — для обоих режимов */}
+          {rows.length > 0 && (
             <div>
-              <div className="text-xs text-[hsl(var(--text-muted))] mb-2 uppercase tracking-wider">Показывать строки</div>
+              <div className="text-xs text-[hsl(var(--text-muted))] mb-2 uppercase tracking-wider">
+                {isClient ? 'Показывать клиенту' : 'Показывать строки'}
+              </div>
               <div className="space-y-1.5">
-                {rows.map(r => {
-                  const hidden = hiddenRows.has(r.id);
-                  return (
-                    <button key={r.id}
-                      onClick={() => onToggleRow(r.id)}
-                      className="flex items-center gap-2 w-full text-left text-xs hover:text-foreground transition-colors"
-                    >
-                      <span className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${!hidden ? 'bg-gold border-gold' : 'border-border'}`}>
-                        {!hidden && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
-                      </span>
-                      <span className={`${r.indent ? 'pl-3' : ''} ${!hidden ? 'text-foreground' : 'text-[hsl(var(--text-muted))]'}`}>{r.label}</span>
-                      <span className="ml-auto font-mono text-[hsl(var(--text-muted))]">{fmt(r.value)} {cur}</span>
-                    </button>
-                  );
-                })}
+                {rows.map(r => <ToggleRow key={r.id} r={r} />)}
                 {allRowIds.length > 0 && (
                   <button onClick={onShowAll} className="text-xs text-gold hover:underline mt-1">
                     Показать все
                   </button>
                 )}
               </div>
+              {isClient && clientRows.some(r => r.section === 'expenses') && (
+                <p className="text-[10px] text-[hsl(var(--text-muted))] mt-2">
+                  Скидки и надбавки можно показать или скрыть в итоге для клиента
+                </p>
+              )}
             </div>
           )}
         </div>
       )}
 
-      {/* Режим «для клиента» — упрощённый вид */}
-      {isClient ? (
-        <div className="space-y-1.5">
-          {totals.rawMaterials > 0 && (
-            <div className="flex justify-between text-sm text-[hsl(var(--text-dim))]">
-              <span>Материалы</span>
-              <span className="font-mono">{fmt(totals.rawMaterials)} {cur}</span>
-            </div>
-          )}
-          {totalServices > 0 && (
-            <div className="flex justify-between text-sm text-[hsl(var(--text-dim))] border-t border-border pt-1.5">
-              <span>Услуги</span>
-              <span className="font-mono">{fmt(totalServices)} {cur}</span>
-            </div>
-          )}
-          <div className="flex justify-between text-base font-semibold border-t border-border pt-2 mt-1">
+      {/* Список строк (единый рендер для обоих режимов) */}
+      <div className="space-y-1.5">
+        {visibleRows.length === 0 && isClient && (
+          <div className="text-sm text-[hsl(var(--text-dim))] flex justify-between">
             <span>Итого</span>
             <span className="font-mono text-gold">{fmt(grandTotal)} {cur}</span>
           </div>
-        </div>
-      ) : (
-        <div className="space-y-1.5">
-          {/* Заголовок секции типов */}
-          {groupingMode === 'types' && visibleRows.some(r => r.section === 'types') && (
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] uppercase tracking-wider text-[hsl(var(--text-muted))]">Статьи материалов</span>
-              <div className="flex-1 h-px bg-border" />
-            </div>
-          )}
+        )}
 
-          {visibleRows.map((r, i) => {
-            const hasDivider = getSectionDivider(r, i);
-            const isTypesSection = r.section === 'types';
-            const totalMat = visibleRows.filter(x => x.section === 'types').reduce((s, x) => s + x.value, 0);
+        {visibleRows.map((r, i) => {
+          const hasDivider = getSectionDivider(r, i);
+          const isTypesSection = r.section === 'types';
+          const totalMat = visibleRows.filter(x => x.section === 'types').reduce((s, x) => s + x.value, 0);
 
-            return (
-              <div key={r.id}>
-                {hasDivider && <div className="border-t border-border my-1.5" />}
-                <div
-                  className={`flex justify-between text-sm ${r.indent ? 'pl-4' : ''} ${
-                    r.color === 'gold' ? 'text-gold' :
-                    r.color === 'blue' ? 'text-[hsl(200,60%,70%)]' :
-                    r.color === 'green' ? 'text-[hsl(140,60%,50%)]' :
-                    r.color === 'red' ? 'text-[hsl(0,70%,60%)]' :
-                    'text-[hsl(var(--text-dim))]'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <span className="truncate">{r.label}</span>
-                    {isTypesSection && r.pct !== undefined && r.pct > 0 && (
-                      <span className="text-[10px] text-[hsl(var(--text-muted))] shrink-0">
-                        {r.pct}%
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-3 shrink-0 ml-4">
-                    {isTypesSection && totalMat > 0 && (
-                      <div className="w-16 h-1 bg-[hsl(220,12%,20%)] rounded-full overflow-hidden hidden sm:block">
-                        <div
-                          className="h-full bg-gold/50 rounded-full"
-                          style={{ width: `${Math.min(100, r.value / totalMat * 100)}%` }}
-                        />
-                      </div>
-                    )}
-                    <span className="font-mono">
-                      {r.sign === '+' ? `+${fmt(r.value)}` : r.sign === '-' ? `-${fmt(r.value)}` : fmt(r.value)} {cur}
-                    </span>
-                  </div>
+          return (
+            <div key={r.id}>
+              {hasDivider && <div className="border-t border-border my-1.5" />}
+              <div
+                className={`flex justify-between text-sm ${r.indent ? 'pl-4' : ''} ${
+                  r.color === 'gold'  ? 'text-gold' :
+                  r.color === 'blue'  ? 'text-[hsl(200,60%,70%)]' :
+                  r.color === 'green' ? 'text-[hsl(140,60%,50%)]' :
+                  r.color === 'red'   ? 'text-[hsl(0,70%,60%)]' :
+                  'text-[hsl(var(--text-dim))]'
+                }`}
+              >
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className="truncate">{r.label}</span>
+                  {isTypesSection && r.pct !== undefined && r.pct > 0 && (
+                    <span className="text-[10px] text-[hsl(var(--text-muted))] shrink-0">{r.pct}%</span>
+                  )}
+                </div>
+                <div className="flex items-center gap-3 shrink-0 ml-4">
+                  {isTypesSection && totalMat > 0 && (
+                    <div className="w-16 h-1 bg-[hsl(220,12%,20%)] rounded-full overflow-hidden hidden sm:block">
+                      <div className="h-full bg-gold/50 rounded-full" style={{ width: `${Math.min(100, r.value / totalMat * 100)}%` }} />
+                    </div>
+                  )}
+                  <span className="font-mono">
+                    {r.sign === '+' ? `+${fmt(r.value)}` : r.sign === '-' ? `-${fmt(r.value)}` : fmt(r.value)} {cur}
+                  </span>
                 </div>
               </div>
-            );
-          })}
+            </div>
+          );
+        })}
 
+        {visibleRows.length > 0 && (
           <div className="flex justify-between text-base font-semibold border-t border-border pt-2 mt-1">
             <span>Итого</span>
             <span className="font-mono text-gold">{fmt(grandTotal)} {cur}</span>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
