@@ -30,8 +30,10 @@ export default function SettingsCompanySection() {
   const [newUnit, setNewUnit] = useState('');
   const [uploadingStamp, setUploadingStamp] = useState(false);
   const [uploadingSig, setUploadingSig] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const stampRef = useRef<HTMLInputElement>(null);
   const sigRef = useRef<HTMLInputElement>(null);
+  const logoRef = useRef<HTMLInputElement>(null);
 
   const company: CompanyInfo = store.settings.company || { name: '' };
   const upd = (field: keyof CompanyInfo, value: string | boolean) =>
@@ -46,9 +48,9 @@ export default function SettingsCompanySection() {
 
   const bankFilled = [company.bank, company.bik, company.rs, company.ks].filter(Boolean).length;
 
-  const uploadAsset = async (file: File, assetType: 'stamp' | 'signature') => {
+  const uploadAsset = async (file: File, assetType: 'stamp' | 'signature' | 'logo') => {
     const token = localStorage.getItem('kuhni_token') || '';
-    const setUploading = assetType === 'stamp' ? setUploadingStamp : setUploadingSig;
+    const setUploading = assetType === 'stamp' ? setUploadingStamp : assetType === 'logo' ? setUploadingLogo : setUploadingSig;
     setUploading(true);
     try {
       const reader = new FileReader();
@@ -66,10 +68,14 @@ export default function SettingsCompanySection() {
       if (!resp.ok) throw new Error(data.error || 'Ошибка загрузки');
       if (assetType === 'stamp') {
         store.updateSettings({ company: { ...company, stampUrl: data.url, useStamp: true } });
-      } else {
+        toast.success('Печать загружена');
+      } else if (assetType === 'signature') {
         store.updateSettings({ company: { ...company, signatureUrl: data.url, useSignature: true } });
+        toast.success('Подпись загружена');
+      } else {
+        store.updateSettings({ company: { ...company, logoUrl: data.url } });
+        toast.success('Логотип загружен');
       }
-      toast.success(assetType === 'stamp' ? 'Печать загружена' : 'Подпись загружена');
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Ошибка загрузки');
     } finally {
@@ -172,58 +178,81 @@ export default function SettingsCompanySection() {
         </div>
       </Section>
 
-      {/* Доверенность */}
-      <Section title="Доверенность" icon="ScrollText">
+      {/* Логотип */}
+      <Section title="Логотип компании" icon="ImageIcon">
         <div className="space-y-3">
           <p className="text-xs text-[hsl(var(--text-muted))]">
-            Номер и дата автоматически подставляются во все договоры в строку «действующего на основании доверенности №___ от ___».
+            Логотип будет отображаться в шапке КП и договоров. Рекомендуется PNG с прозрачным фоном.
           </p>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Номер доверенности">
-              <input value={company.poaNumber || ''} onChange={e => upd('poaNumber', e.target.value)} placeholder="12/2024" className={inp} />
-            </Field>
-            <Field label="Дата доверенности">
-              <input type="date" value={company.poaDate || ''} onChange={e => upd('poaDate', e.target.value)} className={inp} />
-            </Field>
-          </div>
-          {(company.poaNumber || company.poaDate) && (
-            <div className="p-3 bg-[hsl(220,12%,14%)] rounded text-xs text-[hsl(var(--text-muted))]">
-              В договоре: <span className="text-foreground">«действующего на основании доверенности № {company.poaNumber || '___'} от {company.poaDate ? new Date(company.poaDate).toLocaleDateString('ru') : '___'}»</span>
+          <div className="flex items-center gap-4">
+            <div className="w-24 h-16 rounded border border-dashed border-border bg-[hsl(220,12%,12%)] flex items-center justify-center shrink-0 overflow-hidden">
+              {company.logoUrl
+                ? <img src={company.logoUrl} alt="Логотип" className="w-full h-full object-contain p-1" />
+                : <Icon name="ImageIcon" size={22} className="text-[hsl(var(--text-muted))]" />
+              }
             </div>
-          )}
+            <div className="flex flex-col gap-2">
+              <input
+                ref={logoRef}
+                type="file"
+                accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) uploadAsset(f, 'logo'); e.target.value = ''; }}
+              />
+              <button
+                type="button"
+                onClick={() => logoRef.current?.click()}
+                disabled={uploadingLogo}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-gold hover:text-gold transition-colors disabled:opacity-50"
+              >
+                {uploadingLogo ? <Icon name="Loader" size={12} className="animate-spin" /> : <Icon name="Upload" size={12} />}
+                {uploadingLogo ? 'Загружаю...' : 'Загрузить логотип'}
+              </button>
+              {company.logoUrl && (
+                <button
+                  type="button"
+                  onClick={() => store.updateSettings({ company: { ...company, logoUrl: '' } })}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded border border-border text-xs text-[hsl(var(--text-muted))] hover:border-destructive hover:text-destructive transition-colors"
+                >
+                  <Icon name="Trash2" size={12} /> Удалить
+                </button>
+              )}
+              {!company.logoUrl && <p className="text-xs text-[hsl(var(--text-muted))]">PNG, JPG, SVG — до 5 МБ</p>}
+            </div>
+          </div>
         </div>
       </Section>
 
       {/* Печать и подпись */}
       <Section title="Печать и подпись" icon="Stamp">
-        <div className="space-y-5">
+        <div className="space-y-4">
           <p className="text-xs text-[hsl(var(--text-muted))]">
             Загрузите изображения печати и подписи директора — они будут вставляться в блок реквизитов документов. Рекомендуется PNG с прозрачным фоном.
           </p>
 
           {/* Печать */}
-          <div className="flex items-start gap-4 p-4 bg-[hsl(220,12%,14%)] rounded-lg border border-border">
-            <div className="w-20 h-20 rounded border border-dashed border-border bg-[hsl(220,12%,12%)] flex items-center justify-center shrink-0 overflow-hidden">
-              {company.stampUrl
-                ? <img src={company.stampUrl} alt="Печать" className="w-full h-full object-contain" />
-                : <Icon name="Stamp" size={24} className="text-[hsl(var(--text-muted))]" />
-              }
-            </div>
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Печать организации</span>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-xs text-[hsl(var(--text-muted))]">{company.useStamp ? 'Включена' : 'Выключена'}</span>
-                  <button
-                    type="button"
-                    onClick={() => upd('useStamp', !company.useStamp)}
-                    className={`w-9 h-5 rounded-full transition-colors relative ${company.useStamp ? 'bg-gold' : 'bg-[hsl(220,12%,26%)]'}`}
-                  >
-                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${company.useStamp ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                  </button>
-                </label>
+          <div className="p-4 bg-[hsl(220,12%,14%)] rounded-lg border border-border space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Печать организации</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[hsl(var(--text-muted))]">{company.useStamp ? 'Включена' : 'Выключена'}</span>
+                <button
+                  type="button"
+                  onClick={() => upd('useStamp', !company.useStamp)}
+                  className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${company.useStamp ? 'bg-gold' : 'bg-[hsl(220,12%,26%)]'}`}
+                >
+                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${company.useStamp ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </button>
               </div>
-              <div className="flex gap-2">
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded border border-dashed border-border bg-[hsl(220,12%,12%)] flex items-center justify-center shrink-0 overflow-hidden">
+                {company.stampUrl
+                  ? <img src={company.stampUrl} alt="Печать" className="w-full h-full object-contain" />
+                  : <Icon name="Stamp" size={20} className="text-[hsl(var(--text-muted))]" />
+                }
+              </div>
+              <div className="flex gap-2 flex-wrap">
                 <input ref={stampRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
                   onChange={e => { const f = e.target.files?.[0]; if (f) uploadAsset(f, 'stamp'); e.target.value = ''; }} />
                 <button
@@ -244,34 +273,34 @@ export default function SettingsCompanySection() {
                     <Icon name="Trash2" size={12} /> Удалить
                   </button>
                 )}
+                {!company.stampUrl && <p className="text-xs text-[hsl(var(--text-muted))] self-center">PNG с прозрачным фоном, до 5 МБ</p>}
               </div>
-              {!company.stampUrl && <p className="text-xs text-[hsl(var(--text-muted))]">PNG с прозрачным фоном, до 5 МБ</p>}
             </div>
           </div>
 
           {/* Подпись */}
-          <div className="flex items-start gap-4 p-4 bg-[hsl(220,12%,14%)] rounded-lg border border-border">
-            <div className="w-20 h-20 rounded border border-dashed border-border bg-[hsl(220,12%,12%)] flex items-center justify-center shrink-0 overflow-hidden">
-              {company.signatureUrl
-                ? <img src={company.signatureUrl} alt="Подпись" className="w-full h-full object-contain" />
-                : <Icon name="PenLine" size={24} className="text-[hsl(var(--text-muted))]" />
-              }
-            </div>
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Подпись директора</span>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <span className="text-xs text-[hsl(var(--text-muted))]">{company.useSignature ? 'Включена' : 'Выключена'}</span>
-                  <button
-                    type="button"
-                    onClick={() => upd('useSignature', !company.useSignature)}
-                    className={`w-9 h-5 rounded-full transition-colors relative ${company.useSignature ? 'bg-gold' : 'bg-[hsl(220,12%,26%)]'}`}
-                  >
-                    <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${company.useSignature ? 'translate-x-4' : 'translate-x-0.5'}`} />
-                  </button>
-                </label>
+          <div className="p-4 bg-[hsl(220,12%,14%)] rounded-lg border border-border space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Подпись директора</span>
+              <div className="flex items-center gap-2">
+                <span className="text-xs text-[hsl(var(--text-muted))]">{company.useSignature ? 'Включена' : 'Выключена'}</span>
+                <button
+                  type="button"
+                  onClick={() => upd('useSignature', !company.useSignature)}
+                  className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${company.useSignature ? 'bg-gold' : 'bg-[hsl(220,12%,26%)]'}`}
+                >
+                  <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${company.useSignature ? 'translate-x-4' : 'translate-x-0.5'}`} />
+                </button>
               </div>
-              <div className="flex gap-2">
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded border border-dashed border-border bg-[hsl(220,12%,12%)] flex items-center justify-center shrink-0 overflow-hidden">
+                {company.signatureUrl
+                  ? <img src={company.signatureUrl} alt="Подпись" className="w-full h-full object-contain" />
+                  : <Icon name="PenLine" size={20} className="text-[hsl(var(--text-muted))]" />
+                }
+              </div>
+              <div className="flex gap-2 flex-wrap">
                 <input ref={sigRef} type="file" accept="image/png,image/jpeg,image/webp" className="hidden"
                   onChange={e => { const f = e.target.files?.[0]; if (f) uploadAsset(f, 'signature'); e.target.value = ''; }} />
                 <button
@@ -292,8 +321,8 @@ export default function SettingsCompanySection() {
                     <Icon name="Trash2" size={12} /> Удалить
                   </button>
                 )}
+                {!company.signatureUrl && <p className="text-xs text-[hsl(var(--text-muted))] self-center">PNG с прозрачным фоном, до 5 МБ</p>}
               </div>
-              {!company.signatureUrl && <p className="text-xs text-[hsl(var(--text-muted))]">PNG с прозрачным фоном, до 5 МБ</p>}
             </div>
           </div>
         </div>

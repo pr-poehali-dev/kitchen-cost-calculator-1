@@ -212,6 +212,8 @@ export interface CompanyInfo {
   // Доверенность
   poaNumber?: string;
   poaDate?: string;
+  // Логотип
+  logoUrl?: string;
   // Печать и подпись
   stampUrl?: string;
   signatureUrl?: string;
