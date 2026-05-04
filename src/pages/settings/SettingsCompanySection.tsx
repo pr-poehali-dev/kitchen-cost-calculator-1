@@ -49,7 +49,7 @@ export default function SettingsCompanySection() {
   const bankFilled = [company.bank, company.bik, company.rs, company.ks].filter(Boolean).length;
 
   const uploadAsset = async (file: File, assetType: 'stamp' | 'signature' | 'logo') => {
-    const token = localStorage.getItem('kuhni_token') || '';
+    const token = localStorage.getItem('kuhni_pro_token') || '';
     const setUploading = assetType === 'stamp' ? setUploadingStamp : assetType === 'logo' ? setUploadingLogo : setUploadingSig;
     setUploading(true);
     try {
