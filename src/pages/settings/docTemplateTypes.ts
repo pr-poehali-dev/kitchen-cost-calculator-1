@@ -23,6 +23,8 @@ export const DOC_TYPES = [
   { id: 'assembly_calc', label: 'Калькуляция сборки' },
   { id: 'assembly_extra',label: 'Прайс доп. услуг сборки' },
   { id: 'act_assembly',  label: 'Акт выполненных работ сборки' },
+  { id: 'addendum',     label: 'Дополнительное соглашение' },
+  { id: 'tech_spec',    label: 'Спецификация на технику' },
 ];
 
 export const VARS = [
