@@ -20,9 +20,9 @@ export function Toggle({ enabled, onChange }: { enabled: boolean; onChange: (v: 
   return (
     <button
       onClick={e => { e.stopPropagation(); onChange(!enabled); }}
-      className={`relative w-8 h-4 rounded-full transition-colors shrink-0 ${enabled ? 'bg-gold' : 'bg-[hsl(220,12%,22%)]'}`}
+      className={`w-8 h-4 rounded-full transition-colors shrink-0 flex items-center px-0.5 ${enabled ? 'bg-gold justify-end' : 'bg-[hsl(220,12%,22%)] justify-start'}`}
     >
-      <span className={`absolute top-0.5 w-3 h-3 rounded-full bg-white shadow transition-all ${enabled ? 'left-[18px]' : 'left-0.5'}`} />
+      <span className="w-3 h-3 rounded-full bg-white shadow block" />
     </button>
   );
 }

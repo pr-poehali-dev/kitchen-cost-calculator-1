@@ -42,9 +42,9 @@ function ToggleRow({ label, hint, value, onChange }: ToggleRowProps) {
       </div>
       <button
         onClick={() => onChange(!value)}
-        className={`relative w-10 h-5 rounded-full transition-colors shrink-0 ml-4 ${value ? 'bg-gold' : 'bg-[hsl(220,12%,22%)]'}`}
+        className={`w-10 h-5 rounded-full transition-colors shrink-0 ml-4 flex items-center px-0.5 ${value ? 'bg-gold justify-end' : 'bg-[hsl(220,12%,22%)] justify-start'}`}
       >
-        <span className={`absolute top-0.5 w-4 h-4 rounded-full bg-white shadow transition-all ${value ? 'left-[22px]' : 'left-0.5'}`} />
+        <span className="w-4 h-4 rounded-full bg-white shadow block" />
       </button>
     </div>
   );
