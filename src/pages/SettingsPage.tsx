@@ -5,7 +5,6 @@ import SettingsCompanySection from './settings/SettingsCompanySection';
 import SettingsCatalogSection from './settings/SettingsCatalogSection';
 import SettingsAppSection from './settings/SettingsAppSection';
 import SettingsBackupSection from './settings/SettingsBackupSection';
-import SettingsDocTemplates from './settings/SettingsDocTemplates';
 
 export default function SettingsPage() {
   const store = useStore();
@@ -48,18 +47,9 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      {/* Конструктор документов — полная ширина и высота */}
-      <div className="flex-1 flex flex-col min-h-0 p-4 md:p-6 gap-5 overflow-y-auto scrollbar-thin">
-        <div className="shrink-0 max-w-3xl space-y-5">
+      <div className="flex-1 overflow-auto scrollbar-thin p-4 md:p-6">
+        <div className="max-w-3xl space-y-5">
           <SettingsCompanySection />
-        </div>
-
-        {/* Конструктор занимает оставшееся пространство */}
-        <div className="flex-1 min-h-[600px]">
-          <SettingsDocTemplates />
-        </div>
-
-        <div className="shrink-0 max-w-3xl space-y-5">
           <SettingsCatalogSection />
           <SettingsAppSection />
           <SettingsBackupSection onExportBackup={handleExportBackup} />

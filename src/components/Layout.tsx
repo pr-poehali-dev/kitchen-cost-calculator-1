@@ -3,7 +3,7 @@ import Icon from '@/components/ui/icon';
 import type { AuthUser } from '@/auth/useAuth';
 import { getSaveStatus, saveStatusListeners, saveStateToDb, type SaveStatus } from '@/store/stateCore';
 
-type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings' | 'users';
+type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'pdf' | 'settings' | 'users';
 
 interface LayoutProps {
   active: Section;
@@ -21,8 +21,9 @@ const NAV_BASE = [
   { id: 'blocks'   as Section, label: 'Блоки',     icon: 'Layers' },
   { id: 'services' as Section, label: 'Услуги',    icon: 'Wrench' },
   { id: 'base'     as Section, label: 'База',       icon: 'Database' },
-  { id: 'expenses' as Section, label: 'Расходы',   icon: 'TrendingUp' },
-  { id: 'settings' as Section, label: 'Настройки', icon: 'Settings' },
+  { id: 'expenses' as Section, label: 'Расходы',        icon: 'TrendingUp' },
+  { id: 'pdf'      as Section, label: 'Конструктор PDF', icon: 'ScrollText' },
+  { id: 'settings' as Section, label: 'Настройки',       icon: 'Settings' },
 ];
 
 const NAV_ADMIN = { id: 'users' as Section, label: 'Пользователи', icon: 'ShieldCheck' };

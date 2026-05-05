@@ -15,13 +15,14 @@ import ServicesPage from '@/pages/ServicesPage';
 import BasePage from '@/pages/BasePage';
 import ExpensesPage from '@/pages/ExpensesPage';
 import SettingsPage from '@/pages/SettingsPage';
+import PdfBuilderPage from '@/pages/PdfBuilderPage';
 import LoginPage from '@/auth/LoginPage';
 import AdminPanel from '@/auth/AdminPanel';
 import { useAuth } from '@/auth/useAuth';
 import Icon from '@/components/ui/icon';
 import { API_URLS } from '@/config/api';
 
-type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'settings' | 'users';
+type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'pdf' | 'settings' | 'users';
 
 // Восстанавливаем акцент при старте
 const _savedAccent = localStorage.getItem('kuhni_pro_accent');
@@ -128,6 +129,7 @@ export default function App() {
         {section === 'services' && <ServicesPage />}
         {section === 'base'     && <BasePage initialSearch={baseSearch?.search} initialTab={baseSearch?.tab} key={baseSearch ? `${baseSearch.tab}-${baseSearch.search}` : 'base'} />}
         {section === 'expenses' && <ExpensesPage />}
+        {section === 'pdf'      && <PdfBuilderPage />}
         {section === 'settings' && <SettingsPage />}
         {section === 'users'    && user.role === 'admin' && <AdminPanel currentUser={user} token={token} inline />}
         {section === 'users'    && user.role !== 'admin' && <HomePage onNav={setSection} />}
