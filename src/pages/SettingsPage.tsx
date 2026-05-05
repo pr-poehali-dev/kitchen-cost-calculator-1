@@ -35,7 +35,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex flex-col h-full animate-fade-in">
-      <div className="border-b border-border bg-[hsl(220,14%,11%)] px-4 md:px-6 py-3 md:py-4 flex items-center justify-between">
+      <div className="border-b border-border bg-[hsl(220,14%,11%)] px-4 md:px-6 py-3 md:py-4 flex items-center justify-between shrink-0">
         <div>
           <h1 className="text-base font-semibold text-foreground">Настройки</h1>
           <p className="text-[hsl(var(--text-muted))] text-xs mt-0.5">Справочники, единицы измерения, типы и категории материалов</p>
@@ -48,12 +48,22 @@ export default function SettingsPage() {
         </button>
       </div>
 
-      <div className="flex-1 overflow-auto scrollbar-thin p-4 md:p-6 space-y-5 max-w-3xl">
-        <SettingsCompanySection />
-        <SettingsDocTemplates />
-        <SettingsCatalogSection />
-        <SettingsAppSection />
-        <SettingsBackupSection onExportBackup={handleExportBackup} />
+      {/* Конструктор документов — полная ширина и высота */}
+      <div className="flex-1 flex flex-col min-h-0 p-4 md:p-6 gap-5 overflow-y-auto scrollbar-thin">
+        <div className="shrink-0 max-w-3xl space-y-5">
+          <SettingsCompanySection />
+        </div>
+
+        {/* Конструктор занимает оставшееся пространство */}
+        <div className="flex-1 min-h-[600px]">
+          <SettingsDocTemplates />
+        </div>
+
+        <div className="shrink-0 max-w-3xl space-y-5">
+          <SettingsCatalogSection />
+          <SettingsAppSection />
+          <SettingsBackupSection onExportBackup={handleExportBackup} />
+        </div>
       </div>
     </div>
   );

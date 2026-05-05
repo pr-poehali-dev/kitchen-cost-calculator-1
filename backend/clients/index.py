@@ -664,7 +664,9 @@ def handler(event: dict, context) -> dict:
         manager_poa = _get_manager_poa(client.get('manager_name', ''))
         if manager_poa.get('poa_number') or manager_poa.get('poa_date'):
             company = {**company, 'poaNumber': manager_poa.get('poa_number', ''), 'poaDate': manager_poa.get('poa_date', '')}
-        html = _build_contract_html(client, doc_type, company)
+        fallback_html = _build_contract_html(client, doc_type, company)
+        tpl_blocks, tpl_settings = _get_template_blocks(user_id, doc_type)
+        html = _render_template_html(tpl_blocks, tpl_settings, client, company, fallback_html)
         return {'statusCode': 200, 'headers': {**cors, 'Content-Type': 'text/html; charset=utf-8'}, 'body': html}
 
     # ── DOCUMENT: save HTML to S3, return link ────────────────────
@@ -691,7 +693,9 @@ def handler(event: dict, context) -> dict:
         manager_poa = _get_manager_poa(client.get('manager_name', ''))
         if manager_poa.get('poa_number') or manager_poa.get('poa_date'):
             company = {**company, 'poaNumber': manager_poa.get('poa_number', ''), 'poaDate': manager_poa.get('poa_date', '')}
-        html = _build_contract_html(client, doc_type, company)
+        fallback_html = _build_contract_html(client, doc_type, company)
+        tpl_blocks, tpl_settings = _get_template_blocks(user_id, doc_type)
+        html = _render_template_html(tpl_blocks, tpl_settings, client, company, fallback_html)
         doc_id = str(uuid.uuid4())
         key = f'documents/{doc_id}.html'
         s3_client().put_object(Bucket='files', Key=key, Body=html.encode('utf-8'), ContentType='text/html; charset=utf-8')
@@ -986,6 +990,237 @@ def _fmt_money(n: float) -> str:
     if n == int(n):
         return f'{int(n):,}'.replace(',', '\u202f')
     return f'{n:,.2f}'.replace(',', '\u202f')
+
+
+def _get_template_blocks(user_id: str, doc_type: str) -> tuple:
+    """Возвращает (blocks, settings) пользовательского шаблона по умолчанию."""
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(
+                "SELECT blocks, settings FROM doc_templates WHERE user_id = %s AND doc_type = %s AND is_default = true LIMIT 1",
+                (str(user_id), doc_type)
+            )
+            row = cur.fetchone()
+            if row:
+                blocks = row[0] if isinstance(row[0], list) else []
+                settings = row[1] if isinstance(row[1], dict) else {}
+                return blocks, settings
+    except Exception as e:
+        logger.error(f'_get_template_blocks error: {e}')
+    return [], {}
+
+
+def _fmt_date_ru(d) -> str:
+    months = ['января','февраля','марта','апреля','мая','июня','июля','августа','сентября','октября','ноября','декабря']
+    if not d:
+        return ''
+    try:
+        dt = datetime.strptime(str(d)[:10], '%Y-%m-%d')
+        return f'{dt.day} {months[dt.month-1]} {dt.year} г.'
+    except:
+        return str(d)
+
+
+def _check_block_condition(block: dict, c: dict) -> bool:
+    """Проверяет условие показа блока. Если условия нет — показываем всегда."""
+    condition = block.get('condition')
+    if not condition:
+        return True
+    field = condition.get('field', '')
+    operator = condition.get('operator', 'eq')
+    value = condition.get('value', '')
+
+    def get_field_value():
+        if field == 'payment_type':
+            return str(c.get('payment_type') or '')
+        if field == 'has_delivery':
+            return 'yes' if float(c.get('delivery_cost') or 0) > 0 else 'no'
+        if field == 'has_assembly':
+            return 'yes' if float(c.get('assembly_cost') or 0) > 0 else 'no'
+        if field == 'has_credit':
+            pt = str(c.get('payment_type') or '').lower()
+            return 'yes' if pt in ('credit', 'installment') else 'no'
+        if field == 'prepaid_percent':
+            total = float(c.get('total_amount') or 0)
+            prepaid = float(c.get('prepaid_amount') or 0)
+            return str(round(prepaid / total * 100) if total > 0 else 0)
+        if field == 'total_amount':
+            return str(float(c.get('total_amount') or 0))
+        return ''
+
+    fval = get_field_value()
+
+    if operator == 'set':
+        return bool(fval and fval not in ('', 'no', '0'))
+    if operator == 'not_set':
+        return not bool(fval and fval not in ('', 'no', '0'))
+    if operator == 'eq':
+        return fval == value
+    if operator == 'neq':
+        return fval != value
+    if operator == 'gt':
+        try: return float(fval) > float(value)
+        except: return False
+    if operator == 'lt':
+        try: return float(fval) < float(value)
+        except: return False
+    return True
+
+
+def _apply_vars(text: str, c: dict, company: dict) -> str:
+    """Подставляет все переменные {{...}} в текст блока из данных клиента и компании."""
+    def addr(prefix):
+        parts = [c.get(f'{prefix}_city',''), c.get(f'{prefix}_street',''), c.get(f'{prefix}_house','')]
+        apt = c.get(f'{prefix}_apt','')
+        if apt: parts.append(f'кв. {apt}')
+        return ', '.join(p for p in parts if p) or ''
+
+    fname = _full_name(c)
+    total = float(c.get('total_amount') or 0)
+    prepaid = float(c.get('prepaid_amount') or 0)
+    balance = float(c.get('balance_due') or 0)
+
+    payment_map = {
+        'cash': 'наличные', 'card': 'банковская карта',
+        'transfer': 'безналичный перевод', 'credit': 'рассрочка',
+        'installment': 'рассрочка (магазин)',
+    }
+
+    passport_s = c.get('passport_series','') or ''
+    passport_n = c.get('passport_number','') or ''
+    passport_str = f'{passport_s} {passport_n}'.strip()
+
+    replacements = {
+        '{{имя_клиента}}':        fname,
+        '{{телефон_клиента}}':    c.get('phone','') or '',
+        '{{телефон2_клиента}}':   c.get('phone2','') or '',
+        '{{email_клиента}}':      c.get('email','') or '',
+        '{{паспорт}}':            passport_str,
+        '{{паспорт_выдан}}':      c.get('passport_issued_by','') or '',
+        '{{паспорт_дата}}':       c.get('passport_issued_date','') or '',
+        '{{паспорт_код}}':        c.get('passport_dept_code','') or '',
+        '{{адрес_регистрации}}':  addr('reg'),
+        '{{адрес_доставки}}':     addr('delivery'),
+        '{{номер_договора}}':     c.get('contract_number','') or '',
+        '{{дата_договора}}':      _fmt_date_ru(c.get('contract_date','')),
+        '{{сумма}}':              _fmt_money(total),
+        '{{сумма_прописью}}':     _num_to_words(total),
+        '{{аванс}}':              _fmt_money(prepaid),
+        '{{остаток}}':            _fmt_money(balance),
+        '{{тип_оплаты}}':         payment_map.get(c.get('payment_type',''), c.get('payment_type','') or ''),
+        '{{стоимость_доставки}}': _fmt_money(float(c.get('delivery_cost') or 0)),
+        '{{стоимость_сборки}}':   _fmt_money(float(c.get('assembly_cost') or 0)),
+        '{{срок_изготовления}}':  str(c.get('production_days','') or ''),
+        '{{срок_сборки}}':        str(c.get('assembly_days','') or ''),
+        '{{дата_доставки}}':      _fmt_date_ru(c.get('delivery_date','')),
+        '{{компания}}':           _co(company, 'name', ''),
+        '{{менеджер}}':           c.get('manager_name','') or '',
+        '{{дизайнер}}':           c.get('designer','') or '',
+    }
+    for key, val in replacements.items():
+        text = text.replace(key, val)
+    return text
+
+
+def _render_block_html(block: dict, global_font_size: float, c: dict, company: dict) -> str:
+    """Рендерит один блок шаблона в HTML с подстановкой переменных."""
+    btype = block.get('type', 'paragraph')
+    content = _apply_vars(block.get('content', ''), c, company)
+    fs = block.get('fontSize') or global_font_size
+    bold = block.get('bold', False)
+    italic = block.get('italic', False)
+    underline = block.get('underline', False)
+    align = block.get('align', 'left')
+    mt = block.get('marginTop')
+    mb = block.get('marginBottom')
+    mt_s = f'margin-top:{mt}mm;' if mt is not None else ''
+    mb_s = f'margin-bottom:{mb}mm;' if mb is not None else ''
+
+    def base_style(extra=''):
+        parts = [f'font-size:{fs}pt']
+        if bold: parts.append('font-weight:bold')
+        if italic: parts.append('font-style:italic')
+        if underline: parts.append('text-decoration:underline')
+        if align: parts.append(f'text-align:{align}')
+        if mt is not None: parts.append(f'margin-top:{mt}mm')
+        if mb is not None: parts.append(f'margin-bottom:{mb}mm')
+        if extra: parts.append(extra)
+        return ';'.join(parts)
+
+    if btype == 'divider':
+        return f'<hr style="border:none;border-top:1px solid #000;{mt_s or "margin-top:8px;"}{mb_s or "margin-bottom:8px;"}" />'
+    if btype == 'spacer':
+        h = content or '20'
+        return f'<div style="height:{h}px;{mt_s}{mb_s}"></div>'
+    if btype == 'lines':
+        count = int(content) if content.isdigit() else 6
+        lines = ''.join(['<div style="border-bottom:1px solid #000;height:22px;margin-bottom:4px"></div>'] * count)
+        return f'<div style="{mt_s}{mb_s}">{lines}</div>'
+    if btype == 'image':
+        url = content or ''
+        col_widths = block.get('colWidths')
+        w_s = f'max-width:{col_widths}mm;' if col_widths else 'max-width:100%;'
+        wrap = f'text-align:{align};{mt_s or "margin-top:6px;"}{mb_s or "margin-bottom:6px;"}'
+        if not url:
+            return f'<div style="{wrap};border:1px dashed #ccc;padding:20px;color:#999;font-size:9pt">[Фото технического проекта]</div>'
+        return f'<div style="{wrap}"><img src="{url}" style="{w_s}max-height:180mm;object-fit:contain;" /></div>'
+    if btype == 'table':
+        rows_raw = [r for r in content.split('\n') if r.strip()]
+        if not rows_raw:
+            return ''
+        header = rows_raw[0].split(';')
+        body_rows = rows_raw[1:]
+        col_widths = block.get('colWidths')
+        if not col_widths or len(col_widths) != len(header):
+            col_widths = [round(100 / len(header))] * len(header)
+        colgroup = ''.join([f'<col style="width:{w}%"/>' for w in col_widths])
+        t_style = base_style('width:100%;border-collapse:collapse;table-layout:fixed')
+        ths = ''.join([f'<th style="border:1px solid #000;padding:3px 5px;background:#f0f0f0;font-weight:bold;word-break:break-word">{h}</th>' for h in header])
+        trs = ''.join([
+            '<tr>' + ''.join([f'<td style="border:1px solid #000;padding:3px 5px;word-break:break-word">{cell}</td>' for cell in row.split(';')]) + '</tr>'
+            for row in body_rows
+        ])
+        return f'<table style="{t_style}"><colgroup>{colgroup}</colgroup><tr>{ths}</tr>{trs}</table>'
+    if btype == 'section':
+        s_style = f'font-weight:bold;text-align:{align or "center"};font-size:{fs}pt;{mt_s or "margin-top:8px;"}{mb_s or "margin-bottom:3px;"}'
+        if italic: s_style += ';font-style:italic'
+        if underline: s_style += ';text-decoration:underline'
+        return f'<p style="{s_style}">{content}</p>'
+    # paragraph / header / default
+    return f'<p style="{base_style()}">{content}</p>'
+
+
+def _render_template_html(blocks: list, settings: dict, c: dict, company: dict, fallback_html: str) -> str:
+    """Строит полный HTML из пользовательских блоков шаблона.
+    Если блоков нет — возвращает fallback_html (старую жёсткую вёрстку)."""
+    enabled_blocks = [b for b in blocks if b.get('enabled', True) and _check_block_condition(b, c)]
+    if not enabled_blocks:
+        return fallback_html
+
+    global_font_size = float(settings.get('fontSize', 9.5))
+    line_height = float(settings.get('lineHeight', 1.0))
+    font_family = settings.get('fontFamily', 'Times New Roman')
+    m_left   = settings.get('marginLeft', 20)
+    m_right  = settings.get('marginRight', 10)
+    m_top    = settings.get('marginTop', 10)
+    m_bottom = settings.get('marginBottom', 10)
+    landscape = settings.get('orientation', '') == 'landscape'
+    page_w = '297mm' if landscape else '210mm'
+    page_h = '210mm' if landscape else '297mm'
+
+    rendered = '\n'.join([_render_block_html(b, global_font_size, c, company) for b in enabled_blocks])
+
+    return f'''<!DOCTYPE html><html><head><meta charset="UTF-8">
+<style>
+  @page{{size:{page_w} {page_h};margin:{m_top}mm {m_right}mm {m_bottom}mm {m_left}mm}}
+  *{{box-sizing:border-box}}
+  body{{font-family:'{font_family}';line-height:{line_height};margin:0;padding:0;font-size:{global_font_size}pt}}
+  p{{margin:0 0 4px 0}}
+  table{{border-collapse:collapse;width:100%}}
+  @media print{{body{{margin:0}};@page{{margin:{m_top}mm {m_right}mm {m_bottom}mm {m_left}mm}}}}
+</style>
+</head><body>{rendered}</body></html>'''
 
 
 def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:

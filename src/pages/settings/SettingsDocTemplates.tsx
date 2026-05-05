@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
 import Icon from '@/components/ui/icon';
 import DocTemplateEditor from './DocTemplateEditor';
@@ -11,8 +11,8 @@ export default function SettingsDocTemplates() {
   const [editingBlock, setEditingBlock] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [previewHtml, setPreviewHtml] = useState('');
-  const [showPreview, setShowPreview] = useState(false);
+  const [showPreview, setShowPreview] = useState(true);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const loadTemplates = useCallback(async () => {
     setLoading(true);
@@ -111,113 +111,133 @@ export default function SettingsDocTemplates() {
     }
   };
 
-  const handleUpdateTemplate = (t: Template) => setSelectedTemplate(t);
+  const handleUpdateTemplate = (t: Template) => {
+    setSelectedTemplate(t);
+    if (iframeRef.current && showPreview) {
+      iframeRef.current.srcdoc = buildPreviewHtml(t);
+    }
+  };
 
   const handlePreview = () => {
-    if (!selectedTemplate) return;
-    setPreviewHtml(buildPreviewHtml(selectedTemplate));
-    setShowPreview(true);
+    setShowPreview(p => !p);
   };
 
   const docLabel = DOC_TYPES.find(d => d.id === selectedDocType)?.label || selectedDocType;
 
-  return (
-    <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg overflow-hidden">
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Icon name="FileEdit" size={15} className="text-emerald-400" />
-          <span className="text-sm font-medium text-foreground">Конструктор документов</span>
-        </div>
-        <span className="text-xs text-[hsl(var(--text-muted))]">Настройте шаблоны для PDF и Просмотра</span>
-      </div>
+  const previewHtml = selectedTemplate ? buildPreviewHtml(selectedTemplate) : '';
 
-      <div className="p-4 space-y-4">
-        {/* Выбор типа документа */}
-        <div>
-          <label className="text-xs text-[hsl(var(--text-muted))] mb-1 block">Тип документа</label>
+  return (
+    <div className="flex flex-col h-full bg-[hsl(220,14%,11%)] border border-border rounded-lg overflow-hidden">
+      {/* Шапка */}
+      <div className="px-4 py-3 border-b border-border flex items-center justify-between shrink-0">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <Icon name="FileEdit" size={15} className="text-emerald-400" />
+            <span className="text-sm font-medium text-foreground">Конструктор документов</span>
+          </div>
+          {/* Тип документа */}
           <select
             value={selectedDocType}
             onChange={e => setSelectedDocType(e.target.value)}
-            className="w-full bg-[hsl(220,14%,14%)] border border-border rounded px-3 py-2 text-sm text-foreground"
+            className="bg-[hsl(220,14%,14%)] border border-border rounded px-2 py-1 text-xs text-foreground"
           >
             {DOC_TYPES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
           </select>
-        </div>
-
-        {/* Список шаблонов */}
-        <div>
-          <div className="flex items-center justify-between mb-2">
-            <label className="text-xs text-[hsl(var(--text-muted))]">Шаблоны для «{docLabel}»</label>
-            <button
-              onClick={createTemplate}
-              className="flex items-center gap-1 px-2 py-1 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded text-xs hover:bg-emerald-500/20 transition-all"
-            >
-              <Icon name="Plus" size={11} /> Создать
-            </button>
+          {/* Список шаблонов */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {loading ? (
+              <span className="text-xs text-[hsl(var(--text-muted))]">Загрузка...</span>
+            ) : (
+              <>
+                {templates.map(t => (
+                  <button
+                    key={t.id}
+                    onClick={() => setSelectedTemplate(t)}
+                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs transition-all ${
+                      selectedTemplate?.id === t.id
+                        ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300'
+                        : 'border-border text-[hsl(var(--text-muted))] hover:border-border/80 hover:text-foreground'
+                    }`}
+                  >
+                    {t.is_default && <Icon name="Star" size={9} className="text-gold" />}
+                    {t.name}
+                  </button>
+                ))}
+                <button
+                  onClick={createTemplate}
+                  className="flex items-center gap-1 px-2 py-1 border border-dashed border-border text-[hsl(var(--text-muted))] rounded text-xs hover:text-emerald-400 hover:border-emerald-500/40 transition-all"
+                >
+                  <Icon name="Plus" size={10} /> Новый
+                </button>
+              </>
+            )}
           </div>
+        </div>
+        {/* Кнопка показа preview */}
+        <button
+          onClick={handlePreview}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs transition-all ${
+            showPreview
+              ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-400'
+              : 'border-border text-[hsl(var(--text-muted))] hover:text-emerald-400'
+          }`}
+        >
+          <Icon name="PanelRight" size={12} />
+          {showPreview ? 'Скрыть превью' : 'Показать превью'}
+        </button>
+      </div>
 
-          {loading ? (
-            <div className="text-xs text-[hsl(var(--text-muted))] py-4 text-center">Загрузка...</div>
-          ) : templates.length === 0 ? (
-            <div className="text-xs text-[hsl(var(--text-muted))] py-6 text-center border border-dashed border-border rounded-lg">
-              Нет шаблонов — нажмите «Создать» чтобы начать
+      {/* Split layout */}
+      <div className="flex flex-1 overflow-hidden min-h-0">
+        {/* Левая панель — редактор */}
+        <div className={`overflow-y-auto transition-all ${showPreview ? 'w-1/2' : 'w-full'}`}>
+          {selectedTemplate ? (
+            <div className="p-4">
+              <DocTemplateEditor
+                template={selectedTemplate}
+                saving={saving}
+                editingBlock={editingBlock}
+                onUpdate={handleUpdateTemplate}
+                onSave={saveTemplate}
+                onDelete={() => deleteTemplate(selectedTemplate.id)}
+                onSetDefault={() => setDefault(selectedTemplate.id)}
+                onPreview={handlePreview}
+                onDuplicate={duplicateTemplate}
+                onEditBlock={setEditingBlock}
+              />
             </div>
           ) : (
-            <div className="flex gap-2 flex-wrap">
-              {templates.map(t => (
-                <div
-                  key={t.id}
-                  onClick={() => setSelectedTemplate(t)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded border cursor-pointer text-xs transition-all ${
-                    selectedTemplate?.id === t.id
-                      ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300'
-                      : 'border-border text-[hsl(var(--text-dim))] hover:border-border/80'
-                  }`}
-                >
-                  {t.is_default && <Icon name="Star" size={10} className="text-gold" />}
-                  {t.name}
-                </div>
-              ))}
+            <div className="flex items-center justify-center h-full text-xs text-[hsl(var(--text-muted))]">
+              {templates.length === 0
+                ? 'Нажмите «Новый» чтобы создать первый шаблон'
+                : 'Выберите шаблон слева'}
             </div>
           )}
         </div>
 
-        {/* Редактор выбранного шаблона */}
-        {selectedTemplate && (
-          <DocTemplateEditor
-            template={selectedTemplate}
-            saving={saving}
-            editingBlock={editingBlock}
-            onUpdate={handleUpdateTemplate}
-            onSave={saveTemplate}
-            onDelete={() => deleteTemplate(selectedTemplate.id)}
-            onSetDefault={() => setDefault(selectedTemplate.id)}
-            onPreview={handlePreview}
-            onDuplicate={duplicateTemplate}
-            onEditBlock={setEditingBlock}
-          />
+        {/* Правая панель — live preview */}
+        {showPreview && (
+          <div className="w-1/2 border-l border-border flex flex-col overflow-hidden">
+            <div className="px-3 py-2 border-b border-border flex items-center gap-2 shrink-0">
+              <Icon name="Eye" size={12} className="text-[hsl(var(--text-muted))]" />
+              <span className="text-xs text-[hsl(var(--text-muted))]">Предпросмотр — обновляется в реальном времени</span>
+            </div>
+            {selectedTemplate ? (
+              <iframe
+                ref={iframeRef}
+                srcDoc={previewHtml}
+                className="flex-1 w-full"
+                style={{ background: '#e8e8e8' }}
+                title="Предпросмотр"
+              />
+            ) : (
+              <div className="flex-1 flex items-center justify-center text-xs text-[hsl(var(--text-muted))]">
+                Выберите шаблон для предпросмотра
+              </div>
+            )}
+          </div>
         )}
       </div>
-
-      {/* Предпросмотр */}
-      {showPreview && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70">
-          <div className="w-[90vw] h-[90vh] flex flex-col bg-[hsl(220,14%,11%)] border border-border rounded-xl overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <span className="text-sm font-medium">Предпросмотр шаблона</span>
-              <button onClick={() => setShowPreview(false)} className="text-[hsl(var(--text-muted))] hover:text-foreground">
-                <Icon name="X" size={16} />
-              </button>
-            </div>
-            <iframe
-              srcDoc={previewHtml}
-              className="flex-1 w-full"
-              style={{ background: '#e8e8e8' }}
-              title="Предпросмотр"
-            />
-          </div>
-        </div>
-      )}
     </div>
   );
 }
