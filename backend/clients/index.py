@@ -666,7 +666,8 @@ def handler(event: dict, context) -> dict:
             company = {**company, 'poaNumber': manager_poa.get('poa_number', ''), 'poaDate': manager_poa.get('poa_date', '')}
         fallback_html = _build_contract_html(client, doc_type, company)
         tpl_blocks, tpl_settings = _get_template_blocks(user_id, doc_type)
-        html = _render_template_html(tpl_blocks, tpl_settings, client, company, fallback_html)
+        projects = _get_client_projects(user_id, client) if any(b.get('type') == 'calc_table' for b in tpl_blocks) else []
+        html = _render_template_html(tpl_blocks, tpl_settings, client, company, fallback_html, projects)
         return {'statusCode': 200, 'headers': {**cors, 'Content-Type': 'text/html; charset=utf-8'}, 'body': html}
 
     # ── DOCUMENT: save HTML to S3, return link ────────────────────
@@ -695,7 +696,8 @@ def handler(event: dict, context) -> dict:
             company = {**company, 'poaNumber': manager_poa.get('poa_number', ''), 'poaDate': manager_poa.get('poa_date', '')}
         fallback_html = _build_contract_html(client, doc_type, company)
         tpl_blocks, tpl_settings = _get_template_blocks(user_id, doc_type)
-        html = _render_template_html(tpl_blocks, tpl_settings, client, company, fallback_html)
+        projects = _get_client_projects(user_id, client) if any(b.get('type') == 'calc_table' for b in tpl_blocks) else []
+        html = _render_template_html(tpl_blocks, tpl_settings, client, company, fallback_html, projects)
         doc_id = str(uuid.uuid4())
         key = f'documents/{doc_id}.html'
         s3_client().put_object(Bucket='files', Key=key, Body=html.encode('utf-8'), ContentType='text/html; charset=utf-8')
@@ -1123,7 +1125,139 @@ def _apply_vars(text: str, c: dict, company: dict) -> str:
     return text
 
 
-def _render_block_html(block: dict, global_font_size: float, c: dict, company: dict) -> str:
+def _get_client_projects(user_id: str, client: dict) -> list:
+    """Получает проекты клиента из app_state по project_ids."""
+    project_ids = client.get('project_ids') or []
+    if not project_ids:
+        return []
+    try:
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute("SELECT state FROM app_state WHERE user_id = %s LIMIT 1", (str(user_id),))
+            row = cur.fetchone()
+            if not row or not row[0]:
+                return []
+            state = row[0] if isinstance(row[0], dict) else {}
+            all_projects = state.get('projects') or []
+            return [p for p in all_projects if p.get('id') in project_ids]
+    except Exception as e:
+        logger.error(f'_get_client_projects error: {e}')
+        return []
+
+
+def _render_calc_table_html(block: dict, projects: list, global_font_size: float) -> str:
+    """Строит HTML-таблицу спецификации из данных проектов клиента."""
+    cts = block.get('calcTableSettings') or {}
+    columns = cts.get('columns') or ['name', 'qty', 'unit', 'total']
+    show_block_headers = cts.get('showBlockHeaders', True)
+    show_services = cts.get('showServices', True)
+    show_total = cts.get('showTotal', True)
+    price_mode = cts.get('priceMode', 'client')
+    mt = block.get('marginTop')
+    mb = block.get('marginBottom')
+    mt_s = f'margin-top:{mt}mm;' if mt is not None else 'margin-top:6px;'
+    mb_s = f'margin-bottom:{mb}mm;' if mb is not None else 'margin-bottom:6px;'
+    fs = block.get('fontSize') or global_font_size
+
+    col_labels = {
+        'name': 'Наименование', 'qty': 'Кол-во', 'unit': 'Ед.',
+        'price': 'Цена', 'total': 'Сумма', 'article': 'Артикул',
+        'manufacturer': 'Производитель',
+    }
+
+    def fmt_num(n):
+        try:
+            v = float(n or 0)
+            return f'{int(v):,}'.replace(',', '\u202f') if v == int(v) else f'{v:,.2f}'.replace(',', '\u202f')
+        except:
+            return str(n or '')
+
+    th_style = f'border:1px solid #999;padding:3px 5px;background:#f0f0f0;font-weight:bold;font-size:{fs}pt;text-align:left'
+    td_style = f'border:1px solid #ddd;padding:2px 5px;font-size:{fs}pt'
+    grand_total = 0.0
+    rows_html = ''
+
+    ths = ''.join([f'<th style="{th_style}">{col_labels.get(c, c)}</th>' for c in columns])
+
+    for proj in projects:
+        proj_name = proj.get('object') or proj.get('client') or ''
+        # Блоки материалов
+        for blk in (proj.get('blocks') or []):
+            blk_name = blk.get('name') or ''
+            if show_block_headers and proj_name:
+                label = f'{proj_name} — {blk_name}' if blk_name else proj_name
+                rows_html += f'<tr><td colspan="{len(columns)}" style="{td_style};font-weight:bold;background:#f5f5f5">{label}</td></tr>'
+            elif show_block_headers and blk_name:
+                rows_html += f'<tr><td colspan="{len(columns)}" style="{td_style};font-weight:bold;background:#f5f5f5">{blk_name}</td></tr>'
+
+            for row in (blk.get('rows') or []):
+                name = row.get('name') or ''
+                if not name:
+                    continue
+                qty = float(row.get('qty') or 0)
+                unit = row.get('unit') or ''
+                price = float(row.get('basePrice') if price_mode == 'base' else row.get('price') or 0)
+                total = round(qty * price, 2)
+                grand_total += total
+                article = row.get('article') or ''
+                manufacturer = row.get('manufacturerId') or ''
+
+                def cell(col):
+                    if col == 'name': return name
+                    if col == 'qty': return fmt_num(qty)
+                    if col == 'unit': return unit
+                    if col == 'price': return fmt_num(price)
+                    if col == 'total': return fmt_num(total)
+                    if col == 'article': return article
+                    if col == 'manufacturer': return manufacturer
+                    return ''
+                rows_html += '<tr>' + ''.join([f'<td style="{td_style}">{cell(c)}</td>' for c in columns]) + '</tr>'
+
+        # Блоки услуг
+        if show_services:
+            for sblk in (proj.get('serviceBlocks') or []):
+                sblk_name = sblk.get('name') or 'Услуги'
+                has_rows = any(r.get('name') for r in (sblk.get('rows') or []))
+                if not has_rows:
+                    continue
+                if show_block_headers:
+                    rows_html += f'<tr><td colspan="{len(columns)}" style="{td_style};font-weight:bold;background:#f5f5f5">{sblk_name}</td></tr>'
+                for row in (sblk.get('rows') or []):
+                    name = row.get('name') or ''
+                    if not name:
+                        continue
+                    qty = float(row.get('qty') or 0)
+                    unit = row.get('unit') or ''
+                    price = float(row.get('price') or 0)
+                    total = round(qty * price, 2)
+                    grand_total += total
+
+                    def scell(col):
+                        if col == 'name': return name
+                        if col == 'qty': return fmt_num(qty)
+                        if col == 'unit': return unit
+                        if col == 'price': return fmt_num(price)
+                        if col == 'total': return fmt_num(total)
+                        return ''
+                    rows_html += '<tr>' + ''.join([f'<td style="{td_style}">{scell(c)}</td>' for c in columns]) + '</tr>'
+
+    if not rows_html:
+        rows_html = f'<tr><td colspan="{len(columns)}" style="{td_style};color:#999;font-style:italic">Нет данных расчёта</td></tr>'
+
+    total_row = ''
+    if show_total:
+        total_row = f'<tr><td colspan="{len(columns)-1}" style="{th_style};text-align:right">Итого:</td><td style="{th_style}">{fmt_num(grand_total)} ₽</td></tr>'
+
+    return f'''<div style="{mt_s}{mb_s}">
+<table style="width:100%;border-collapse:collapse;table-layout:fixed;font-size:{fs}pt">
+  <tr>{ths}</tr>
+  {rows_html}
+  {total_row}
+</table>
+</div>'''
+
+
+def _render_block_html(block: dict, global_font_size: float, c: dict, company: dict, projects: list = None) -> str:
     """Рендерит один блок шаблона в HTML с подстановкой переменных."""
     btype = block.get('type', 'paragraph')
     content = _apply_vars(block.get('content', ''), c, company)
@@ -1187,11 +1321,13 @@ def _render_block_html(block: dict, global_font_size: float, c: dict, company: d
         if italic: s_style += ';font-style:italic'
         if underline: s_style += ';text-decoration:underline'
         return f'<p style="{s_style}">{content}</p>'
+    if btype == 'calc_table':
+        return _render_calc_table_html(block, projects or [], global_font_size)
     # paragraph / header / default
     return f'<p style="{base_style()}">{content}</p>'
 
 
-def _render_template_html(blocks: list, settings: dict, c: dict, company: dict, fallback_html: str) -> str:
+def _render_template_html(blocks: list, settings: dict, c: dict, company: dict, fallback_html: str, projects: list = None) -> str:
     """Строит полный HTML из пользовательских блоков шаблона.
     Если блоков нет — возвращает fallback_html (старую жёсткую вёрстку)."""
     enabled_blocks = [b for b in blocks if b.get('enabled', True) and _check_block_condition(b, c)]
@@ -1209,7 +1345,7 @@ def _render_template_html(blocks: list, settings: dict, c: dict, company: dict, 
     page_w = '297mm' if landscape else '210mm'
     page_h = '210mm' if landscape else '297mm'
 
-    rendered = '\n'.join([_render_block_html(b, global_font_size, c, company) for b in enabled_blocks])
+    rendered = '\n'.join([_render_block_html(b, global_font_size, c, company, projects) for b in enabled_blocks])
 
     return f'''<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>

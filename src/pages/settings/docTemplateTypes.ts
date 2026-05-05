@@ -121,6 +121,35 @@ export const PAYMENT_TYPE_OPTIONS = [
   { value: 'installment',label: 'Рассрочка (магазин)' },
 ];
 
+// Настройки блока «Таблица из расчёта»
+export type CalcTableColumn = 'name' | 'qty' | 'unit' | 'price' | 'total' | 'article' | 'manufacturer';
+
+export const CALC_TABLE_COLUMNS: { key: CalcTableColumn; label: string; defaultOn: boolean }[] = [
+  { key: 'name',         label: 'Наименование',  defaultOn: true },
+  { key: 'qty',          label: 'Кол-во',         defaultOn: true },
+  { key: 'unit',         label: 'Ед. изм.',        defaultOn: true },
+  { key: 'price',        label: 'Цена',            defaultOn: false },
+  { key: 'total',        label: 'Сумма',           defaultOn: true },
+  { key: 'article',      label: 'Артикул',         defaultOn: false },
+  { key: 'manufacturer', label: 'Производитель',   defaultOn: false },
+];
+
+export interface CalcTableSettings {
+  columns: CalcTableColumn[];       // какие колонки показывать
+  showBlockHeaders: boolean;        // показывать заголовки блоков
+  showServices: boolean;            // включать услуги
+  showTotal: boolean;               // итоговая строка
+  priceMode: 'client' | 'base';    // розничная или закупочная цена
+}
+
+export const DEFAULT_CALC_TABLE_SETTINGS: CalcTableSettings = {
+  columns: ['name', 'qty', 'unit', 'total'],
+  showBlockHeaders: true,
+  showServices: true,
+  showTotal: true,
+  priceMode: 'client',
+};
+
 export interface Block {
   id: string;
   type: string;
@@ -139,6 +168,8 @@ export interface Block {
   marginBottom?: number;
   // Для таблиц: ширины колонок в процентах (сумма = 100)
   colWidths?: number[];
+  // Для блока calc_table: настройки таблицы из расчёта
+  calcTableSettings?: CalcTableSettings;
 }
 
 export interface Template {
@@ -296,6 +327,35 @@ export function buildPreviewHtml(template: Template): string {
       </table>`;
     }
     // paragraph и прочие
+    if (b.type === 'calc_table') {
+      const cts = b.calcTableSettings || { columns: ['name','qty','unit','total'], showBlockHeaders: true, showServices: true, showTotal: true, priceMode: 'client' };
+      const colLabels: Record<string, string> = { name:'Наименование', qty:'Кол-во', unit:'Ед.', price:'Цена', total:'Сумма', article:'Артикул', manufacturer:'Производитель' };
+      const mockRows = [
+        { name:'ЛДСП белый 16мм', qty:8.4, unit:'м²', price:1200, total:10080, article:'A101', manufacturer:'Кроностар' },
+        { name:'МДФ фрезерованный', qty:2.1, unit:'м²', price:3500, total:7350, article:'M205', manufacturer:'Kastamonu' },
+        { name:'Петля Blum', qty:24, unit:'шт', price:180, total:4320, article:'B72', manufacturer:'Blum' },
+      ];
+      const serviceRows = [
+        { name:'Сборка', qty:1, unit:'усл.', price:8000, total:8000, article:'', manufacturer:'' },
+      ];
+      const ths = cts.columns.map(c => `<th style="border:1px solid #999;padding:3px 5px;background:#f0f0f0;font-weight:bold;font-size:${globalFontSize}pt">${colLabels[c]||c}</th>`).join('');
+      const renderRow = (r: typeof mockRows[0]) =>
+        `<tr>${cts.columns.map(c => `<td style="border:1px solid #ddd;padding:2px 5px;font-size:${globalFontSize}pt">${
+          c==='qty' ? r.qty : c==='unit' ? r.unit : c==='price' ? r.price.toLocaleString('ru') : c==='total' ? r.total.toLocaleString('ru') : c==='article' ? r.article : c==='manufacturer' ? r.manufacturer : r.name
+        }</td>`).join('')}</tr>`;
+      const grandTotal = [...mockRows, ...(cts.showServices ? serviceRows : [])].reduce((s,r)=>s+r.total,0);
+      const wrapStyle = `${mt?`margin-top:${mt};`:'margin-top:6px;'}${mb?`margin-bottom:${mb}`:'margin-bottom:6px'}`;
+      return `<div style="${wrapStyle}">
+        ${cts.showBlockHeaders ? `<p style="font-weight:bold;font-size:${globalFontSize}pt;margin:0 0 3px">Корпусные материалы</p>` : ''}
+        <table style="width:100%;border-collapse:collapse;table-layout:fixed">
+          <tr>${ths}</tr>
+          ${mockRows.map(renderRow).join('')}
+          ${cts.showServices ? `<tr><td colspan="${cts.columns.length}" style="border:1px solid #ddd;padding:3px 5px;font-weight:bold;font-size:${globalFontSize}pt;background:#f9f9f9">Услуги</td></tr>${serviceRows.map(renderRow).join('')}` : ''}
+          ${cts.showTotal ? `<tr><td colspan="${cts.columns.length-1}" style="border:1px solid #999;padding:3px 5px;font-weight:bold;font-size:${globalFontSize}pt;text-align:right">Итого:</td><td style="border:1px solid #999;padding:3px 5px;font-weight:bold;font-size:${globalFontSize}pt">${grandTotal.toLocaleString('ru')} ₽</td></tr>` : ''}
+        </table>
+      </div>`;
+    }
+
     const pStyle = [
       style,
       mt ? `margin-top:${mt}`    : '',

@@ -1,7 +1,7 @@
 import { toast } from 'sonner';
 import Icon from '@/components/ui/icon';
 import DocTemplateBlockItem from './DocTemplateBlockItem';
-import { VARS, type Block, type Template } from './docTemplateTypes';
+import { VARS, type Block, type Template, DEFAULT_CALC_TABLE_SETTINGS } from './docTemplateTypes';
 
 interface Props {
   template: Template;
@@ -17,23 +17,25 @@ interface Props {
 }
 
 const ADD_BLOCK_TYPES = [
-  { type: 'paragraph', label: 'Текст',   icon: 'AlignLeft' },
-  { type: 'section',   label: 'Раздел',  icon: 'Heading' },
-  { type: 'divider',   label: 'Линия',   icon: 'Minus' },
-  { type: 'spacer',    label: 'Отступ',  icon: 'ArrowUpDown' },
-  { type: 'lines',     label: 'Линии',   icon: 'SeparatorHorizontal' },
-  { type: 'table',     label: 'Таблица', icon: 'Table' },
-  { type: 'image',     label: 'Фото',    icon: 'Image' },
+  { type: 'paragraph',  label: 'Текст',        icon: 'AlignLeft' },
+  { type: 'section',    label: 'Раздел',        icon: 'Heading' },
+  { type: 'divider',    label: 'Линия',          icon: 'Minus' },
+  { type: 'spacer',     label: 'Отступ',         icon: 'ArrowUpDown' },
+  { type: 'lines',      label: 'Линии',          icon: 'SeparatorHorizontal' },
+  { type: 'table',      label: 'Таблица',        icon: 'Table' },
+  { type: 'calc_table', label: 'Из расчёта',     icon: 'Calculator' },
+  { type: 'image',      label: 'Фото',           icon: 'Image' },
 ] as const;
 
 const BLOCK_DEFAULTS: Record<string, Partial<Block>> = {
-  paragraph: { label: 'Новый пункт',       content: 'Текст нового пункта...' },
-  section:   { label: 'Новый раздел',       content: 'НАЗВАНИЕ РАЗДЕЛА' },
-  divider:   { label: 'Разделитель',        content: '' },
-  spacer:    { label: 'Отступ',             content: '20' },
-  lines:     { label: 'Линии для записей',  content: '6' },
-  table:     { label: 'Таблица',            content: 'Колонка 1;Колонка 2;Колонка 3\nЗначение 1;Значение 2;Значение 3' },
-  image:     { label: 'Фото проекта',       content: '' },
+  paragraph:  { label: 'Новый пункт',          content: 'Текст нового пункта...' },
+  section:    { label: 'Новый раздел',          content: 'НАЗВАНИЕ РАЗДЕЛА' },
+  divider:    { label: 'Разделитель',           content: '' },
+  spacer:     { label: 'Отступ',                content: '20' },
+  lines:      { label: 'Линии для записей',     content: '6' },
+  table:      { label: 'Таблица',               content: 'Колонка 1;Колонка 2;Колонка 3\nЗначение 1;Значение 2;Значение 3' },
+  calc_table: { label: 'Спецификация из расчёта', content: '', calcTableSettings: DEFAULT_CALC_TABLE_SETTINGS },
+  image:      { label: 'Фото проекта',          content: '' },
 };
 
 const SETTINGS_SLIDERS = [

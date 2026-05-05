@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import Icon from '@/components/ui/icon';
-import type { Block, BlockAlign, BlockCondition } from './docTemplateTypes';
-import { parseTableContent, serializeTableContent, VAR_GROUPS, CONDITION_FIELDS, CONDITION_OPERATORS, PAYMENT_TYPE_OPTIONS } from './docTemplateTypes';
+import type { Block, BlockAlign, BlockCondition, CalcTableSettings } from './docTemplateTypes';
+import { parseTableContent, serializeTableContent, VAR_GROUPS, CONDITION_FIELDS, CONDITION_OPERATORS, PAYMENT_TYPE_OPTIONS, CALC_TABLE_COLUMNS } from './docTemplateTypes';
 
 interface Props {
   block: Block;
@@ -435,10 +435,11 @@ export default function DocTemplateBlockItem({
           block.type === 'spacer'   ? 'border-violet-500/40 text-violet-400 bg-violet-500/10' :
           block.type === 'lines'    ? 'border-emerald-500/40 text-emerald-400 bg-emerald-500/10' :
           block.type === 'table'    ? 'border-orange-500/40 text-orange-400 bg-orange-500/10' :
-          block.type === 'image'    ? 'border-pink-500/40 text-pink-400 bg-pink-500/10' :
+          block.type === 'image'      ? 'border-pink-500/40 text-pink-400 bg-pink-500/10' :
+          block.type === 'calc_table' ? 'border-cyan-500/40 text-cyan-400 bg-cyan-500/10' :
           'border-border text-[hsl(var(--text-muted))]'
         }`}>
-          {{ section:'раздел', header:'шапка', divider:'линия', spacer:'отступ', lines:'линии', table:'таблица', paragraph:'текст', image:'фото' }[block.type] || block.type}
+          {{ section:'раздел', header:'шапка', divider:'линия', spacer:'отступ', lines:'линии', table:'таблица', paragraph:'текст', image:'фото', calc_table:'из расчёта' }[block.type] || block.type}
         </span>
 
         <span className="flex-1 text-xs text-foreground truncate">{block.label}</span>
@@ -569,6 +570,63 @@ export default function DocTemplateBlockItem({
           {block.type === 'divider' && (
             <p className="text-[10px] text-[hsl(var(--text-muted))]">Горизонтальная линия — настройка не требуется.</p>
           )}
+
+          {/* Таблица из расчёта */}
+          {block.type === 'calc_table' && (() => {
+            const cts: CalcTableSettings = block.calcTableSettings || {
+              columns: ['name','qty','unit','total'],
+              showBlockHeaders: true,
+              showServices: true,
+              showTotal: true,
+              priceMode: 'client',
+            };
+            const updateCts = (patch: Partial<CalcTableSettings>) => {
+              onUpdate('calcTableSettings', { ...cts, ...patch } as unknown as string);
+            };
+            const toggleCol = (col: string) => {
+              const cols = cts.columns.includes(col as never)
+                ? cts.columns.filter(c => c !== col)
+                : [...cts.columns, col as never];
+              updateCts({ columns: cols });
+            };
+            const btnBase = 'px-2 py-0.5 rounded border text-[10px] transition-all';
+            const btnOn = 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400';
+            const btnOff = 'border-border text-[hsl(var(--text-muted))] hover:text-foreground';
+            return (
+              <div className="space-y-3">
+                <div>
+                  <label className="text-[10px] text-[hsl(var(--text-muted))] block mb-2">Колонки таблицы</label>
+                  <div className="flex flex-wrap gap-1.5">
+                    {CALC_TABLE_COLUMNS.map(col => (
+                      <button key={col.key} type="button"
+                        onClick={() => toggleCol(col.key)}
+                        className={`${btnBase} ${cts.columns.includes(col.key) ? btnOn : btnOff}`}
+                      >{col.label}</button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <label className="text-[10px] text-[hsl(var(--text-muted))] w-full">Параметры</label>
+                  <button type="button" onClick={() => updateCts({ showBlockHeaders: !cts.showBlockHeaders })}
+                    className={`${btnBase} ${cts.showBlockHeaders ? btnOn : btnOff}`}>Заголовки блоков</button>
+                  <button type="button" onClick={() => updateCts({ showServices: !cts.showServices })}
+                    className={`${btnBase} ${cts.showServices ? btnOn : btnOff}`}>Услуги</button>
+                  <button type="button" onClick={() => updateCts({ showTotal: !cts.showTotal })}
+                    className={`${btnBase} ${cts.showTotal ? btnOn : btnOff}`}>Итоговая строка</button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <label className="text-[10px] text-[hsl(var(--text-muted))] shrink-0">Цена:</label>
+                  <button type="button" onClick={() => updateCts({ priceMode: 'client' })}
+                    className={`${btnBase} ${cts.priceMode === 'client' ? btnOn : btnOff}`}>Розничная</button>
+                  <button type="button" onClick={() => updateCts({ priceMode: 'base' })}
+                    className={`${btnBase} ${cts.priceMode === 'base' ? btnOn : btnOff}`}>Закупочная</button>
+                </div>
+                <p className="text-[10px] text-[hsl(var(--text-muted))]">
+                  Таблица автоматически заполняется из смет, привязанных к карточке клиента.
+                </p>
+              </div>
+            );
+          })()}
 
           {/* Фото */}
           {block.type === 'image' && (
