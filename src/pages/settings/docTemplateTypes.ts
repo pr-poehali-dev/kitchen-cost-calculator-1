@@ -27,12 +27,99 @@ export const DOC_TYPES = [
   { id: 'tech_spec',    label: 'Спецификация на технику' },
 ];
 
-export const VARS = [
-  '{{имя_клиента}}', '{{номер_договора}}', '{{дата_договора}}',
-  '{{сумма}}', '{{сумма_прописью}}', '{{менеджер}}', '{{компания}}',
+export const VAR_GROUPS: { label: string; vars: { key: string; desc: string; preview: string }[] }[] = [
+  {
+    label: 'Клиент',
+    vars: [
+      { key: '{{имя_клиента}}',        desc: 'ФИО клиента',              preview: 'Иванов Иван Иванович' },
+      { key: '{{телефон_клиента}}',     desc: 'Телефон клиента',          preview: '+7 (999) 123-45-67' },
+      { key: '{{телефон2_клиента}}',    desc: 'Доп. телефон',             preview: '+7 (999) 765-43-21' },
+      { key: '{{email_клиента}}',       desc: 'Email клиента',            preview: 'ivanov@mail.ru' },
+      { key: '{{паспорт}}',            desc: 'Серия и номер паспорта',    preview: '4520 123456' },
+      { key: '{{паспорт_выдан}}',      desc: 'Кем выдан паспорт',        preview: 'ОУФМС по г. Москве' },
+      { key: '{{паспорт_дата}}',       desc: 'Дата выдачи паспорта',      preview: '15.03.2015' },
+      { key: '{{паспорт_код}}',        desc: 'Код подразделения',         preview: '770-001' },
+      { key: '{{адрес_регистрации}}',  desc: 'Адрес регистрации',        preview: 'г. Москва, ул. Ленина, д. 5, кв. 12' },
+      { key: '{{адрес_доставки}}',     desc: 'Адрес доставки',           preview: 'г. Москва, ул. Садовая, д. 3, кв. 8' },
+    ],
+  },
+  {
+    label: 'Договор',
+    vars: [
+      { key: '{{номер_договора}}',     desc: 'Номер договора',           preview: '877' },
+      { key: '{{дата_договора}}',      desc: 'Дата договора',            preview: '02 мая 2026 г.' },
+      { key: '{{сумма}}',              desc: 'Итоговая сумма',           preview: '350 000' },
+      { key: '{{сумма_прописью}}',     desc: 'Сумма прописью',           preview: 'триста пятьдесят тысяч рублей' },
+      { key: '{{аванс}}',              desc: 'Сумма предоплаты',         preview: '175 000' },
+      { key: '{{остаток}}',            desc: 'Остаток к оплате',         preview: '175 000' },
+      { key: '{{тип_оплаты}}',         desc: 'Тип оплаты',              preview: 'наличные' },
+      { key: '{{стоимость_доставки}}', desc: 'Стоимость доставки',       preview: '3 000' },
+      { key: '{{стоимость_сборки}}',   desc: 'Стоимость сборки',         preview: '8 000' },
+    ],
+  },
+  {
+    label: 'Сроки',
+    vars: [
+      { key: '{{срок_изготовления}}',  desc: 'Срок изготовления (дней)', preview: '30' },
+      { key: '{{срок_сборки}}',        desc: 'Срок сборки (дней)',       preview: '2' },
+      { key: '{{дата_доставки}}',      desc: 'Дата доставки',            preview: '15 июня 2026 г.' },
+    ],
+  },
+  {
+    label: 'Компания',
+    vars: [
+      { key: '{{компания}}',           desc: 'Название компании',        preview: 'ООО «Интерьерные Решения»' },
+      { key: '{{менеджер}}',           desc: 'Имя менеджера',            preview: 'Сазонов Василий Николаевич' },
+      { key: '{{дизайнер}}',           desc: 'Имя дизайнера',            preview: 'Петрова Анна Сергеевна' },
+    ],
+  },
 ];
 
+export const VARS = VAR_GROUPS.flatMap(g => g.vars.map(v => v.key));
+
 export type BlockAlign = 'left' | 'center' | 'right' | 'justify';
+
+export type ConditionField =
+  | 'payment_type'
+  | 'has_delivery'
+  | 'has_assembly'
+  | 'has_credit'
+  | 'prepaid_percent'
+  | 'total_amount';
+
+export type ConditionOperator = 'eq' | 'neq' | 'gt' | 'lt' | 'set' | 'not_set';
+
+export interface BlockCondition {
+  field: ConditionField;
+  operator: ConditionOperator;
+  value?: string;
+}
+
+export const CONDITION_FIELDS: { value: ConditionField; label: string }[] = [
+  { value: 'payment_type',    label: 'Тип оплаты' },
+  { value: 'has_delivery',    label: 'Есть доставка' },
+  { value: 'has_assembly',    label: 'Есть сборка' },
+  { value: 'has_credit',      label: 'Рассрочка / кредит' },
+  { value: 'prepaid_percent', label: 'Процент аванса' },
+  { value: 'total_amount',    label: 'Сумма договора' },
+];
+
+export const CONDITION_OPERATORS: { value: ConditionOperator; label: string; needsValue: boolean }[] = [
+  { value: 'eq',      label: 'равно',              needsValue: true },
+  { value: 'neq',     label: 'не равно',           needsValue: true },
+  { value: 'gt',      label: 'больше чем',         needsValue: true },
+  { value: 'lt',      label: 'меньше чем',         needsValue: true },
+  { value: 'set',     label: 'указано',            needsValue: false },
+  { value: 'not_set', label: 'не указано',         needsValue: false },
+];
+
+export const PAYMENT_TYPE_OPTIONS = [
+  { value: 'cash',       label: 'Наличные' },
+  { value: 'card',       label: 'Карта' },
+  { value: 'transfer',   label: 'Перевод' },
+  { value: 'credit',     label: 'Рассрочка' },
+  { value: 'installment',label: 'Рассрочка (магазин)' },
+];
 
 export interface Block {
   id: string;
@@ -40,6 +127,8 @@ export interface Block {
   label: string;
   content: string;
   enabled: boolean;
+  // Условие показа блока (опционально)
+  condition?: BlockCondition;
   // Типографика блока (опциональные — применяются поверх глобальных настроек шаблона)
   fontSize?: number;
   bold?: boolean;
@@ -86,6 +175,41 @@ export function serializeTableContent(rows: string[][]): string {
   return rows.map(r => r.join(';')).join('\n');
 }
 
+const PREVIEW_VALUES: Record<string, string> = {
+  '{{имя_клиента}}':        'Иванов Иван Иванович',
+  '{{телефон_клиента}}':    '+7 (999) 123-45-67',
+  '{{телефон2_клиента}}':   '+7 (999) 765-43-21',
+  '{{email_клиента}}':      'ivanov@mail.ru',
+  '{{паспорт}}':            '4520 123456',
+  '{{паспорт_выдан}}':      'ОУФМС по г. Москве',
+  '{{паспорт_дата}}':       '15.03.2015',
+  '{{паспорт_код}}':        '770-001',
+  '{{адрес_регистрации}}':  'г. Москва, ул. Ленина, д. 5, кв. 12',
+  '{{адрес_доставки}}':     'г. Москва, ул. Садовая, д. 3, кв. 8',
+  '{{номер_договора}}':     '877',
+  '{{дата_договора}}':      '02 мая 2026 г.',
+  '{{сумма}}':              '350 000',
+  '{{сумма_прописью}}':     'триста пятьдесят тысяч рублей',
+  '{{аванс}}':              '175 000',
+  '{{остаток}}':            '175 000',
+  '{{тип_оплаты}}':         'наличные',
+  '{{стоимость_доставки}}': '3 000',
+  '{{стоимость_сборки}}':   '8 000',
+  '{{срок_изготовления}}':  '30',
+  '{{срок_сборки}}':        '2',
+  '{{дата_доставки}}':      '15 июня 2026 г.',
+  '{{компания}}':           'ООО «Интерьерные Решения»',
+  '{{менеджер}}':           'Сазонов Василий Николаевич',
+  '{{дизайнер}}':           'Петрова Анна Сергеевна',
+};
+
+function applyPreviewVars(text: string): string {
+  return Object.entries(PREVIEW_VALUES).reduce(
+    (t, [key, val]) => t.replace(new RegExp(key.replace(/[{}]/g, '\\$&'), 'g'), val),
+    text
+  );
+}
+
 export function buildPreviewHtml(template: Template): string {
   const blocks = template.blocks.filter(b => b.enabled);
   const s = template.settings as Record<string, number | string>;
@@ -102,14 +226,7 @@ export function buildPreviewHtml(template: Template): string {
   const pageH = landscape ? '210mm' : '297mm';
 
   const rendered = blocks.map(b => {
-    const text = b.content
-      .replace(/\{\{имя_клиента\}\}/g, 'Иванов Иван Иванович')
-      .replace(/\{\{номер_договора\}\}/g, '877')
-      .replace(/\{\{дата_договора\}\}/g, '02 мая 2026 г.')
-      .replace(/\{\{сумма\}\}/g, '350 000')
-      .replace(/\{\{сумма_прописью\}\}/g, 'триста пятьдесят тысяч')
-      .replace(/\{\{менеджер\}\}/g, 'Сазонов Василий Николаевич')
-      .replace(/\{\{компания\}\}/g, 'ООО «Интерьерные Решения»');
+    const text = applyPreviewVars(b.content);
 
     const style = blockStyle(b, globalFontSize);
     const styleAttr = style ? ` style="${style}"` : '';
