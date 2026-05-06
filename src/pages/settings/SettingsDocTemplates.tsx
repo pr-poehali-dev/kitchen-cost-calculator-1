@@ -13,8 +13,8 @@ export default function SettingsDocTemplates() {
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
+  const [pendingSwitch, setPendingSwitch] = useState<Template | null>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
-  const pendingSwitchRef = useRef<Template | null>(null);
 
   const loadTemplates = useCallback(async (keepSelectedId?: string) => {
     setLoading(true);
@@ -79,19 +79,27 @@ export default function SettingsDocTemplates() {
     }
   };
 
-  const switchTemplate = async (t: Template) => {
-    if (selectedTemplate && selectedTemplate.id === t.id) return;
-    if (isDirty && selectedTemplate) {
-      const confirmed = window.confirm('Есть несохранённые изменения. Сохранить перед переключением?');
-      if (confirmed) {
-        await saveTemplate(selectedTemplate);
-      }
-    }
-    // Берём актуальную версию шаблона из синхронизированного массива
+  const doSwitch = (t: Template) => {
     const fresh = templates.find(tpl => tpl.id === t.id) ?? t;
     setSelectedTemplate(fresh);
     setEditingBlock(null);
     setIsDirty(false);
+    setPendingSwitch(null);
+  };
+
+  const switchTemplate = (t: Template) => {
+    if (selectedTemplate && selectedTemplate.id === t.id) return;
+    if (isDirty && selectedTemplate) {
+      setPendingSwitch(t);
+      return;
+    }
+    doSwitch(t);
+  };
+
+  const confirmSwitch = async (save: boolean) => {
+    if (!pendingSwitch) return;
+    if (save) await saveTemplate(selectedTemplate ?? undefined);
+    doSwitch(pendingSwitch);
   };
 
   const deleteTemplate = async (id: string) => {
@@ -219,6 +227,40 @@ export default function SettingsDocTemplates() {
           {showPreview ? 'Скрыть превью' : 'Показать превью'}
         </button>
       </div>
+
+      {/* Баннер несохранённых изменений */}
+      {pendingSwitch && (
+        <div className="px-4 py-2.5 border-b border-amber-500/30 bg-amber-500/10 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2">
+            <Icon name="AlertTriangle" size={13} className="text-amber-400 shrink-0" />
+            <span className="text-xs text-amber-300">
+              Есть несохранённые изменения в «{selectedTemplate?.name}». Сохранить перед переключением на «{pendingSwitch.name}»?
+            </span>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 ml-4">
+            <button
+              onClick={() => confirmSwitch(true)}
+              disabled={saving}
+              className="flex items-center gap-1 px-3 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 rounded text-xs hover:bg-emerald-500/30 transition-all disabled:opacity-60"
+            >
+              {saving ? <Icon name="Loader2" size={10} className="animate-spin" /> : <Icon name="Save" size={10} />}
+              Сохранить и переключить
+            </button>
+            <button
+              onClick={() => confirmSwitch(false)}
+              className="px-3 py-1 border border-border text-[hsl(var(--text-muted))] rounded text-xs hover:text-foreground transition-all"
+            >
+              Не сохранять
+            </button>
+            <button
+              onClick={() => setPendingSwitch(null)}
+              className="text-[hsl(var(--text-muted))] hover:text-foreground transition-all"
+            >
+              <Icon name="X" size={13} />
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Split layout */}
       <div className="flex flex-1 overflow-hidden min-h-0">
