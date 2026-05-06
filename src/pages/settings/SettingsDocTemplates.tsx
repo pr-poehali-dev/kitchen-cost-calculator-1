@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { toast } from 'sonner';
 import Icon from '@/components/ui/icon';
 import DocTemplateEditor from './DocTemplateEditor';
@@ -17,6 +17,7 @@ export default function SettingsDocTemplates() {
   const [pendingSwitch, setPendingSwitch] = useState<Template | null>(null);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const loadTemplates = useCallback(async (keepSelectedId?: string) => {
     setLoading(true);
@@ -152,13 +153,40 @@ export default function SettingsDocTemplates() {
     await setDefault(selectedTemplate.id);
   };
 
+  const updatePreview = useCallback((t: Template) => {
+    if (!iframeRef.current || !showPreview) return;
+    // Сохраняем позицию скролла
+    const iframe = iframeRef.current;
+    const scrollY = iframe.contentWindow?.scrollY ?? 0;
+    const html = buildPreviewHtml(t);
+
+    // Если iframe ещё не загружен — используем srcdoc (первая загрузка)
+    if (!iframe.contentDocument?.body) {
+      iframe.srcdoc = html;
+      return;
+    }
+
+    // Обновляем содержимое без пересоздания iframe
+    try {
+      iframe.contentDocument.open();
+      iframe.contentDocument.write(html);
+      iframe.contentDocument.close();
+      // Восстанавливаем позицию скролла после перерисовки
+      requestAnimationFrame(() => {
+        iframe.contentWindow?.scrollTo(0, scrollY);
+      });
+    } catch {
+      iframe.srcdoc = html;
+    }
+  }, [showPreview]);
+
   const handleUpdateTemplate = (t: Template) => {
     setSelectedTemplate(t);
     setTemplates(prev => prev.map(tpl => tpl.id === t.id ? t : tpl));
     setIsDirty(true);
-    if (iframeRef.current && showPreview) {
-      iframeRef.current.srcdoc = buildPreviewHtml(t);
-    }
+    // Дебаунс 400мс — не перерисовываем при каждом символе
+    if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
+    previewDebounceRef.current = setTimeout(() => updatePreview(t), 400);
   };
 
   const handlePreview = () => {
@@ -202,7 +230,12 @@ export default function SettingsDocTemplates() {
 
   const docLabel = DOC_TYPES.find(d => d.id === selectedDocType)?.label || selectedDocType;
 
-  const previewHtml = selectedTemplate ? buildPreviewHtml(selectedTemplate) : '';
+  // Начальный HTML для iframe — только при смене шаблона/типа документа, не при каждом символе
+  const initialPreviewHtml = useMemo(
+    () => selectedTemplate ? buildPreviewHtml(selectedTemplate) : '',
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [selectedTemplate?.id, selectedDocType]
+  );
 
   return (
     <div className="flex flex-col h-full bg-[hsl(220,14%,11%)] border border-border rounded-lg overflow-hidden">
@@ -383,7 +416,7 @@ export default function SettingsDocTemplates() {
             {selectedTemplate ? (
               <iframe
                 ref={iframeRef}
-                srcDoc={previewHtml}
+                srcDoc={initialPreviewHtml}
                 className="flex-1 w-full"
                 style={{ background: '#e8e8e8' }}
                 title="Предпросмотр"
