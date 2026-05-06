@@ -206,103 +206,136 @@ export default function SettingsDocTemplates() {
 
   return (
     <div className="flex flex-col h-full bg-[hsl(220,14%,11%)] border border-border rounded-lg overflow-hidden">
-      {/* Шапка */}
-      <div className="px-4 py-3 border-b border-border flex items-center justify-between shrink-0">
+
+      {/* ── Тулбар ── */}
+      <div className="px-4 py-2.5 border-b border-border flex items-center justify-between shrink-0 bg-[hsl(220,14%,10%)]">
         <div className="flex items-center gap-3">
+          {/* Логотип + заголовок */}
           <div className="flex items-center gap-2">
-            <Icon name="FileEdit" size={15} className="text-emerald-400" />
-            <span className="text-sm font-medium text-foreground">Конструктор документов</span>
+            <div className="flex items-center justify-center w-6 h-6 rounded bg-emerald-500/15 border border-emerald-500/25">
+              <Icon name="FileText" size={13} className="text-emerald-400" />
+            </div>
+            <span className="text-sm font-semibold text-foreground tracking-tight">Конструктор PDF</span>
           </div>
-          {/* Тип документа */}
-          <select
-            value={selectedDocType}
-            onChange={e => setSelectedDocType(e.target.value)}
-            className="bg-[hsl(220,14%,14%)] border border-border rounded px-2 py-1 text-xs text-foreground"
-          >
-            {DOC_TYPES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
-          </select>
-          {/* Список шаблонов */}
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {loading ? (
-              <span className="text-xs text-[hsl(var(--text-muted))]">Загрузка...</span>
-            ) : (
-              <>
-                {templates.map(t => (
-                  <button
-                    key={t.id}
-                    onClick={() => switchTemplate(t)}
-                    className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs transition-all ${
-                      selectedTemplate?.id === t.id
-                        ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300'
-                        : 'border-border text-[hsl(var(--text-muted))] hover:border-border/80 hover:text-foreground'
-                    }`}
-                  >
-                    {t.is_default && <Icon name="Star" size={9} className="text-gold" />}
-                    {t.name}
-                  </button>
-                ))}
-                <button
-                  onClick={createTemplate}
-                  className="flex items-center gap-1 px-2 py-1 border border-dashed border-border text-[hsl(var(--text-muted))] rounded text-xs hover:text-emerald-400 hover:border-emerald-500/40 transition-all"
-                >
-                  <Icon name="Plus" size={10} /> Новый
-                </button>
-              </>
-            )}
+
+          {/* Разделитель */}
+          <span className="text-border text-base font-light select-none">|</span>
+
+          {/* Выпадающий список типа документа */}
+          <div className="relative">
+            <select
+              value={selectedDocType}
+              onChange={e => setSelectedDocType(e.target.value)}
+              className="appearance-none bg-[hsl(220,14%,13%)] border border-border hover:border-border/70 rounded-md pl-3 pr-7 py-1.5 text-xs text-foreground cursor-pointer focus:outline-none focus:border-emerald-500/50 transition-colors"
+            >
+              {DOC_TYPES.map(d => <option key={d.id} value={d.id}>{d.label}</option>)}
+            </select>
+            <Icon name="ChevronDown" size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] pointer-events-none" />
           </div>
         </div>
-        {/* Кнопка показа preview */}
+
+        {/* Кнопка превью */}
         <button
           onClick={handlePreview}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs transition-all ${
+          title={showPreview ? 'Скрыть превью' : 'Показать превью'}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-all ${
             showPreview
-              ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-400'
-              : 'border-border text-[hsl(var(--text-muted))] hover:text-emerald-400'
+              ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/15'
+              : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground hover:border-border/70'
           }`}
         >
-          <Icon name="PanelRight" size={12} />
-          {showPreview ? 'Скрыть превью' : 'Показать превью'}
+          <Icon name={showPreview ? 'EyeOff' : 'Eye'} size={13} />
+          {showPreview ? 'Скрыть' : 'Превью'}
         </button>
       </div>
 
-      {/* Баннер несохранённых изменений */}
+      {/* ── Таб-бар шаблонов ── */}
+      <div className="border-b border-border shrink-0 bg-[hsl(220,14%,10%)]">
+        <div className="flex items-end gap-0 overflow-x-auto scrollbar-none px-2">
+          {loading ? (
+            <div className="flex items-center gap-2 px-4 py-2.5">
+              <Icon name="Loader2" size={12} className="animate-spin text-[hsl(var(--text-muted))]" />
+              <span className="text-xs text-[hsl(var(--text-muted))]">Загрузка...</span>
+            </div>
+          ) : (
+            <>
+              {templates.map(t => {
+                const isActive = selectedTemplate?.id === t.id;
+                return (
+                  <button
+                    key={t.id}
+                    onClick={() => switchTemplate(t)}
+                    className={`relative flex items-center gap-1.5 px-4 py-2.5 text-xs whitespace-nowrap transition-all border-b-2 shrink-0 ${
+                      isActive
+                        ? 'border-b-emerald-500 text-foreground font-medium'
+                        : 'border-b-transparent text-[hsl(var(--text-muted))] hover:text-foreground'
+                    }`}
+                  >
+                    {t.is_default && (
+                      <Icon name="Star" size={9} className="text-yellow-400 shrink-0" />
+                    )}
+                    {t.name}
+                    {isActive && isDirty && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Есть несохранённые изменения" />
+                    )}
+                  </button>
+                );
+              })}
+              <button
+                onClick={createTemplate}
+                className="flex items-center gap-1 px-3 py-2.5 border-b-2 border-b-transparent text-[hsl(var(--text-muted))] hover:text-emerald-400 transition-all text-xs shrink-0 border border-dashed border-border/50 rounded-t-md mx-1.5 mb-px hover:border-emerald-500/40"
+              >
+                <Icon name="Plus" size={11} />
+                Новый
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      {/* ── Баннер несохранённых изменений ── */}
       {pendingSwitch && (
-        <div className="px-4 py-2.5 border-b border-amber-500/30 bg-amber-500/10 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-2">
-            <Icon name="AlertTriangle" size={13} className="text-amber-400 shrink-0" />
-            <span className="text-xs text-amber-300">
-              Есть несохранённые изменения в «{selectedTemplate?.name}». Сохранить перед переключением на «{pendingSwitch.name}»?
-            </span>
-          </div>
-          <div className="flex items-center gap-2 shrink-0 ml-4">
-            <button
-              onClick={() => confirmSwitch(true)}
-              disabled={saving}
-              className="flex items-center gap-1 px-3 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 rounded text-xs hover:bg-emerald-500/30 transition-all disabled:opacity-60"
-            >
-              {saving ? <Icon name="Loader2" size={10} className="animate-spin" /> : <Icon name="Save" size={10} />}
-              Сохранить и переключить
-            </button>
-            <button
-              onClick={() => confirmSwitch(false)}
-              className="px-3 py-1 border border-border text-[hsl(var(--text-muted))] rounded text-xs hover:text-foreground transition-all"
-            >
-              Не сохранять
-            </button>
-            <button
-              onClick={() => setPendingSwitch(null)}
-              className="text-[hsl(var(--text-muted))] hover:text-foreground transition-all"
-            >
-              <Icon name="X" size={13} />
-            </button>
+        <div className="shrink-0 border-b border-amber-500/25 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2.5 bg-gradient-to-r from-amber-500/12 via-amber-500/6 to-transparent">
+            <div className="flex items-center gap-2.5">
+              <div className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/30 shrink-0">
+                <Icon name="AlertTriangle" size={11} className="text-amber-400" />
+              </div>
+              <span className="text-xs text-amber-300 leading-relaxed">
+                Несохранённые изменения в <span className="font-medium text-amber-200">«{selectedTemplate?.name}»</span>.
+                {' '}Сохранить перед переключением на <span className="font-medium text-amber-200">«{pendingSwitch.name}»</span>?
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 ml-4">
+              <button
+                onClick={() => confirmSwitch(true)}
+                disabled={saving}
+                className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 rounded-md text-xs hover:bg-emerald-500/30 transition-all disabled:opacity-60"
+              >
+                {saving ? <Icon name="Loader2" size={10} className="animate-spin" /> : <Icon name="Save" size={10} />}
+                Сохранить
+              </button>
+              <button
+                onClick={() => confirmSwitch(false)}
+                className="px-3 py-1 border border-border text-[hsl(var(--text-muted))] rounded-md text-xs hover:text-foreground transition-all"
+              >
+                Не сохранять
+              </button>
+              <button
+                onClick={() => setPendingSwitch(null)}
+                className="text-[hsl(var(--text-muted))] hover:text-foreground transition-all p-0.5 rounded"
+              >
+                <Icon name="X" size={13} />
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Split layout */}
+      {/* ── Split layout ── */}
       <div className="flex flex-1 overflow-hidden min-h-0">
         {/* Левая панель — редактор */}
-        <div className={`overflow-y-auto transition-all ${showPreview ? 'w-1/2' : 'w-full'}`}>
+        <div className={`overflow-y-auto transition-all bg-[hsl(220,14%,11%)] ${showPreview ? 'w-1/2' : 'w-full'}`}>
           {selectedTemplate ? (
             <div className="p-4">
               <DocTemplateEditor
@@ -323,10 +356,15 @@ export default function SettingsDocTemplates() {
               />
             </div>
           ) : (
-            <div className="flex items-center justify-center h-full text-xs text-[hsl(var(--text-muted))]">
-              {templates.length === 0
-                ? 'Нажмите «Новый» чтобы создать первый шаблон'
-                : 'Выберите шаблон слева'}
+            <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-8">
+              <div className="w-10 h-10 rounded-full bg-[hsl(220,14%,14%)] border border-border flex items-center justify-center">
+                <Icon name="FileText" size={18} className="text-[hsl(var(--text-muted))]" />
+              </div>
+              <p className="text-sm text-[hsl(var(--text-muted))]">
+                {templates.length === 0
+                  ? 'Нажмите «Новый» чтобы создать первый шаблон'
+                  : 'Выберите шаблон в панели вкладок выше'}
+              </p>
             </div>
           )}
         </div>
@@ -334,9 +372,13 @@ export default function SettingsDocTemplates() {
         {/* Правая панель — live preview */}
         {showPreview && (
           <div className="w-1/2 border-l border-border flex flex-col overflow-hidden">
-            <div className="px-3 py-2 border-b border-border flex items-center gap-2 shrink-0">
+            <div className="px-3 py-2 border-b border-border flex items-center gap-2 shrink-0 bg-[hsl(220,14%,10%)]">
               <Icon name="Eye" size={12} className="text-[hsl(var(--text-muted))]" />
               <span className="text-xs text-[hsl(var(--text-muted))]">Предпросмотр — обновляется в реальном времени</span>
+              <span className="ml-auto flex items-center gap-1 text-[10px] text-emerald-500/70">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500/60 animate-pulse" />
+                live
+              </span>
             </div>
             {selectedTemplate ? (
               <iframe

@@ -349,39 +349,113 @@ export default function BlockEditorPanels({ block, textareaRef, onUpdate, insert
 
       {/* Фото */}
       {block.type === 'image' && (
-        <div className="space-y-2">
+        <div className="space-y-3">
+          {/* URL */}
           <div>
             <label className="text-[10px] text-[hsl(var(--text-muted))] block mb-1">URL изображения</label>
-            <div className="flex gap-2">
-              <input
-                type="text"
-                value={block.content}
-                onChange={e => onUpdate('content', e.target.value)}
-                placeholder="https://... или оставь пустым для авто-подстановки из карточки"
-                className="flex-1 bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1 text-xs text-foreground"
-              />
-            </div>
-            <p className="text-[10px] text-[hsl(var(--text-muted))] mt-1">Если оставить пустым — в документе автоматически подставится фото из карточки клиента.</p>
+            <input
+              type="text"
+              value={block.content}
+              onChange={e => onUpdate('content', e.target.value)}
+              placeholder="https://... или оставь пустым — подставится из карточки"
+              className="w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1 text-xs text-foreground"
+            />
+            <p className="text-[10px] text-[hsl(var(--text-muted))] mt-1">Если оставить пустым — подставится фото из карточки клиента.</p>
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5">
-              <label className="text-[10px] text-[hsl(var(--text-muted))] shrink-0">Выравнивание</label>
-              <div className="flex items-center gap-1">
-                {ALIGN_OPTIONS.filter(a => a.value !== 'justify').map(({ value, icon, title }) => (
-                  <button
-                    key={value}
-                    onClick={() => onUpdate('align', block.align === value ? undefined : value)}
-                    className={`w-6 h-6 flex items-center justify-center rounded border text-[10px] transition-all ${block.align === value ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
-                    title={title}
-                  >
-                    <Icon name={icon as Parameters<typeof Icon>[0]['name']} size={11} />
-                  </button>
-                ))}
+
+          {/* Размер */}
+          <div>
+            <label className="text-[10px] text-[hsl(var(--text-muted))] block mb-1.5">Размер (мм, 0 = авто)</label>
+            <div className="grid grid-cols-2 gap-2">
+              <div className="flex items-center gap-1.5 bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1">
+                <Icon name="ArrowLeftRight" size={11} className="text-[hsl(var(--text-muted))] shrink-0" />
+                <span className="text-[10px] text-[hsl(var(--text-muted))] shrink-0">Ш</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={300}
+                  value={block.imageWidth ?? ''}
+                  onChange={e => onUpdate('imageWidth', e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="авто"
+                  className="flex-1 bg-transparent text-xs text-foreground outline-none w-0 min-w-0"
+                />
+                <span className="text-[10px] text-[hsl(var(--text-muted))]">мм</span>
+              </div>
+              <div className="flex items-center gap-1.5 bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1">
+                <Icon name="ArrowUpDown" size={11} className="text-[hsl(var(--text-muted))] shrink-0" />
+                <span className="text-[10px] text-[hsl(var(--text-muted))] shrink-0">В</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={300}
+                  value={block.imageHeight ?? ''}
+                  onChange={e => onUpdate('imageHeight', e.target.value ? Number(e.target.value) : undefined)}
+                  placeholder="авто"
+                  className="flex-1 bg-transparent text-xs text-foreground outline-none w-0 min-w-0"
+                />
+                <span className="text-[10px] text-[hsl(var(--text-muted))]">мм</span>
               </div>
             </div>
+            {/* Быстрые пресеты */}
+            <div className="flex gap-1 mt-1.5 flex-wrap">
+              {[
+                { label: 'Мал', w: 60, h: 45 },
+                { label: 'Средн', w: 120, h: 90 },
+                { label: 'Больш', w: 180, h: 135 },
+                { label: 'Полная ширина', w: 0, h: 0 },
+              ].map(p => (
+                <button
+                  key={p.label}
+                  onClick={() => { onUpdate('imageWidth', p.w || undefined); onUpdate('imageHeight', p.h || undefined); }}
+                  className={`px-2 py-0.5 rounded border text-[10px] transition-all ${
+                    (block.imageWidth ?? 0) === p.w && (block.imageHeight ?? 0) === p.h
+                      ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-400'
+                      : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'
+                  }`}
+                >
+                  {p.label}
+                </button>
+              ))}
+            </div>
           </div>
+
+          {/* Выравнивание */}
+          <div className="flex items-center gap-2">
+            <label className="text-[10px] text-[hsl(var(--text-muted))] shrink-0">Выравнивание</label>
+            <div className="flex items-center gap-1">
+              {ALIGN_OPTIONS.filter(a => a.value !== 'justify').map(({ value, icon, title }) => (
+                <button
+                  key={value}
+                  onClick={() => onUpdate('align', block.align === value ? undefined : value)}
+                  className={`w-6 h-6 flex items-center justify-center rounded border text-[10px] transition-all ${block.align === value ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+                  title={title}
+                >
+                  <Icon name={icon as Parameters<typeof Icon>[0]['name']} size={11} />
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Превью */}
           {block.content && (
-            <img src={block.content} alt="preview" className="max-h-32 rounded border border-border object-contain" />
+            <div className="relative rounded border border-border overflow-hidden bg-[hsl(220,14%,10%)]">
+              <img
+                src={block.content}
+                alt="preview"
+                className="object-contain mx-auto block"
+                style={{
+                  maxHeight: 140,
+                  width: block.imageWidth ? `${block.imageWidth}mm` : '100%',
+                  height: block.imageHeight ? `${block.imageHeight}mm` : 'auto',
+                  maxWidth: '100%',
+                }}
+              />
+              {(block.imageWidth || block.imageHeight) && (
+                <div className="absolute bottom-1 right-1 bg-black/60 text-[10px] text-white px-1.5 py-0.5 rounded">
+                  {block.imageWidth ? `${block.imageWidth}мм` : 'авто'} × {block.imageHeight ? `${block.imageHeight}мм` : 'авто'}
+                </div>
+              )}
+            </div>
           )}
         </div>
       )}

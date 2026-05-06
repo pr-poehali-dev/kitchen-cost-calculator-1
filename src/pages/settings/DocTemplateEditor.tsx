@@ -164,6 +164,7 @@ export default function DocTemplateEditor({
   onDownloadDocx, downloadingDocx,
 }: Props) {
   const [insertFn, setInsertFn] = useState<((v: string) => void) | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const handleRegisterInsert = (fn: ((v: string) => void) | null) => {
     // useState с функцией требует обёртку чтобы не вызвался как initializer
@@ -203,175 +204,245 @@ export default function DocTemplateEditor({
   };
 
   return (
-    <div className="space-y-3 border border-border rounded-lg p-4">
-      {/* Название и действия */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <input
-          value={template.name}
-          onChange={e => onUpdate({ ...template, name: e.target.value })}
-          className="flex-1 min-w-[140px] bg-[hsl(220,14%,14%)] border border-border rounded px-3 py-1.5 text-sm text-foreground"
-          placeholder="Название шаблона"
-        />
-        {template.is_default && (
-          <span className="flex items-center gap-1 px-2 py-1 rounded border border-gold/40 bg-gold/10 text-gold text-[10px] shrink-0">
-            <Icon name="Star" size={10} /> Активный
-          </span>
-        )}
-        {isDirty && (
-          <span className="text-[10px] text-amber-400 shrink-0">● не сохранено</span>
-        )}
-        <button onClick={onPreview} className="px-2 py-1.5 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-emerald-400 transition-all" title="Предпросмотр">
-          <Icon name="Eye" size={12} />
-        </button>
-        <button onClick={onDuplicate} className="px-2 py-1.5 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-blue-400 transition-all" title="Копировать шаблон">
-          <Icon name="Copy" size={12} />
-        </button>
-        {onDownloadDocx && (
+    <div className="space-y-3 border border-border rounded-xl overflow-hidden">
+
+      {/* ── Шапка: название + действия ── */}
+      <div className="px-4 pt-4 pb-3 border-b border-border bg-[hsl(220,14%,10%)]">
+        {/* Строка 1: имя + статус */}
+        <div className="flex items-center gap-2 mb-3">
+          <input
+            value={template.name}
+            onChange={e => onUpdate({ ...template, name: e.target.value })}
+            className="flex-1 min-w-[120px] bg-transparent border border-transparent hover:border-border focus:border-border rounded-md px-2 py-1 text-base font-semibold text-foreground placeholder:text-[hsl(var(--text-muted))] outline-none transition-colors"
+            placeholder="Название шаблона"
+          />
+          {template.is_default && (
+            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 text-[11px] font-medium shrink-0">
+              <Icon name="CheckCircle2" size={11} />
+              Активный
+            </span>
+          )}
+          {isDirty && (
+            <span className="flex items-center gap-1.5 text-[11px] text-amber-400 shrink-0">
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              не сохранено
+            </span>
+          )}
+        </div>
+
+        {/* Строка 2: кнопки действий */}
+        <div className="flex items-center gap-1.5 flex-wrap">
+          {/* Eye */}
           <button
-            onClick={onDownloadDocx}
-            disabled={downloadingDocx}
-            className="flex items-center gap-1 px-2.5 py-1.5 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-violet-400 hover:border-violet-500/40 transition-all disabled:opacity-60"
-            title="Скачать пример DOCX по этому шаблону"
+            onClick={onPreview}
+            title="Предпросмотр"
+            className="p-1.5 border border-border rounded-md text-[hsl(var(--text-muted))] hover:text-emerald-400 hover:border-emerald-500/40 transition-all"
           >
-            {downloadingDocx
-              ? <Icon name="Loader2" size={11} className="animate-spin" />
-              : <Icon name="FileDown" size={11} />}
-            DOCX
+            <Icon name="Eye" size={13} />
           </button>
-        )}
-        <button
-          onClick={onSave}
-          disabled={saving}
-          className="flex items-center gap-1 px-3 py-1.5 bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 rounded text-xs hover:bg-emerald-500/30 transition-all disabled:opacity-60"
-        >
-          {saving ? <Icon name="Loader2" size={11} className="animate-spin" /> : <Icon name="Save" size={11} />}
-          Сохранить
-        </button>
-        {!template.is_default && (
+
+          {/* Copy */}
           <button
-            onClick={onApply}
-            className="flex items-center gap-1 px-3 py-1.5 bg-gold/15 border border-gold/40 text-gold rounded text-xs hover:bg-gold/25 transition-all"
-            title="Применить этот шаблон ко всем документам данного типа"
+            onClick={onDuplicate}
+            title="Дублировать шаблон"
+            className="p-1.5 border border-border rounded-md text-[hsl(var(--text-muted))] hover:text-blue-400 hover:border-blue-500/40 transition-all"
           >
-            <Icon name="CheckCircle" size={11} />
-            Применить
+            <Icon name="Copy" size={13} />
           </button>
-        )}
-        <button onClick={onDelete} className="px-2 py-1.5 border border-border rounded text-xs text-red-400/60 hover:text-red-400 transition-all">
-          <Icon name="Trash2" size={12} />
-        </button>
+
+          {/* DOCX */}
+          {onDownloadDocx && (
+            <button
+              onClick={onDownloadDocx}
+              disabled={downloadingDocx}
+              title="Скачать пример DOCX по этому шаблону"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 border border-border rounded-md text-[11px] text-[hsl(var(--text-muted))] hover:text-violet-400 hover:border-violet-500/40 transition-all disabled:opacity-60"
+            >
+              {downloadingDocx
+                ? <Icon name="Loader2" size={12} className="animate-spin" />
+                : <Icon name="FileDown" size={12} />}
+              DOCX
+            </button>
+          )}
+
+          {/* Spacer */}
+          <span className="flex-1" />
+
+          {/* Применить */}
+          {!template.is_default && (
+            <button
+              onClick={onApply}
+              title="Применить этот шаблон ко всем документам данного типа"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-gold/12 border border-gold/35 text-gold rounded-md text-xs font-medium hover:bg-gold/22 transition-all"
+            >
+              <Icon name="CheckCircle" size={12} />
+              Применить
+            </button>
+          )}
+
+          {/* Сохранить */}
+          <button
+            onClick={onSave}
+            disabled={saving}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium transition-all disabled:opacity-60 ${
+              isDirty
+                ? 'bg-emerald-500 border border-emerald-500 text-white hover:bg-emerald-600'
+                : 'bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 hover:bg-emerald-500/25'
+            }`}
+          >
+            {saving ? <Icon name="Loader2" size={12} className="animate-spin" /> : <Icon name="Save" size={12} />}
+            Сохранить
+          </button>
+
+          {/* Удалить */}
+          <button
+            onClick={onDelete}
+            title="Удалить шаблон"
+            className="p-1.5 border border-border rounded-md text-red-400/50 hover:text-red-400 hover:border-red-500/40 transition-all"
+          >
+            <Icon name="Trash2" size={13} />
+          </button>
+        </div>
       </div>
 
-      {/* Настройки отображения */}
-      <div className="flex flex-wrap gap-4 items-end">
-        {SETTINGS_SLIDERS.map(({ key, label, min, max, step }) => (
-          <div key={key} className="flex-1 min-w-[120px]">
-            <label className="text-xs text-[hsl(var(--text-muted))] block mb-1">{label}</label>
-            <div className="flex items-center gap-2">
-              <input
-                type="range" min={min} max={max} step={step}
-                value={Number((template.settings as Record<string, number>)[key]) || min}
-                onChange={e => onUpdate({ ...template, settings: { ...template.settings, [key]: parseFloat(e.target.value) } })}
-                className="flex-1"
-              />
-              <span className="text-xs text-foreground w-8 text-right">
-                {Number((template.settings as Record<string, number>)[key]) || min}
-              </span>
+      {/* ── Аккордеон: Настройки страницы ── */}
+      <div className="mx-4 border border-border rounded-lg overflow-hidden">
+        <button
+          onClick={() => setSettingsOpen(o => !o)}
+          className="w-full flex items-center justify-between px-3 py-2.5 bg-[hsl(220,14%,10%)] hover:bg-[hsl(220,14%,12%)] transition-colors"
+        >
+          <div className="flex items-center gap-2">
+            <Icon name="Settings2" size={13} className="text-[hsl(var(--text-muted))]" />
+            <span className="text-xs font-medium text-foreground">Настройки страницы</span>
+          </div>
+          <Icon name={settingsOpen ? 'ChevronUp' : 'ChevronDown'} size={13} className="text-[hsl(var(--text-muted))]" />
+        </button>
+
+        {settingsOpen && (
+          <div className="px-3 py-3 border-t border-border grid grid-cols-2 gap-x-5 gap-y-3 bg-[hsl(220,14%,11%)]">
+            {/* Слайдеры */}
+            {SETTINGS_SLIDERS.map(({ key, label, min, max, step }) => (
+              <div key={key}>
+                <label className="text-[11px] text-[hsl(var(--text-muted))] block mb-1">{label}</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="range" min={min} max={max} step={step}
+                    value={Number((template.settings as Record<string, number>)[key]) || min}
+                    onChange={e => onUpdate({ ...template, settings: { ...template.settings, [key]: parseFloat(e.target.value) } })}
+                    className="flex-1"
+                  />
+                  <span className="text-xs text-foreground w-8 text-right tabular-nums">
+                    {Number((template.settings as Record<string, number>)[key]) || min}
+                  </span>
+                </div>
+              </div>
+            ))}
+
+            {/* Поля страницы */}
+            <div>
+              <label className="text-[11px] text-[hsl(var(--text-muted))] block mb-1">Поля (мм)</label>
+              <div className="grid grid-cols-2 gap-1">
+                {MARGIN_FIELDS.map(({ key, label, title }) => {
+                  const s = template.settings as Record<string, number>;
+                  const fallback = key === 'marginLeft' ? 20 : key === 'marginRight' ? 10 : 10;
+                  const val = s[key] != null ? s[key] : (s['marginMm'] ?? fallback);
+                  return (
+                    <div key={key} className="flex items-center gap-1" title={title}>
+                      <span className="text-[10px] text-[hsl(var(--text-muted))] w-4 text-center shrink-0">{label}</span>
+                      <input
+                        type="number" min={3} max={50} step={1}
+                        value={val}
+                        onChange={e => onUpdate({ ...template, settings: { ...template.settings, [key]: parseFloat(e.target.value) || 0 } })}
+                        className="w-12 bg-[hsl(220,14%,12%)] border border-border rounded px-1.5 py-0.5 text-xs text-foreground text-center"
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Гарнитура */}
+            <div>
+              <label className="text-[11px] text-[hsl(var(--text-muted))] block mb-1">Гарнитура</label>
+              <div className="flex flex-col gap-1">
+                {[
+                  { value: 'Times New Roman', label: 'Times New Roman' },
+                  { value: 'Arial',           label: 'Arial' },
+                  { value: 'Calibri',         label: 'Calibri' },
+                ].map(opt => {
+                  const active = (template.settings.fontFamily ?? 'Times New Roman') === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => onUpdate({ ...template, settings: { ...template.settings, fontFamily: opt.value } })}
+                      style={{ fontFamily: opt.value }}
+                      className={`px-2.5 py-0.5 rounded border text-xs text-left transition-all ${active ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Ориентация */}
+            <div>
+              <label className="text-[11px] text-[hsl(var(--text-muted))] block mb-1">Ориентация</label>
+              <div className="flex gap-1.5">
+                {[
+                  { value: 'portrait',  label: 'Книжная',  icon: '▯' },
+                  { value: 'landscape', label: 'Альбомная', icon: '▭' },
+                ].map(opt => {
+                  const active = (template.settings.orientation ?? 'portrait') === opt.value;
+                  return (
+                    <button
+                      key={opt.value}
+                      onClick={() => onUpdate({ ...template, settings: { ...template.settings, orientation: opt.value } })}
+                      title={opt.label}
+                      className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs transition-all ${active ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+                    >
+                      <span className="text-sm leading-none">{opt.icon}</span>
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
-        ))}
-        {/* Поля страницы */}
-        <div>
-          <label className="text-xs text-[hsl(var(--text-muted))] block mb-1">Поля (мм)</label>
-          <div className="grid grid-cols-2 gap-1">
-            {MARGIN_FIELDS.map(({ key, label, title }) => {
-              const s = template.settings as Record<string, number>;
-              const fallback = key === 'marginLeft' ? 20 : key === 'marginRight' ? 10 : 10;
-              const val = s[key] != null ? s[key] : (s['marginMm'] ?? fallback);
-              return (
-                <div key={key} className="flex items-center gap-1" title={title}>
-                  <span className="text-[10px] text-[hsl(var(--text-muted))] w-4 text-center shrink-0">{label}</span>
-                  <input
-                    type="number" min={3} max={50} step={1}
-                    value={val}
-                    onChange={e => onUpdate({ ...template, settings: { ...template.settings, [key]: parseFloat(e.target.value) || 0 } })}
-                    className="w-12 bg-[hsl(220,14%,12%)] border border-border rounded px-1.5 py-0.5 text-xs text-foreground text-center"
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-        {/* Шрифт */}
-        <div>
-          <label className="text-xs text-[hsl(var(--text-muted))] block mb-1">Гарнитура</label>
-          <div className="flex flex-col gap-1">
-            {[
-              { value: 'Times New Roman', label: 'Times New Roman' },
-              { value: 'Arial',           label: 'Arial' },
-              { value: 'Calibri',         label: 'Calibri' },
-            ].map(opt => {
-              const active = (template.settings.fontFamily ?? 'Times New Roman') === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => onUpdate({ ...template, settings: { ...template.settings, fontFamily: opt.value } })}
-                  style={{ fontFamily: opt.value }}
-                  className={`px-2.5 py-0.5 rounded border text-xs text-left transition-all ${active ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
-                >
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-        {/* Ориентация */}
-        <div>
-          <label className="text-xs text-[hsl(var(--text-muted))] block mb-1">Ориентация</label>
-          <div className="flex gap-1">
-            {[
-              { value: 'portrait',  label: 'Книжная',  icon: '▯' },
-              { value: 'landscape', label: 'Альбомная', icon: '▭' },
-            ].map(opt => {
-              const active = (template.settings.orientation ?? 'portrait') === opt.value;
-              return (
-                <button
-                  key={opt.value}
-                  onClick={() => onUpdate({ ...template, settings: { ...template.settings, orientation: opt.value } })}
-                  title={opt.label}
-                  className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs transition-all ${active ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
-                >
-                  <span className="text-sm leading-none">{opt.icon}</span>
-                  {opt.label}
-                </button>
-              );
-            })}
-          </div>
-        </div>
+        )}
       </div>
 
-      {/* Переменные */}
-      <VarPanel onInsert={insertFn} />
+      {/* ── Переменные ── */}
+      <div className="px-4">
+        <VarPanel onInsert={insertFn} />
+      </div>
 
-      {/* Блоки документа */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-xs font-medium text-foreground">Блоки документа</p>
-          <div className="flex gap-1 flex-wrap justify-end">
-            {ADD_BLOCK_TYPES.map(({ type, label, icon }) => (
-              <button
-                key={type}
-                onClick={() => addBlock(type)}
-                className="flex items-center gap-1 px-2 py-1 border border-border rounded text-[10px] text-[hsl(var(--text-muted))] hover:text-emerald-400 hover:border-emerald-500/40 transition-all"
-                title={`Добавить: ${label}`}
-              >
-                <Icon name={icon as Parameters<typeof Icon>[0]['name']} size={10} />
-                {label}
-              </button>
-            ))}
-          </div>
+      {/* ── Блоки документа ── */}
+      <div className="px-4 pb-4">
+        {/* Заголовок секции */}
+        <div className="flex items-center gap-2 mb-2.5">
+          <span className="text-xs font-semibold text-foreground">Блоки документа</span>
+          <span className="flex items-center justify-center h-4 min-w-[20px] px-1 rounded-full bg-[hsl(220,14%,16%)] border border-border text-[10px] text-[hsl(var(--text-muted))] tabular-nums">
+            {template.blocks.length}
+          </span>
         </div>
 
+        {/* Кнопки добавления блоков — горизонтальная прокрутка */}
+        <div className="flex gap-1.5 overflow-x-auto pb-1.5 mb-3 scrollbar-none">
+          {ADD_BLOCK_TYPES.map(({ type, label, icon }) => (
+            <button
+              key={type}
+              onClick={() => addBlock(type)}
+              title={`Добавить: ${label}`}
+              className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg border border-border hover:border-emerald-500/40 hover:bg-emerald-500/5 text-[hsl(var(--text-muted))] hover:text-emerald-400 transition-all shrink-0"
+            >
+              <Icon name={icon as Parameters<typeof Icon>[0]['name']} size={14} />
+              <span className="text-[10px] whitespace-nowrap">{label}</span>
+            </button>
+          ))}
+        </div>
+
+        {/* Список блоков */}
         <div className="space-y-1">
           {template.blocks.map((block, idx) => (
             <DocTemplateBlockItem
