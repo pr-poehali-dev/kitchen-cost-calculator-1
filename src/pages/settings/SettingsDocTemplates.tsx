@@ -12,16 +12,19 @@ export default function SettingsDocTemplates() {
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
+  const [isDirty, setIsDirty] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
+  const pendingSwitchRef = useRef<Template | null>(null);
 
-  const loadTemplates = useCallback(async () => {
+  const loadTemplates = useCallback(async (keepSelectedId?: string) => {
     setLoading(true);
     try {
       const res = await fetch(`${API}/?doc_type=${selectedDocType}`, { headers: authHeaders() });
       const data = await res.json();
       setTemplates(Array.isArray(data) ? data : []);
       if (Array.isArray(data) && data.length > 0) {
-        const def = data.find((t: Template) => t.is_default) || data[0];
+        const keep = keepSelectedId ? data.find((t: Template) => t.id === keepSelectedId) : null;
+        const def = keep || data.find((t: Template) => t.is_default) || data[0];
         setSelectedTemplate(def);
       } else {
         setSelectedTemplate(null);
@@ -53,20 +56,22 @@ export default function SettingsDocTemplates() {
     }
   };
 
-  const saveTemplate = async () => {
-    if (!selectedTemplate) return;
+  const saveTemplate = async (tpl?: Template) => {
+    const target = tpl ?? selectedTemplate;
+    if (!target) return;
     setSaving(true);
     try {
-      await fetch(`${API}/?id=${selectedTemplate.id}`, {
+      await fetch(`${API}/?id=${target.id}`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({
-          name: selectedTemplate.name,
-          blocks: selectedTemplate.blocks,
-          settings: selectedTemplate.settings,
+          name: target.name,
+          blocks: target.blocks,
+          settings: target.settings,
         }),
       });
-      toast.success('Сохранено');
+      setIsDirty(false);
+      if (!tpl) toast.success('Сохранено');
     } catch {
       toast.error('Ошибка сохранения');
     } finally {
@@ -74,11 +79,25 @@ export default function SettingsDocTemplates() {
     }
   };
 
+  const switchTemplate = async (t: Template) => {
+    if (isDirty && selectedTemplate) {
+      pendingSwitchRef.current = t;
+      const confirmed = window.confirm('Есть несохранённые изменения. Сохранить перед переключением?');
+      if (confirmed) {
+        await saveTemplate(selectedTemplate);
+      }
+      pendingSwitchRef.current = null;
+    }
+    setSelectedTemplate(t);
+    setEditingBlock(null);
+    setIsDirty(false);
+  };
+
   const deleteTemplate = async (id: string) => {
     if (!confirm('Удалить шаблон?')) return;
     await fetch(`${API}/?id=${id}`, { method: 'DELETE', headers: authHeaders() });
     toast.success('Удалён');
-    loadTemplates();
+    await loadTemplates();
   };
 
   const setDefault = async (id: string) => {
@@ -87,8 +106,8 @@ export default function SettingsDocTemplates() {
       headers: authHeaders(),
       body: JSON.stringify({ is_default: true }),
     });
-    toast.success('Установлен по умолчанию');
-    loadTemplates();
+    toast.success('Шаблон применён — теперь он активный для этого типа документа');
+    await loadTemplates(id);
   };
 
   const duplicateTemplate = async () => {
@@ -111,8 +130,20 @@ export default function SettingsDocTemplates() {
     }
   };
 
+  const handleApplyTemplate = async () => {
+    if (!selectedTemplate) return;
+    const docLabel = DOC_TYPES.find(d => d.id === selectedDocType)?.label || selectedDocType;
+    const confirmed = window.confirm(
+      `Применить шаблон «${selectedTemplate.name}» ко всем документам типа «${docLabel}»?\n\nВсе существующие договоры этого типа будут формироваться по новому шаблону. Это действие нельзя отменить автоматически.`
+    );
+    if (!confirmed) return;
+    if (isDirty) await saveTemplate();
+    await setDefault(selectedTemplate.id);
+  };
+
   const handleUpdateTemplate = (t: Template) => {
     setSelectedTemplate(t);
+    setIsDirty(true);
     if (iframeRef.current && showPreview) {
       iframeRef.current.srcdoc = buildPreviewHtml(t);
     }
@@ -152,7 +183,7 @@ export default function SettingsDocTemplates() {
                 {templates.map(t => (
                   <button
                     key={t.id}
-                    onClick={() => setSelectedTemplate(t)}
+                    onClick={() => switchTemplate(t)}
                     className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-xs transition-all ${
                       selectedTemplate?.id === t.id
                         ? 'border-emerald-500/60 bg-emerald-500/10 text-emerald-300'
@@ -196,9 +227,11 @@ export default function SettingsDocTemplates() {
               <DocTemplateEditor
                 template={selectedTemplate}
                 saving={saving}
+                isDirty={isDirty}
                 editingBlock={editingBlock}
                 onUpdate={handleUpdateTemplate}
                 onSave={saveTemplate}
+                onApply={handleApplyTemplate}
                 onDelete={() => deleteTemplate(selectedTemplate.id)}
                 onSetDefault={() => setDefault(selectedTemplate.id)}
                 onPreview={handlePreview}

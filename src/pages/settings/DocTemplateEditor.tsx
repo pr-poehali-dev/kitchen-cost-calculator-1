@@ -6,9 +6,11 @@ import { VARS, type Block, type Template, DEFAULT_CALC_TABLE_SETTINGS } from './
 interface Props {
   template: Template;
   saving: boolean;
+  isDirty: boolean;
   editingBlock: string | null;
   onUpdate: (t: Template) => void;
   onSave: () => void;
+  onApply: () => void;
   onDelete: () => void;
   onSetDefault: () => void;
   onPreview: () => void;
@@ -51,8 +53,8 @@ const MARGIN_FIELDS = [
 ];
 
 export default function DocTemplateEditor({
-  template, saving, editingBlock,
-  onUpdate, onSave, onDelete, onSetDefault, onPreview, onDuplicate, onEditBlock,
+  template, saving, isDirty, editingBlock,
+  onUpdate, onSave, onApply, onDelete, onSetDefault, onPreview, onDuplicate, onEditBlock,
 }: Props) {
   const updateBlock = (blockId: string, field: keyof Block, value: string | boolean | number | number[] | undefined) => {
     onUpdate({
@@ -89,21 +91,20 @@ export default function DocTemplateEditor({
   return (
     <div className="space-y-3 border border-border rounded-lg p-4">
       {/* Название и действия */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <input
           value={template.name}
           onChange={e => onUpdate({ ...template, name: e.target.value })}
-          className="flex-1 bg-[hsl(220,14%,14%)] border border-border rounded px-3 py-1.5 text-sm text-foreground"
+          className="flex-1 min-w-[140px] bg-[hsl(220,14%,14%)] border border-border rounded px-3 py-1.5 text-sm text-foreground"
           placeholder="Название шаблона"
         />
-        {!template.is_default && (
-          <button
-            onClick={onSetDefault}
-            className="px-2 py-1.5 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-gold hover:border-gold/40 transition-all"
-            title="Сделать по умолчанию"
-          >
-            <Icon name="Star" size={12} />
-          </button>
+        {template.is_default && (
+          <span className="flex items-center gap-1 px-2 py-1 rounded border border-gold/40 bg-gold/10 text-gold text-[10px] shrink-0">
+            <Icon name="Star" size={10} /> Активный
+          </span>
+        )}
+        {isDirty && (
+          <span className="text-[10px] text-amber-400 shrink-0">● не сохранено</span>
         )}
         <button onClick={onPreview} className="px-2 py-1.5 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-emerald-400 transition-all" title="Предпросмотр">
           <Icon name="Eye" size={12} />
@@ -119,6 +120,16 @@ export default function DocTemplateEditor({
           {saving ? <Icon name="Loader2" size={11} className="animate-spin" /> : <Icon name="Save" size={11} />}
           Сохранить
         </button>
+        {!template.is_default && (
+          <button
+            onClick={onApply}
+            className="flex items-center gap-1 px-3 py-1.5 bg-gold/15 border border-gold/40 text-gold rounded text-xs hover:bg-gold/25 transition-all"
+            title="Применить этот шаблон ко всем документам данного типа"
+          >
+            <Icon name="CheckCircle" size={11} />
+            Применить
+          </button>
+        )}
         <button onClick={onDelete} className="px-2 py-1.5 border border-border rounded text-xs text-red-400/60 hover:text-red-400 transition-all">
           <Icon name="Trash2" size={12} />
         </button>
