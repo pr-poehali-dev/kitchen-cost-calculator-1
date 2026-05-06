@@ -253,44 +253,125 @@ def get_products(c):
     return []
 
 def apply_vars(text: str, c: dict, company: dict) -> str:
-    """Заменяет {{переменные}} шаблона реальными данными клиента и компании. v2"""
+    """Заменяет {{переменные}} шаблона реальными данными клиента и компании."""
     import re
+    _total    = float(c.get('total_amount') or 0)
+    _prepaid  = float(c.get('prepaid_amount') or 0)
+    _balance  = float(c.get('balance_due') or 0) or max(0.0, _total - _prepaid)
+    _delivery = float(c.get('delivery_cost') or 0)
+    _assembly = float(c.get('assembly_cost') or 0)
+    _fmt = lambda n: f"{int(n):,}".replace(',', ' ')
+
+    # Адрес регистрации — может лежать в одном поле или собираться из частей
+    _reg_addr = (str(c.get('registration_address') or '').strip()
+                 or ', '.join(filter(None, [
+                     str(c.get('reg_city') or '').strip(),
+                     str(c.get('reg_street') or '').strip(),
+                     str(c.get('reg_house') or '').strip(),
+                     ('кв. ' + str(c.get('reg_apt'))) if c.get('reg_apt') else '',
+                 ])) or '___________')
+
+    # Адрес доставки расширенный
+    _del_parts = [
+        str(c.get('delivery_city') or '').strip(),
+        str(c.get('delivery_street') or '').strip(),
+        str(c.get('delivery_house') or '').strip(),
+    ]
+    if c.get('delivery_apt'):    _del_parts.append(f'кв. {c["delivery_apt"]}')
+    if c.get('delivery_floor'):  _del_parts.append(f'эт. {c["delivery_floor"]}')
+    if c.get('delivery_entrance'): _del_parts.append(f'подъезд {c["delivery_entrance"]}')
+    _del_addr = ', '.join(p for p in _del_parts if p) or '___________'
+
     vals = {
-        'имя_клиента':        full_name(c),
-        'телефон_клиента':    str(c.get('phone') or '').strip() or '___________',
-        'телефон2_клиента':   str(c.get('phone2') or '').strip() or '',
-        'email_клиента':      str(c.get('email') or '').strip() or '',
-        'паспорт':            passport_str(c),
-        'паспорт_выдан':      str(c.get('passport_issued_by') or '').strip() or '___________',
-        'паспорт_дата':       fmt_date(c.get('passport_date') or ''),
-        'паспорт_код':        str(c.get('passport_code') or '').strip() or '',
-        'адрес_регистрации':  str(c.get('registration_address') or '').strip() or '___________',
-        'адрес_доставки':     delivery_addr(c),
-        'номер_договора':     str(c.get('contract_number') or '___'),
-        'дата_договора':      fmt_date_full(c.get('contract_date') or ''),
-        'сумма':              f"{int(float(c.get('total_amount') or 0)):,}".replace(',', ' '),
-        'сумма_прописью':     num_to_words(float(c.get('total_amount') or 0)),
-        'аванс':              f"{int(float(c.get('prepaid_amount') or 0)):,}".replace(',', ' '),
-        'остаток':            f"{int(float(c.get('balance_due') or 0) or max(0.0, float(c.get('total_amount') or 0) - float(c.get('prepaid_amount') or 0))):,}".replace(',', ' '),
-        'тип_оплаты':         str(c.get('payment_type') or '').strip() or '',
-        'стоимость_доставки': f"{int(float(c.get('delivery_cost') or 0)):,}".replace(',', ' '),
-        'стоимость_сборки':   f"{int(float(c.get('assembly_cost') or 0)):,}".replace(',', ' '),
-        'срок_изготовления':  str(c.get('production_days') or ''),
-        'срок_сборки':        str(c.get('assembly_days') or ''),
-        'дата_доставки':      fmt_date(c.get('delivery_date') or ''),
-        'компания':           str(company.get('name') or '').strip() or '___________',
-        'менеджер':           str(c.get('manager_name') or '').strip() or '___________',
-        'дизайнер':           str(c.get('designer_name') or '').strip() or '___________',
-        'город':              str(company.get('city') or c.get('city') or '').strip() or '___________',
-        'телефон':            str(c.get('phone') or '').strip() or '___________',
-        'телефон2':           str(c.get('phone2') or '').strip() or '',
-        'email':              str(c.get('email') or '').strip() or '',
-        'инн':                str(company.get('inn') or '').strip() or '',
-        'огрн':               str(company.get('ogrn') or '').strip() or '',
-        'адрес_компании':     str(company.get('address') or '').strip() or '',
-        'сумма_цифры':        f"{int(float(c.get('total_amount') or 0)):,}".replace(',', ' '),
-        'аванс_цифры':        f"{int(float(c.get('prepaid_amount') or 0)):,}".replace(',', ' '),
-        'номер_договора_кр':  str(c.get('contract_number') or '___'),
+        # ── Клиент ──────────────────────────────────────────────────────────
+        'имя_клиента':           full_name(c),
+        'имя_клиента_рп':        full_name_genitive(c),
+        'фамилия':               str(c.get('last_name') or '').strip() or '___________',
+        'имя':                   str(c.get('first_name') or '').strip() or '___________',
+        'отчество':              str(c.get('middle_name') or '').strip() or '',
+        'телефон_клиента':       str(c.get('phone') or '').strip() or '___________',
+        'телефон':               str(c.get('phone') or '').strip() or '___________',
+        'телефон2_клиента':      str(c.get('phone2') or '').strip() or '',
+        'телефон2':              str(c.get('phone2') or '').strip() or '',
+        'email_клиента':         str(c.get('email') or '').strip() or '',
+        'email':                 str(c.get('email') or '').strip() or '',
+        'мессенджер':            str(c.get('messenger') or '').strip() or '',
+        # ── Паспорт ─────────────────────────────────────────────────────────
+        'паспорт':               passport_str(c),
+        'паспорт_серия':         str(c.get('passport_series') or '').strip() or '',
+        'паспорт_номер':         str(c.get('passport_number') or '').strip() or '',
+        'паспорт_выдан':         str(c.get('passport_issued_by') or '').strip() or '___________',
+        'паспорт_дата':          fmt_date(c.get('passport_date') or c.get('passport_issued_date') or ''),
+        'паспорт_код':           str(c.get('passport_code') or c.get('passport_dept_code') or '').strip() or '',
+        # ── Адреса ──────────────────────────────────────────────────────────
+        'адрес_регистрации':     _reg_addr,
+        'город_клиента':         str(c.get('delivery_city') or c.get('reg_city') or c.get('city') or '').strip() or '___________',
+        'адрес_доставки':        _del_addr,
+        'город_доставки':        str(c.get('delivery_city') or '').strip() or '___________',
+        'улица_доставки':        str(c.get('delivery_street') or '').strip() or '___________',
+        'дом_доставки':          str(c.get('delivery_house') or '').strip() or '___________',
+        'квартира_доставки':     str(c.get('delivery_apt') or '').strip() or '',
+        'этаж_доставки':         str(c.get('delivery_floor') or '').strip() or '',
+        'подъезд_доставки':      str(c.get('delivery_entrance') or '').strip() or '',
+        'примечание_доставки':   str(c.get('delivery_note') or '').strip() or '',
+        # ── Договор ─────────────────────────────────────────────────────────
+        'номер_договора':        str(c.get('contract_number') or '___'),
+        'дата_договора':         fmt_date_full(c.get('contract_date') or ''),
+        'дата_договора_кратко':  fmt_date(c.get('contract_date') or ''),
+        'сумма':                 _fmt(_total),
+        'сумма_прописью':        num_to_words(_total),
+        'аванс':                 _fmt(_prepaid),
+        'аванс_прописью':        num_to_words(_prepaid),
+        'остаток':               _fmt(_balance),
+        'остаток_прописью':      num_to_words(_balance),
+        'тип_оплаты':            str(c.get('payment_type') or '').strip() or '',
+        'схема_оплаты':          str(c.get('custom_payment_scheme') or '').strip() or '',
+        'стоимость_доставки':    _fmt(_delivery),
+        'доставка_прописью':     num_to_words(_delivery),
+        'стоимость_сборки':      _fmt(_assembly),
+        'сборка_прописью':       num_to_words(_assembly),
+        # ── Сроки ───────────────────────────────────────────────────────────
+        'срок_изготовления':     str(c.get('production_days') or ''),
+        'срок_сборки':           str(c.get('assembly_days') or ''),
+        'дата_доставки':         fmt_date(c.get('delivery_date') or ''),
+        'дата_доставки_полная':  fmt_date_full(c.get('delivery_date') or ''),
+        # ── Кредит / рассрочка ──────────────────────────────────────────────
+        'номер_кредита':         str(c.get('credit_contract_number') or '').strip() or '',
+        'дата_кредита':          fmt_date_full(c.get('credit_contract_date') or ''),
+        'банк_кредита':          str(c.get('credit_bank') or '').strip() or '',
+        'аванс_кредит':          _fmt(float(c.get('credit_prepaid') or _prepaid)),
+        'остаток_кредит':        _fmt(float(c.get('credit_balance') or _balance)),
+        # ── Техпроект ───────────────────────────────────────────────────────
+        'корпус':                str(c.get('tech_korpus') or '').strip() or '',
+        'корпус2':               str(c.get('tech_korpus2') or '').strip() or '',
+        'фасад':                 str(c.get('tech_fasad1') or '').strip() or '',
+        'фасад2':                str(c.get('tech_fasad2') or '').strip() or '',
+        'столешница':            str(c.get('tech_stoleshniza') or '').strip() or '',
+        'стеновая':              str(c.get('tech_stenovaya') or '').strip() or '',
+        'подсветка':             str(c.get('tech_podsvetka_type') or '').strip() or '',
+        'цвет_подсветки':        str(c.get('tech_podsvetka_svet') or '').strip() or '',
+        'фрезеровка':            str(c.get('tech_frezerovka') or '').strip() or '',
+        # ── Компания ────────────────────────────────────────────────────────
+        'компания':              str(company.get('name') or '').strip() or '___________',
+        'город':                 str(company.get('city') or c.get('city') or '').strip() or '___________',
+        'инн':                   str(company.get('inn') or '').strip() or '',
+        'огрн':                  str(company.get('ogrn') or '').strip() or '',
+        'кпп':                   str(company.get('kpp') or '').strip() or '',
+        'инн_кпп':               (f"{company.get('inn')}/{company.get('kpp')}" if company.get('kpp') else str(company.get('inn') or '')).strip() or '',
+        'адрес_компании':        str(company.get('address') or '').strip() or '',
+        'телефон_компании':      str(company.get('phone') or '').strip() or '',
+        'email_компании':        str(company.get('email') or '').strip() or '',
+        'сайт_компании':         str(company.get('website') or '').strip() or '',
+        'директор':              str(company.get('director') or '').strip() or '',
+        'должность_директора':   str(company.get('directorPosition') or '').strip() or '',
+        'банк':                  str(company.get('bank') or '').strip() or '',
+        'бик':                   str(company.get('bik') or '').strip() or '',
+        'расчётный_счёт':        str(company.get('rs') or '').strip() or '',
+        'корр_счёт':             str(company.get('ks') or '').strip() or '',
+        # ── Ответственные ───────────────────────────────────────────────────
+        'менеджер':              str(c.get('manager_name') or '').strip() or '___________',
+        'дизайнер':              str(c.get('designer_name') or c.get('designer') or '').strip() or '___________',
+        'замерщик':              str(c.get('measurer') or '').strip() or '',
     }
     def replace_var(m):
         key = m.group(1).strip()
