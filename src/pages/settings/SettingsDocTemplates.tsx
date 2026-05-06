@@ -80,15 +80,16 @@ export default function SettingsDocTemplates() {
   };
 
   const switchTemplate = async (t: Template) => {
+    if (selectedTemplate && selectedTemplate.id === t.id) return;
     if (isDirty && selectedTemplate) {
-      pendingSwitchRef.current = t;
       const confirmed = window.confirm('Есть несохранённые изменения. Сохранить перед переключением?');
       if (confirmed) {
         await saveTemplate(selectedTemplate);
       }
-      pendingSwitchRef.current = null;
     }
-    setSelectedTemplate(t);
+    // Берём актуальную версию шаблона из синхронизированного массива
+    const fresh = templates.find(tpl => tpl.id === t.id) ?? t;
+    setSelectedTemplate(fresh);
     setEditingBlock(null);
     setIsDirty(false);
   };
@@ -143,6 +144,7 @@ export default function SettingsDocTemplates() {
 
   const handleUpdateTemplate = (t: Template) => {
     setSelectedTemplate(t);
+    setTemplates(prev => prev.map(tpl => tpl.id === t.id ? t : tpl));
     setIsDirty(true);
     if (iframeRef.current && showPreview) {
       iframeRef.current.srcdoc = buildPreviewHtml(t);

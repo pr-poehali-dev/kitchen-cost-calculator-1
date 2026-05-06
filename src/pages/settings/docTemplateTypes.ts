@@ -257,7 +257,7 @@ export function buildPreviewHtml(template: Template): string {
   const pageH = landscape ? '210mm' : '297mm';
 
   const rendered = blocks.map(b => {
-    const text = applyPreviewVars(b.content);
+    const text = applyPreviewVars(b.content).replace(/\n/g, '<br/>');
 
     const style = blockStyle(b, globalFontSize);
     const styleAttr = style ? ` style="${style}"` : '';
