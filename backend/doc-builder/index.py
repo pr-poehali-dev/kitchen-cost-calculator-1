@@ -372,6 +372,12 @@ def apply_vars(text: str, c: dict, company: dict) -> str:
         'менеджер':              str(c.get('manager_name') or '').strip() or '___________',
         'дизайнер':              str(c.get('designer_name') or c.get('designer') or '').strip() or '___________',
         'замерщик':              str(c.get('measurer') or '').strip() or '',
+        # ── Доверенность менеджера ──────────────────────────────────────────
+        'номер_доверенности':    str(c.get('manager_poa_number') or '____').strip(),
+        'дата_доверенности':     fmt_date(c.get('manager_poa_date') or ''),
+        # ── Прописи сроков ──────────────────────────────────────────────────
+        'срок_изготовления_прописью': num_to_words(int(c.get('production_days') or 0)).replace(' рублей','').strip(),
+        'срок_сборки_прописью':       num_to_words(int(c.get('assembly_days') or 0)).replace(' рублей','').strip(),
     }
     def replace_var(m):
         key = m.group(1).strip()

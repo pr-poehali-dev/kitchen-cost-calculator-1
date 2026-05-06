@@ -145,9 +145,18 @@ export const VAR_GROUPS: { label: string; vars: { key: string; desc: string; pre
   {
     label: 'Ответственные',
     vars: [
-      { key: '{{менеджер}}',           desc: 'Имя менеджера',                  preview: 'Сазонов Василий Николаевич' },
-      { key: '{{дизайнер}}',           desc: 'Имя дизайнера',                  preview: 'Петрова Анна Сергеевна' },
-      { key: '{{замерщик}}',           desc: 'Имя замерщика',                  preview: 'Козлов Дмитрий Игоревич' },
+      { key: '{{менеджер}}',              desc: 'Имя менеджера',                  preview: 'Сазонов Василий Николаевич' },
+      { key: '{{номер_доверенности}}',   desc: 'Номер доверенности менеджера',   preview: '20' },
+      { key: '{{дата_доверенности}}',    desc: 'Дата доверенности менеджера',    preview: '12.01.2026' },
+      { key: '{{дизайнер}}',             desc: 'Имя дизайнера',                  preview: 'Петрова Анна Сергеевна' },
+      { key: '{{замерщик}}',             desc: 'Имя замерщика',                  preview: 'Козлов Дмитрий Игоревич' },
+    ],
+  },
+  {
+    label: 'Прописи',
+    vars: [
+      { key: '{{срок_изготовления_прописью}}', desc: 'Срок изготовления прописью', preview: 'тридцать' },
+      { key: '{{срок_сборки_прописью}}',       desc: 'Срок сборки прописью',       preview: 'два' },
     ],
   },
 ];
@@ -376,6 +385,14 @@ const PREVIEW_VALUES: Record<string, string> = {
   '{{менеджер}}':             'Сазонов Василий Николаевич',
   '{{дизайнер}}':             'Петрова Анна Сергеевна',
   '{{замерщик}}':             'Козлов Дмитрий Игоревич',
+  // Доверенность менеджера
+  '{{номер_доверенности}}':   '20',
+  '{{дата_доверенности}}':    '12.01.2026',
+  // Прописи сроков
+  '{{срок_изготовления_прописью}}': 'тридцать',
+  '{{срок_сборки_прописью}}':       'два',
+  '{{аванс_кредит}}':         '175 000',
+  '{{остаток_кредит}}':       '175 000',
 };
 
 function applyPreviewVars(text: string): string {
@@ -385,8 +402,30 @@ function applyPreviewVars(text: string): string {
   );
 }
 
+// Превью-значения для условий блоков (тип оплаты по умолчанию — наличные)
+const PREVIEW_CONDITION_VALS: Record<string, string> = {
+  payment_type: 'cash',
+  has_delivery: 'false',
+  has_assembly: 'false',
+  has_credit: 'false',
+};
+
+function evalCondition(condition: Block['condition']): boolean {
+  if (!condition) return true;
+  const val = PREVIEW_CONDITION_VALS[condition.field] ?? '';
+  switch (condition.operator) {
+    case 'eq':      return val === (condition.value ?? '');
+    case 'neq':     return val !== (condition.value ?? '');
+    case 'gt':      return parseFloat(val) > parseFloat(condition.value ?? '0');
+    case 'lt':      return parseFloat(val) < parseFloat(condition.value ?? '0');
+    case 'set':     return val !== '' && val !== 'false';
+    case 'not_set': return val === '' || val === 'false';
+    default: return true;
+  }
+}
+
 export function buildPreviewHtml(template: Template): string {
-  const blocks = template.blocks.filter(b => b.enabled);
+  const blocks = template.blocks.filter(b => b.enabled && evalCondition(b.condition));
   const s = template.settings as Record<string, number | string>;
   const globalFontSize = (s.fontSize as number) || 9.5;
   const lineHeight = (s.lineHeight as number) || 1.0;
