@@ -252,9 +252,240 @@ def get_products(c):
     if isinstance(p, list): return [x for x in p if x.get('name','').strip()]
     return []
 
+def apply_vars(text: str, c: dict, company: dict) -> str:
+    """Заменяет {{переменные}} шаблона реальными данными клиента и компании. v2"""
+    import re
+    vals = {
+        'имя_клиента':        full_name(c),
+        'телефон_клиента':    str(c.get('phone') or '').strip() or '___________',
+        'телефон2_клиента':   str(c.get('phone2') or '').strip() or '',
+        'email_клиента':      str(c.get('email') or '').strip() or '',
+        'паспорт':            passport_str(c),
+        'паспорт_выдан':      str(c.get('passport_issued_by') or '').strip() or '___________',
+        'паспорт_дата':       fmt_date(c.get('passport_date') or ''),
+        'паспорт_код':        str(c.get('passport_code') or '').strip() or '',
+        'адрес_регистрации':  str(c.get('registration_address') or '').strip() or '___________',
+        'адрес_доставки':     delivery_addr(c),
+        'номер_договора':     str(c.get('contract_number') or '___'),
+        'дата_договора':      fmt_date_full(c.get('contract_date') or ''),
+        'сумма':              f"{int(float(c.get('total_amount') or 0)):,}".replace(',', ' '),
+        'сумма_прописью':     num_to_words(float(c.get('total_amount') or 0)),
+        'аванс':              f"{int(float(c.get('prepaid_amount') or 0)):,}".replace(',', ' '),
+        'остаток':            f"{int(float(c.get('balance_due') or 0) or max(0.0, float(c.get('total_amount') or 0) - float(c.get('prepaid_amount') or 0))):,}".replace(',', ' '),
+        'тип_оплаты':         str(c.get('payment_type') or '').strip() or '',
+        'стоимость_доставки': f"{int(float(c.get('delivery_cost') or 0)):,}".replace(',', ' '),
+        'стоимость_сборки':   f"{int(float(c.get('assembly_cost') or 0)):,}".replace(',', ' '),
+        'срок_изготовления':  str(c.get('production_days') or ''),
+        'срок_сборки':        str(c.get('assembly_days') or ''),
+        'дата_доставки':      fmt_date(c.get('delivery_date') or ''),
+        'компания':           str(company.get('name') or '').strip() or '___________',
+        'менеджер':           str(c.get('manager_name') or '').strip() or '___________',
+        'дизайнер':           str(c.get('designer_name') or '').strip() or '___________',
+    }
+    def replace_var(m):
+        key = m.group(1).strip()
+        return vals.get(key, m.group(0))
+    return re.sub(r'\{\{([^}]+)\}\}', replace_var, text)
+
+
+def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_name: str, c: dict, company: dict, products: list):
+    """Рендерит блоки из конструктора PDF в DOCX документ."""
+    from docx.shared import Pt, Mm, Cm
+    from docx.enum.text import WD_ALIGN_PARAGRAPH
+
+    ALIGN_MAP = {
+        'left':    WD_ALIGN_PARAGRAPH.LEFT,
+        'center':  WD_ALIGN_PARAGRAPH.CENTER,
+        'right':   WD_ALIGN_PARAGRAPH.RIGHT,
+        'justify': WD_ALIGN_PARAGRAPH.JUSTIFY,
+    }
+
+    for block in blocks:
+        if not block.get('enabled', True):
+            continue
+
+        btype   = block.get('type', 'paragraph')
+        content = apply_vars(block.get('content', ''), c, company)
+        align   = ALIGN_MAP.get(block.get('align', 'justify'), WD_ALIGN_PARAGRAPH.JUSTIFY)
+        fsize   = float(block.get('fontSize') or _base_pt)
+        bold    = bool(block.get('bold', False))
+        italic  = bool(block.get('italic', False))
+        under   = bool(block.get('underline', False))
+        mt      = block.get('marginTop')
+        mb      = block.get('marginBottom')
+
+        def make_para(text_content, para_align=None, para_bold=False, para_italic=False, para_under=False, para_size=None):
+            p = doc.add_paragraph()
+            p.alignment = para_align if para_align is not None else align
+            p.paragraph_format.space_before = Pt(float(mt) * 2.835) if mt else Pt(0)
+            p.paragraph_format.space_after  = Pt(float(mb) * 2.835) if mb else Pt(1)
+            p.paragraph_format.line_spacing = Pt((_base_pt) * 1.25)
+            lines = text_content.split('\n')
+            for i, line in enumerate(lines):
+                if i > 0:
+                    p.add_run().add_break()
+                r = p.add_run(line)
+                r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+                r.font.name  = _font_name
+                r.font.size  = Pt(para_size or fsize)
+                r.bold       = para_bold or bold
+                r.italic     = para_italic or italic
+                r.underline  = para_under or under
+            return p
+
+        if btype == 'header':
+            make_para(content, WD_ALIGN_PARAGRAPH.CENTER, para_bold=True, para_size=fsize or (_base_pt + 1))
+
+        elif btype == 'section':
+            make_para(content, WD_ALIGN_PARAGRAPH.CENTER, para_bold=True)
+
+        elif btype == 'paragraph':
+            make_para(content)
+
+        elif btype == 'divider':
+            p = doc.add_paragraph()
+            p.paragraph_format.space_before = Pt(float(mt) * 2.835) if mt else Pt(4)
+            p.paragraph_format.space_after  = Pt(float(mb) * 2.835) if mb else Pt(4)
+            from docx.oxml.ns import qn
+            from docx.oxml import OxmlElement
+            pPr = p._p.get_or_add_pPr()
+            pBdr = OxmlElement('w:pBdr')
+            bottom = OxmlElement('w:bottom')
+            bottom.set(qn('w:val'), 'single')
+            bottom.set(qn('w:sz'), '6')
+            bottom.set(qn('w:space'), '1')
+            bottom.set(qn('w:color'), '000000')
+            pBdr.append(bottom)
+            pPr.append(pBdr)
+
+        elif btype == 'spacer':
+            height_px = int(content or 20)
+            height_pt = max(2, int(height_px * 0.75))
+            p = doc.add_paragraph()
+            p.paragraph_format.space_before = Pt(0)
+            p.paragraph_format.space_after  = Pt(height_pt)
+
+        elif btype == 'lines':
+            count = int(content or 6) if content.strip().isdigit() else 6
+            from docx.oxml.ns import qn
+            from docx.oxml import OxmlElement
+            for _ in range(count):
+                p = doc.add_paragraph()
+                p.paragraph_format.space_before = Pt(0)
+                p.paragraph_format.space_after  = Pt(14)
+                pPr = p._p.get_or_add_pPr()
+                pBdr = OxmlElement('w:pBdr')
+                bottom = OxmlElement('w:bottom')
+                bottom.set(qn('w:val'), 'single')
+                bottom.set(qn('w:sz'), '4')
+                bottom.set(qn('w:space'), '1')
+                bottom.set(qn('w:color'), '000000')
+                pBdr.append(bottom)
+                pPr.append(pBdr)
+
+        elif btype == 'table':
+            rows_raw = [r for r in content.split('\n') if r.strip()]
+            if not rows_raw:
+                continue
+            header_cols = rows_raw[0].split(';')
+            body_rows   = [r.split(';') for r in rows_raw[1:]]
+            col_widths  = block.get('colWidths') or []
+            t = doc.add_table(rows=1 + len(body_rows), cols=len(header_cols))
+            t.style = 'Table Grid'
+            if col_widths and len(col_widths) == len(header_cols):
+                total_width_cm = 16.0
+                for ci, w in enumerate(col_widths):
+                    col_w = Cm(total_width_cm * w / 100)
+                    for row in t.rows:
+                        row.cells[ci].width = col_w
+            for ci, h in enumerate(header_cols):
+                cell = t.cell(0, ci)
+                p = cell.paragraphs[0]
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                r = p.add_run(h.strip())
+                r.bold = True
+                r.font.name = _font_name
+                r.font.size = Pt(fsize)
+                r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+            for ri, row_data in enumerate(body_rows):
+                for ci in range(len(header_cols)):
+                    val = row_data[ci].strip() if ci < len(row_data) else ''
+                    cell = t.cell(ri + 1, ci)
+                    p = cell.paragraphs[0]
+                    r = p.add_run(val)
+                    r.font.name = _font_name
+                    r.font.size = Pt(fsize)
+                    r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+
+        elif btype == 'calc_table':
+            if not products:
+                make_para('[Таблица из расчёта — нет данных]', WD_ALIGN_PARAGRAPH.CENTER)
+                continue
+            cts = block.get('calcTableSettings') or {}
+            cols = cts.get('columns') or ['name', 'qty', 'unit', 'total']
+            col_labels = {'name':'Наименование','qty':'Кол-во','unit':'Ед.','price':'Цена','total':'Сумма','article':'Артикул','manufacturer':'Производитель'}
+            headers = [col_labels.get(col, col) for col in cols]
+            rows_data = []
+            grand_total = 0
+            for prod in products:
+                row = []
+                for col in cols:
+                    if col == 'name':         row.append(str(prod.get('name','') or ''))
+                    elif col == 'qty':        row.append(str(prod.get('qty', prod.get('quantity','')) or ''))
+                    elif col == 'unit':       row.append(str(prod.get('unit','шт') or 'шт'))
+                    elif col == 'price':      row.append(f"{int(float(prod.get('price',0) or 0)):,}".replace(',', ' '))
+                    elif col == 'total':      row.append(f"{int(float(prod.get('total', prod.get('amount',0)) or 0)):,}".replace(',', ' '))
+                    elif col == 'article':    row.append(str(prod.get('article','') or ''))
+                    elif col == 'manufacturer': row.append(str(prod.get('manufacturer','') or ''))
+                rows_data.append(row)
+                grand_total += float(prod.get('total', prod.get('amount', 0)) or 0)
+            t = doc.add_table(rows=1 + len(rows_data), cols=len(cols))
+            t.style = 'Table Grid'
+            for ci, h in enumerate(headers):
+                cell = t.cell(0, ci)
+                p = cell.paragraphs[0]
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                r = p.add_run(h)
+                r.bold = True
+                r.font.name = _font_name
+                r.font.size = Pt(fsize)
+            for ri, row_data in enumerate(rows_data):
+                for ci, val in enumerate(row_data):
+                    cell = t.cell(ri + 1, ci)
+                    p = cell.paragraphs[0]
+                    r = p.add_run(val)
+                    r.font.name = _font_name
+                    r.font.size = Pt(fsize)
+            if cts.get('showTotal', True) and len(cols) >= 2:
+                total_row = doc.add_paragraph()
+                total_row.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                r = total_row.add_run(f'Итого: {int(grand_total):,} руб.'.replace(',', ' '))
+                r.bold = True
+                r.font.name = _font_name
+                r.font.size = Pt(fsize)
+
+        elif btype == 'image':
+            url = content.strip()
+            if url:
+                try:
+                    import urllib.request, tempfile, os as _os
+                    with tempfile.NamedTemporaryFile(delete=False, suffix='.jpg') as tf:
+                        urllib.request.urlretrieve(url, tf.name)
+                        tmp_path = tf.name
+                    p = doc.add_paragraph()
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                    run = p.add_run()
+                    run.add_picture(tmp_path, width=Cm(14))
+                    _os.unlink(tmp_path)
+                except Exception as img_err:
+                    make_para(f'[Фото: {url}]', WD_ALIGN_PARAGRAPH.CENTER)
+            else:
+                make_para('[Фото технического проекта]', WD_ALIGN_PARAGRAPH.CENTER)
+
+
 # ── DOCX builder ─────────────────────────────────────────────────────────────
 
-def build_docx(c: dict, doc_type: str, company: dict, template_settings: dict | None = None) -> bytes:
+def build_docx(c: dict, doc_type: str, company: dict, template_settings: dict | None = None, template_blocks: list | None = None) -> bytes:
     from docx import Document
     from docx.shared import Pt, Mm, Cm
     from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -294,6 +525,42 @@ def build_docx(c: dict, doc_type: str, company: dict, template_settings: dict | 
     assembly_cost  = float(c.get('assembly_cost') or 0)
     assembly_days  = int(c.get('assembly_days') or prod_days)
     products       = get_products(c)
+
+    # ── Если переданы блоки шаблона — рендерим их вместо хардкода ─────────────
+    if template_blocks:
+        # Создаём документ
+        from docx import Document as _Doc
+        from docx.shared import Pt as _Pt, Mm as _Mm
+        from docx.enum.text import WD_ALIGN_PARAGRAPH as _ALIGN
+        _doc = _Doc()
+        _sec = _doc.sections[0]
+        _ts = template_settings or {}
+        _landscape = _ts.get('orientation') == 'landscape'
+        if _landscape:
+            _sec.page_width  = _Mm(297); _sec.page_height = _Mm(210)
+        else:
+            _sec.page_width  = _Mm(210); _sec.page_height = _Mm(297)
+        _fallback = _ts.get('marginMm')
+        if doc_type == 'rules':   _dl,_dr,_dt,_db = 15,10,10,10
+        elif doc_type == 'contract': _dl,_dr,_dt,_db = 20,10,10,10
+        else: _dl,_dr,_dt,_db = 20,15,15,15
+        _sec.left_margin   = _Mm(float(_ts['marginLeft'])   if 'marginLeft'   in _ts else (_fallback or _dl))
+        _sec.right_margin  = _Mm(float(_ts['marginRight'])  if 'marginRight'  in _ts else (_fallback or _dr))
+        _sec.top_margin    = _Mm(float(_ts['marginTop'])    if 'marginTop'    in _ts else (_fallback or _dt))
+        _sec.bottom_margin = _Mm(float(_ts['marginBottom']) if 'marginBottom' in _ts else (_fallback or _db))
+        _base = float(_ts.get('fontSize') or (10.0 if doc_type=='contract' else (9.5 if doc_type=='rules' else 11)))
+        _fname = _ts.get('fontFamily') or 'Times New Roman'
+        _style = _doc.styles['Normal']
+        _style.font.name = _fname
+        _style.font.size = _Pt(_base)
+        _style.paragraph_format.line_spacing = _Pt(_base * 1.25)
+        _style.paragraph_format.space_after  = _Pt(0)
+        _style.paragraph_format.alignment    = _ALIGN.JUSTIFY
+        render_blocks_to_docx(template_blocks, _doc, None, _base, _fname, c, company, products)
+        _buf = BytesIO()
+        _doc.save(_buf)
+        return _buf.getvalue()
+
     # Кредитные данные
     cr_bank        = (c.get('credit_bank') or '').strip()
     cr_num         = (c.get('credit_contract_number') or '').strip()
@@ -1447,21 +1714,29 @@ def handler(event: dict, context) -> dict:
             client['manager_poa_number'] = poa.get('poa_number', '')
             client['manager_poa_date']   = poa.get('poa_date', '')
 
-    # Загружаем настройки шаблона (orientation и др.)
+    # Загружаем настройки и блоки шаблона
     template_settings = {}
+    template_blocks = None
     with get_db() as conn:
         cur = conn.cursor()
         cur.execute(
-            f"SELECT settings FROM {schema}.doc_templates WHERE user_id = %s AND doc_type = %s AND is_default = true LIMIT 1",
+            f"SELECT settings, blocks FROM {schema}.doc_templates WHERE user_id = %s AND doc_type = %s AND is_default = true LIMIT 1",
             (str(user_id), doc_type)
         )
         trow = cur.fetchone()
         if trow:
             template_settings = trow[0] or {}
+            raw_blocks = trow[1]
+            if raw_blocks:
+                if isinstance(raw_blocks, str):
+                    try: raw_blocks = json.loads(raw_blocks)
+                    except: raw_blocks = None
+                if isinstance(raw_blocks, list) and raw_blocks:
+                    template_blocks = raw_blocks
 
     if action == 'doc_docx':
         logger.info(f'doc_docx: {doc_type} for client {cid}, tech_img={str(client.get("tech_image_url",""))[:80]}')
-        docx_bytes = build_docx(client, doc_type, company, template_settings)
+        docx_bytes = build_docx(client, doc_type, company, template_settings, template_blocks)
         logger.info(f'doc_docx: generated {len(docx_bytes)} bytes')
         return {
             'statusCode': 200,
@@ -1492,7 +1767,26 @@ def handler(event: dict, context) -> dict:
         with zipfile.ZipFile(zip_buf, 'w', zipfile.ZIP_DEFLATED) as zf:
             for dt, name in DOCS_ZIP.items():
                 try:
-                    b = build_docx(client, dt, company, template_settings)
+                    # Загружаем блоки для каждого типа документа отдельно
+                    _tblocks = None
+                    _tsettings = template_settings.copy()
+                    with get_db() as _conn:
+                        _cur = _conn.cursor()
+                        _cur.execute(
+                            f"SELECT settings, blocks FROM {schema}.doc_templates WHERE user_id = %s AND doc_type = %s AND is_default = true LIMIT 1",
+                            (str(user_id), dt)
+                        )
+                        _tr = _cur.fetchone()
+                        if _tr:
+                            _tsettings = _tr[0] or {}
+                            _rb = _tr[1]
+                            if _rb:
+                                if isinstance(_rb, str):
+                                    try: _rb = json.loads(_rb)
+                                    except: _rb = None
+                                if isinstance(_rb, list) and _rb:
+                                    _tblocks = _rb
+                    b = build_docx(client, dt, company, _tsettings, _tblocks)
                     zf.writestr(f'{name} — {fname_client}.docx', b)
                     logger.info(f'zip: added {dt} ({len(b)} bytes)')
                 except Exception as ex:
