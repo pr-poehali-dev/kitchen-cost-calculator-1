@@ -281,6 +281,16 @@ def apply_vars(text: str, c: dict, company: dict) -> str:
         'компания':           str(company.get('name') or '').strip() or '___________',
         'менеджер':           str(c.get('manager_name') or '').strip() or '___________',
         'дизайнер':           str(c.get('designer_name') or '').strip() or '___________',
+        'город':              str(company.get('city') or c.get('city') or '').strip() or '___________',
+        'телефон':            str(c.get('phone') or '').strip() or '___________',
+        'телефон2':           str(c.get('phone2') or '').strip() or '',
+        'email':              str(c.get('email') or '').strip() or '',
+        'инн':                str(company.get('inn') or '').strip() or '',
+        'огрн':               str(company.get('ogrn') or '').strip() or '',
+        'адрес_компании':     str(company.get('address') or '').strip() or '',
+        'сумма_цифры':        f"{int(float(c.get('total_amount') or 0)):,}".replace(',', ' '),
+        'аванс_цифры':        f"{int(float(c.get('prepaid_amount') or 0)):,}".replace(',', ' '),
+        'номер_договора_кр':  str(c.get('contract_number') or '___'),
     }
     def replace_var(m):
         key = m.group(1).strip()
@@ -675,7 +685,7 @@ def build_docx(c: dict, doc_type: str, company: dict, template_settings: dict | 
             p.paragraph_format.space_before = Pt(1)
             p.paragraph_format.space_after  = Pt(1)
             p.paragraph_format.line_spacing = Pt(_base_pt * 1.2)
-            if center: p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER if center else WD_ALIGN_PARAGRAPH.LEFT
             r = p.add_run(line); font(r, size, bold)
 
     def sig_table(left_header, left_body, right_header, right_body):
@@ -1692,7 +1702,8 @@ def handler(event: dict, context) -> dict:
         from datetime import date
         client = {
             'last_name': 'Иванов', 'first_name': 'Иван', 'middle_name': 'Иванович',
-            'phone': '+7 (999) 123-45-67', 'phone2': '', 'email': 'ivanov@mail.ru',
+            'phone': '+7 (999) 123-45-67', 'phone2': '+7 (999) 765-43-21', 'email': 'ivanov@mail.ru',
+            'city': 'Саратов',
             'passport_series': '4520', 'passport_number': '123456',
             'passport_issued_by': 'ОУФМС по г. Москве', 'passport_date': '2015-03-15', 'passport_code': '770-001',
             'registration_address': 'г. Москва, ул. Ленина, д. 5, кв. 12',
