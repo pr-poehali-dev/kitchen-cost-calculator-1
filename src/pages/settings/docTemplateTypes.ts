@@ -370,7 +370,7 @@ export function buildPreviewHtml(template: Template): string {
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:#e8e8e8;font-family:'${fontFamily}',serif;font-size:${globalFontSize}pt;line-height:${lineHeight}}
   h1{text-align:center;font-size:${globalFontSize + 1}pt}
-  p{margin:0 0 2px;text-align:justify}
+  p{margin:0 0 2px;text-align:justify;white-space:pre-wrap}
   /* Обёртка всех листов */
   .pages-wrap{padding:12px;display:flex;flex-direction:column;gap:12px;align-items:center}
   /* Один лист */
