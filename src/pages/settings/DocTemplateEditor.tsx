@@ -55,10 +55,11 @@ const MARGIN_FIELDS = [
   { key: 'marginBottom', label: '↓', title: 'Нижнее поле (мм)' },
 ];
 
-function VarPanel() {
+function VarPanel({ onInsert }: { onInsert: ((v: string) => void) | null }) {
   const [query, setQuery] = useState('');
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const q = query.trim().toLowerCase();
+  const hasTarget = !!onInsert;
 
   const filtered = VAR_GROUPS
     .filter(g => !activeGroup || g.label === activeGroup)
@@ -74,7 +75,14 @@ function VarPanel() {
       <div className="px-3 py-2 bg-[hsl(220,14%,10%)] border-b border-border flex items-center gap-2">
         <Icon name="Braces" size={12} className="text-blue-400 shrink-0" />
         <span className="text-[11px] font-medium text-foreground">Доступные переменные</span>
-        <span className="text-[10px] text-[hsl(var(--text-muted))]">— кликни чтобы скопировать</span>
+        {hasTarget ? (
+          <span className="flex items-center gap-1 text-[10px] text-emerald-400">
+            <Icon name="MousePointerClick" size={10} />
+            вставится в блок
+          </span>
+        ) : (
+          <span className="text-[10px] text-[hsl(var(--text-muted))]">— открой блок для вставки</span>
+        )}
         <span className="ml-auto text-[10px] text-[hsl(var(--text-muted))]">{VARS.length} шт.</span>
       </div>
 
@@ -125,9 +133,21 @@ function VarPanel() {
           filtered.flatMap(g => g.vars).map(v => (
             <button
               key={v.key}
-              onClick={() => { navigator.clipboard.writeText(v.key); toast.success(`Скопировано: ${v.key}`); }}
+              onClick={() => {
+                if (onInsert) {
+                  onInsert(v.key);
+                  toast.success(`Вставлено: ${v.key}`);
+                } else {
+                  navigator.clipboard.writeText(v.key);
+                  toast.success(`Скопировано: ${v.key}`);
+                }
+              }}
               title={`${v.desc}\nПример: ${v.preview}`}
-              className="px-2 py-0.5 bg-blue-500/10 border border-blue-500/30 text-blue-400 rounded text-[10px] hover:bg-blue-500/20 hover:border-blue-500/60 transition-all"
+              className={`px-2 py-0.5 border rounded text-[10px] transition-all ${
+                hasTarget
+                  ? 'bg-emerald-500/10 border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 hover:border-emerald-500/60'
+                  : 'bg-blue-500/10 border-blue-500/30 text-blue-400 hover:bg-blue-500/20 hover:border-blue-500/60'
+              }`}
             >
               {v.key}
             </button>
@@ -143,6 +163,13 @@ export default function DocTemplateEditor({
   onUpdate, onSave, onApply, onDelete, onSetDefault, onPreview, onDuplicate, onEditBlock,
   onDownloadDocx, downloadingDocx,
 }: Props) {
+  const [insertFn, setInsertFn] = useState<((v: string) => void) | null>(null);
+
+  const handleRegisterInsert = (fn: ((v: string) => void) | null) => {
+    // useState с функцией требует обёртку чтобы не вызвался как initializer
+    setInsertFn(fn ? () => (v: string) => fn(v) : null);
+  };
+
   const updateBlock = (blockId: string, field: keyof Block, value: string | boolean | number | number[] | undefined) => {
     onUpdate({
       ...template,
@@ -324,7 +351,7 @@ export default function DocTemplateEditor({
       </div>
 
       {/* Переменные */}
-      <VarPanel />
+      <VarPanel onInsert={insertFn} />
 
       {/* Блоки документа */}
       <div>
@@ -358,6 +385,7 @@ export default function DocTemplateEditor({
               onMove={dir => moveBlock(idx, dir)}
               onRemove={() => removeBlock(block.id)}
               onUpdate={(field, value) => updateBlock(block.id, field, value)}
+              onRegisterInsert={handleRegisterInsert}
             />
           ))}
         </div>

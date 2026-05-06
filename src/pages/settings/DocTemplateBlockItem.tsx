@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useRef, useEffect } from 'react';
 import Icon from '@/components/ui/icon';
 import type { Block } from './docTemplateTypes';
 import BlockEditorPanels from './BlockEditorPanels';
@@ -13,11 +13,12 @@ interface Props {
   onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
   onUpdate: (field: keyof Block, value: string | boolean | number | number[] | undefined) => void;
+  onRegisterInsert?: (fn: ((v: string) => void) | null) => void;
 }
 
 export default function DocTemplateBlockItem({
   block, idx, totalBlocks, isEditing,
-  onToggleEdit, onToggleEnabled, onMove, onRemove, onUpdate,
+  onToggleEdit, onToggleEnabled, onMove, onRemove, onUpdate, onRegisterInsert,
 }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -36,6 +37,16 @@ export default function DocTemplateBlockItem({
       el.selectionStart = el.selectionEnd = start + v.length;
     }, 0);
   };
+
+  // Регистрируем/дерегистрируем функцию вставки при открытии/закрытии редактора
+  useEffect(() => {
+    if (!onRegisterInsert) return;
+    if (isEditing) {
+      onRegisterInsert(insertVar);
+      return () => onRegisterInsert(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEditing]);
 
   const hasCondition = !!block.condition;
 
