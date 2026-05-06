@@ -344,6 +344,7 @@ def build_docx(c: dict, doc_type: str, company: dict, template_settings: dict | 
         run.font.name = _font_name
         run.font.size = Pt(size if size is not None else _base_pt)
         run.bold = bold
+        run._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
 
     def heading(text, size=None):
         _sz = (size or (_base_pt + 2))

@@ -183,7 +183,7 @@ export default function BlockEditorPanels({ block, textareaRef, onUpdate, insert
             value={block.content}
             onChange={e => onUpdate('content', e.target.value)}
             rows={6}
-            spellCheck={false}
+
             className="w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1.5 text-xs text-foreground resize-y font-mono leading-relaxed"
             style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
           />
