@@ -16,6 +16,8 @@ interface Props {
   onPreview: () => void;
   onDuplicate: () => void;
   onEditBlock: (id: string | null) => void;
+  onDownloadDocx?: () => void;
+  downloadingDocx?: boolean;
 }
 
 const ADD_BLOCK_TYPES = [
@@ -55,6 +57,7 @@ const MARGIN_FIELDS = [
 export default function DocTemplateEditor({
   template, saving, isDirty, editingBlock,
   onUpdate, onSave, onApply, onDelete, onSetDefault, onPreview, onDuplicate, onEditBlock,
+  onDownloadDocx, downloadingDocx,
 }: Props) {
   const updateBlock = (blockId: string, field: keyof Block, value: string | boolean | number | number[] | undefined) => {
     onUpdate({
@@ -112,6 +115,19 @@ export default function DocTemplateEditor({
         <button onClick={onDuplicate} className="px-2 py-1.5 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-blue-400 transition-all" title="Копировать шаблон">
           <Icon name="Copy" size={12} />
         </button>
+        {onDownloadDocx && (
+          <button
+            onClick={onDownloadDocx}
+            disabled={downloadingDocx}
+            className="flex items-center gap-1 px-2.5 py-1.5 border border-border rounded text-xs text-[hsl(var(--text-muted))] hover:text-violet-400 hover:border-violet-500/40 transition-all disabled:opacity-60"
+            title="Скачать пример DOCX по этому шаблону"
+          >
+            {downloadingDocx
+              ? <Icon name="Loader2" size={11} className="animate-spin" />
+              : <Icon name="FileDown" size={11} />}
+            DOCX
+          </button>
+        )}
         <button
           onClick={onSave}
           disabled={saving}

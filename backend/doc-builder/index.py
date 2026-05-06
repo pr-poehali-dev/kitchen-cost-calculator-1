@@ -1684,26 +1684,47 @@ def handler(event: dict, context) -> dict:
     if not cid:
         return err('Нет client_id')
 
-    # Загружаем клиента
-    schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
-    with get_db() as conn:
-        cur = conn.cursor()
-        cur.execute(f'SELECT * FROM {schema}.clients WHERE id = %s', (cid,))
-        row = cur.fetchone()
-        if not row:
-            return err('Клиент не найден', 404)
-        cols = [d[0] for d in cur.description]
-        client = dict(zip(cols, row))
-
-        # Для tech — подгружаем фото категории render если нет tech_image_url
-        if doc_type in ('tech',) or action == 'doc_zip':
-            if not client.get('tech_image_url'):
-                cur.execute(f"SELECT url FROM {schema}.client_photos WHERE client_id = %s AND category = 'render' ORDER BY uploaded_at DESC LIMIT 1", (cid,))
-                photo_row = cur.fetchone()
-                if photo_row:
-                    client['tech_image_url'] = photo_row[0]
-
     user_id = payload.get('sub') or payload.get('user_id') or payload.get('id')
+    schema = os.environ.get('MAIN_DB_SCHEMA', 'public')
+
+    # Тестовый клиент для превью шаблона
+    if cid == 'preview':
+        from datetime import date
+        client = {
+            'last_name': 'Иванов', 'first_name': 'Иван', 'middle_name': 'Иванович',
+            'phone': '+7 (999) 123-45-67', 'phone2': '', 'email': 'ivanov@mail.ru',
+            'passport_series': '4520', 'passport_number': '123456',
+            'passport_issued_by': 'ОУФМС по г. Москве', 'passport_date': '2015-03-15', 'passport_code': '770-001',
+            'registration_address': 'г. Москва, ул. Ленина, д. 5, кв. 12',
+            'delivery_city': 'г. Москва', 'delivery_street': 'ул. Садовая', 'delivery_house': 'д. 3', 'delivery_apt': '8',
+            'contract_number': '877', 'contract_date': str(date.today()),
+            'total_amount': 350000, 'prepaid_amount': 175000, 'balance_due': 175000,
+            'payment_type': 'наличные',
+            'delivery_cost': 3000, 'assembly_cost': 8000,
+            'production_days': 30, 'assembly_days': 2,
+            'delivery_date': str(date.today()),
+            'manager_name': 'Сазонов Василий Николаевич',
+            'designer_name': 'Петрова Анна Сергеевна',
+            'products': [], 'tech_image_url': '',
+        }
+    else:
+        # Загружаем клиента из БД
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute(f'SELECT * FROM {schema}.clients WHERE id = %s', (cid,))
+            row = cur.fetchone()
+            if not row:
+                return err('Клиент не найден', 404)
+            cols = [d[0] for d in cur.description]
+            client = dict(zip(cols, row))
+
+            # Для tech — подгружаем фото категории render если нет tech_image_url
+            if doc_type in ('tech',) or action == 'doc_zip':
+                if not client.get('tech_image_url'):
+                    cur.execute(f"SELECT url FROM {schema}.client_photos WHERE client_id = %s AND category = 'render' ORDER BY uploaded_at DESC LIMIT 1", (cid,))
+                    photo_row = cur.fetchone()
+                    if photo_row:
+                        client['tech_image_url'] = photo_row[0]
     company = get_company(user_id)
 
     # Подгружаем доверенность менеджера из БД

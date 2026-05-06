@@ -3,6 +3,7 @@ import { toast } from 'sonner';
 import Icon from '@/components/ui/icon';
 import DocTemplateEditor from './DocTemplateEditor';
 import { API, authHeaders, DOC_TYPES, buildPreviewHtml, type Template, type Block } from './docTemplateTypes';
+import { API_URLS } from '@/config/api';
 
 export default function SettingsDocTemplates() {
   const [templates, setTemplates] = useState<Template[]>([]);
@@ -14,6 +15,7 @@ export default function SettingsDocTemplates() {
   const [showPreview, setShowPreview] = useState(true);
   const [isDirty, setIsDirty] = useState(false);
   const [pendingSwitch, setPendingSwitch] = useState<Template | null>(null);
+  const [downloadingDocx, setDownloadingDocx] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
   const loadTemplates = useCallback(async (keepSelectedId?: string) => {
@@ -163,6 +165,41 @@ export default function SettingsDocTemplates() {
     setShowPreview(p => !p);
   };
 
+  const handleDownloadDocx = async () => {
+    if (!selectedTemplate) return;
+    if (isDirty) {
+      await saveTemplate();
+    }
+    setDownloadingDocx(true);
+    try {
+      // Используем первого доступного клиента как тестовый, либо пустой объект
+      const url = `${API_URLS.docBuilder}/?action=doc_docx&client_id=preview&doc=${selectedTemplate.doc_type}`;
+      const res = await fetch(url, { headers: authHeaders() });
+      const data = await res.json();
+      if (data.data) {
+        const binary = atob(data.data);
+        const bytes = new Uint8Array(binary.length);
+        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+        const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+        const blobUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = blobUrl;
+        a.download = `${selectedTemplate.name} — пример.docx`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+        toast.success('Пример DOCX скачан');
+      } else {
+        toast.error('Ошибка генерации файла');
+      }
+    } catch {
+      toast.error('Ошибка скачивания');
+    } finally {
+      setDownloadingDocx(false);
+    }
+  };
+
   const docLabel = DOC_TYPES.find(d => d.id === selectedDocType)?.label || selectedDocType;
 
   const previewHtml = selectedTemplate ? buildPreviewHtml(selectedTemplate) : '';
@@ -281,6 +318,8 @@ export default function SettingsDocTemplates() {
                 onPreview={handlePreview}
                 onDuplicate={duplicateTemplate}
                 onEditBlock={setEditingBlock}
+                onDownloadDocx={handleDownloadDocx}
+                downloadingDocx={downloadingDocx}
               />
             </div>
           ) : (
