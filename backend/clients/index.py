@@ -942,7 +942,7 @@ def _doc_style(title='', contract_num=''):
   }}
 }}
 *{{box-sizing:border-box;margin:0;padding:0}}
-html{{background:#2d2d2d;min-height:100vh}}
+html{{background:#e8e8e8;min-height:100vh}}
 body{{font-family:'PT Serif',Georgia,serif;font-size:9.5pt;line-height:1.0;color:#000;background:transparent}}
 .page{{width:210mm;min-height:297mm;margin:8px auto;padding:8mm 8mm 8mm 13mm;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)}}
 @media screen and (max-width:900px){{
@@ -1351,10 +1351,11 @@ def _render_template_html(blocks: list, settings: dict, c: dict, company: dict, 
 <style>
   @page{{size:{page_w} {page_h};margin:{m_top}mm {m_right}mm {m_bottom}mm {m_left}mm}}
   *{{box-sizing:border-box}}
-  body{{font-family:'{font_family}';line-height:{line_height};margin:0;padding:0;font-size:{global_font_size}pt}}
+  html{{background:#e8e8e8;min-height:100vh}}
+  body{{font-family:'{font_family}';line-height:{line_height};margin:0 auto;padding:12px;font-size:{global_font_size}pt;background:#fff;max-width:{page_w};box-shadow:0 4px 20px rgba(0,0,0,.3)}}
   p{{margin:0 0 4px 0}}
   table{{border-collapse:collapse;width:100%}}
-  @media print{{body{{margin:0}};@page{{margin:{m_top}mm {m_right}mm {m_bottom}mm {m_left}mm}}}}
+  @media print{{html{{background:#fff}};body{{margin:0;padding:0;box-shadow:none;max-width:none}};@page{{margin:{m_top}mm {m_right}mm {m_bottom}mm {m_left}mm}}}}
 </style>
 </head><body>{rendered}</body></html>'''
 
