@@ -433,8 +433,13 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
         if not _eval_condition(block, c):
             continue
 
+        import re as _re_norm
         btype   = block.get('type', 'paragraph')
-        content = apply_vars(block.get('content', ''), c, company)
+        # Нормализуем: тройные+ переносы → двойные, \r\n → \n
+        _raw = block.get('content', '')
+        _raw = _re_norm.sub(r'\r\n|\r', '\n', _raw)
+        _raw = _re_norm.sub(r'\n{3,}', '\n\n', _raw)
+        content = apply_vars(_raw, c, company)
         align   = ALIGN_MAP.get(block.get('align', 'justify'), WD_ALIGN_PARAGRAPH.JUSTIFY)
         fsize   = float(block.get('fontSize') or _base_pt)
         bold    = bool(block.get('bold', False))
@@ -566,6 +571,7 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
                     r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
 
         elif btype == 'two_col':
+            import re as _re2
             sep = '\n---\n'
             idx = content.find(sep)
             left_text  = content[:idx].strip()  if idx >= 0 else content.strip()
@@ -582,23 +588,38 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
             for side in ('top','left','bottom','right','insideH','insideV'):
                 el = _etree.SubElement(tblBorders, _qn(f'w:{side}'))
                 el.set(_qn('w:val'), 'none')
+
+            def _fill_cell_multiline(cell, txt):
+                """Заполняет ячейку: \n\n = новый параграф, \n = мягкий перенос."""
+                from docx.shared import Cm as _Cm2
+                normalized = _re2.sub(r'\r\n|\r', '\n', txt)
+                normalized = _re2.sub(r'\n{3,}', '\n\n', normalized)
+                chunks = [c.strip('\n') for c in normalized.split('\n\n') if c.strip('\n')]
+                for pi, chunk in enumerate(chunks):
+                    if pi == 0:
+                        p = cell.paragraphs[0]
+                    else:
+                        p = cell.add_paragraph()
+                    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                    p.paragraph_format.space_before = Pt(0)
+                    p.paragraph_format.space_after  = Pt(2)
+                    p.paragraph_format.line_spacing = Pt(_base_pt * 1.25)
+                    lines = chunk.split('\n')
+                    for li, line in enumerate(lines):
+                        if li > 0:
+                            p.add_run().add_break()
+                        r = p.add_run(line)
+                        r.font.name  = _font_name
+                        r.font.size  = Pt(fsize)
+                        r.bold       = bold
+                        r.italic     = italic
+                        r.underline  = under
+                        r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+
             for ci, txt in enumerate([left_text, right_text]):
                 from docx.shared import Cm as _Cm
                 t.rows[0].cells[ci].width = _Cm(total_width_cm / 2)
-                cell = t.rows[0].cells[ci]
-                p = cell.paragraphs[0]
-                p.alignment = align
-                lines = txt.split('\n')
-                for i, line in enumerate(lines):
-                    if i > 0:
-                        p.add_run().add_break()
-                    r = p.add_run(line)
-                    r.font.name  = _font_name
-                    r.font.size  = Pt(fsize)
-                    r.bold       = bold
-                    r.italic     = italic
-                    r.underline  = under
-                    r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+                _fill_cell_multiline(t.rows[0].cells[ci], txt)
 
         elif btype == 'calc_table':
             if not products:
