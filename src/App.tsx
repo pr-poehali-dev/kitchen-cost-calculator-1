@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useConfirmDialog } from '@/components/ui/ConfirmDialog';
 import Layout from '@/components/Layout';
 import GlobalSearch from '@/components/GlobalSearch';
@@ -7,6 +7,7 @@ import { useStore, loadStateFromDb, setStoreToken, forceSetGlobalState, saveStat
 import { setState as setStoreState } from '@/store/stateCore';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { setCatalogToken, loadCatalog, syncCatalogFromAppState, catalogCache } from '@/hooks/useCatalog';
+import { invalidateClientsCache } from '@/clients/useClients';
 import HomePage from '@/pages/HomePage';
 import ClientsPage from '@/clients/ClientsPage';
 import CalcPage from '@/pages/CalcPage';

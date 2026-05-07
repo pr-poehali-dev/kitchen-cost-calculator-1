@@ -17,6 +17,24 @@ function authHeaders(extra: Record<string, string> = {}): Record<string, string>
   return { Authorization: `Bearer ${getToken()}`, ...extra };
 }
 
+// ── Модульный кеш запросов (живёт между навигациями, не внутри React) ──────
+const CACHE_TTL = 30_000; // 30 секунд
+interface CacheEntry { data: unknown; ts: number }
+const _cache = new Map<string, CacheEntry>();
+
+function cacheGet<T>(key: string): T | null {
+  const e = _cache.get(key);
+  if (!e) return null;
+  if (Date.now() - e.ts > CACHE_TTL) { _cache.delete(key); return null; }
+  return e.data as T;
+}
+function cacheSet(key: string, data: unknown) {
+  _cache.set(key, { data, ts: Date.now() });
+}
+export function invalidateClientsCache() {
+  _cache.clear();
+}
+
 export interface ClientsPage {
   clients: Client[];
   total: number;
@@ -70,19 +88,40 @@ export function useClients() {
   };
 
   const fetchClients = useCallback(async (filter: ClientsFilter = {}, p = 1) => {
+    const qs = buildQuery(filter, p);
+    const cacheKey = `list:${qs}`;
+    type ListData = { clients: Client[]; total: number; pages: number; page: number };
+
+    // Мгновенно показываем кешированные данные, не блокируя UI
+    const cached = cacheGet<ListData>(cacheKey);
+    if (cached) {
+      setClients(cached.clients);
+      setTotal(cached.total);
+      setPages(cached.pages);
+      setPage(cached.page);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const qs = buildQuery(filter, p);
       const res = await fetch(`${API}/?action=list&${qs}`, { headers: authHeaders() });
       if (!res.ok) {
         toast.error('Не удалось загрузить клиентов', { description: `Ошибка ${res.status}` });
         return;
       }
-      const data = await res.json();
-      setClients(data.clients || []);
-      setTotal(data.total ?? 0);
-      setPages(data.pages ?? 1);
-      setPage(data.page ?? p);
+      const data: ListData = await res.json();
+      const entry: ListData = {
+        clients: data.clients || [],
+        total:   data.total  ?? 0,
+        pages:   data.pages  ?? 1,
+        page:    data.page   ?? p,
+      };
+      cacheSet(cacheKey, entry);
+      setClients(entry.clients);
+      setTotal(entry.total);
+      setPages(entry.pages);
+      setPage(entry.page);
     } catch {
       toast.error('Ошибка сети', { description: 'Проверьте подключение к интернету' });
     } finally {
@@ -92,17 +131,32 @@ export function useClients() {
 
   // Загрузить все (для канбана и экспорта) — без фильтров, до 500
   const loadAll = useCallback(async (filter: ClientsFilter = {}) => {
+    const qs = buildQuery(filter, 1, 500);
+    const cacheKey = `all:${qs}`;
+    type ListData = { clients: Client[]; total: number };
+
+    const cached = cacheGet<ListData>(cacheKey);
+    if (cached) {
+      setClients(cached.clients);
+      setTotal(cached.total);
+      setPages(1);
+      setPage(1);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const qs = buildQuery(filter, 1, 500);
       const res = await fetch(`${API}/?action=list&${qs}`, { headers: authHeaders() });
       if (!res.ok) {
         toast.error('Не удалось загрузить клиентов', { description: `Ошибка ${res.status}` });
         return;
       }
-      const data = await res.json();
-      setClients(data.clients || []);
-      setTotal(data.total ?? 0);
+      const data: ListData = await res.json();
+      const entry: ListData = { clients: data.clients || [], total: data.total ?? 0 };
+      cacheSet(cacheKey, entry);
+      setClients(entry.clients);
+      setTotal(entry.total);
       setPages(1);
       setPage(1);
     } catch {
@@ -126,6 +180,7 @@ export function useClients() {
         toast.error('Не удалось создать клиента', { description: data.error || `Ошибка ${res.status}` });
         return null;
       }
+      invalidateClientsCache();
       await loadAll();
       return data.id;
     } catch {
@@ -145,6 +200,8 @@ export function useClients() {
         toast.error('Не удалось изменить статус');
         return;
       }
+      // Обновляем локально без перезапроса, кеш инвалидируем
+      invalidateClientsCache();
       setClients(prev => prev.map(c => c.id === id ? { ...c, status: status as Client['status'] } : c));
     } catch {
       toast.error('Ошибка сети при изменении статуса');
@@ -195,6 +252,7 @@ export function useClient(id: string | null) {
         body: JSON.stringify({ client: updated }),
       });
       if (res.ok) {
+        invalidateClientsCache(); // список устарел после изменения клиента
         setClient(updated);
         await load();
         return true;
@@ -222,6 +280,7 @@ export function useClient(id: string | null) {
         toast.error('Не удалось изменить статус');
         return;
       }
+      invalidateClientsCache();
       setClient(prev => prev ? { ...prev, status: status as Client['status'] } : prev);
       await load();
     } catch {

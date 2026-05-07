@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
+import { invalidateClientsCache } from '@/clients/useClients';
 import { API_URLS } from '@/config/api';
 
 const AUTH_URL = API_URLS.auth;
@@ -85,6 +86,7 @@ export function useAuth() {
 
   const logout = () => {
     clearSession();
+    invalidateClientsCache();
     setState({ status: 'unauthenticated' });
   };
 
