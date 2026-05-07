@@ -443,12 +443,13 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
         mt      = block.get('marginTop')
         mb      = block.get('marginBottom')
 
-        def make_para(text_content, para_align=None, para_bold=False, para_italic=False, para_under=False, para_size=None):
+        def _make_single_para(text_content, para_align=None, para_bold=False, para_italic=False, para_under=False, para_size=None, first=True):
+            """Создаёт один параграф. Одиночные \n внутри — мягкий перенос (w:br)."""
             p = doc.add_paragraph()
             p.alignment = para_align if para_align is not None else align
-            p.paragraph_format.space_before = Pt(float(mt) * 2.835) if mt else Pt(0)
+            p.paragraph_format.space_before = Pt(float(mt) * 2.835) if (mt and first) else Pt(0)
             p.paragraph_format.space_after  = Pt(float(mb) * 2.835) if mb else Pt(1)
-            p.paragraph_format.line_spacing = Pt((_base_pt) * 1.25)
+            p.paragraph_format.line_spacing = Pt(_base_pt * 1.25)
             lines = text_content.split('\n')
             for i, line in enumerate(lines):
                 if i > 0:
@@ -461,6 +462,24 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
                 r.italic     = para_italic or italic
                 r.underline  = para_under or under
             return p
+
+        def make_para(text_content, para_align=None, para_bold=False, para_italic=False, para_under=False, para_size=None):
+            """
+            Разбивает текст по двойным переносам (\n\n) на отдельные параграфы.
+            Одиночные \n внутри абзаца — мягкий перенос строки (w:br).
+            """
+            # Нормализуем: \r\n → \n, тройные+ → двойные
+            import re as _re
+            normalized = _re.sub(r'\r\n|\r', '\n', text_content)
+            normalized = _re.sub(r'\n{3,}', '\n\n', normalized)
+            chunks = normalized.split('\n\n')
+            last_p = None
+            for idx, chunk in enumerate(chunks):
+                chunk = chunk.strip('\n')
+                if not chunk:
+                    continue
+                last_p = _make_single_para(chunk, para_align, para_bold, para_italic, para_under, para_size, first=(idx == 0))
+            return last_p
 
         if btype == 'header':
             make_para(content, WD_ALIGN_PARAGRAPH.CENTER, para_bold=True, para_size=fsize or (_base_pt + 1))
