@@ -1,253 +1,49 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
-import { toast } from 'sonner';
 import Icon from '@/components/ui/icon';
 import DocTemplateEditor from './DocTemplateEditor';
-import { API, authHeaders, DOC_TYPES, buildPreviewHtml, type Template, type Block } from './docTemplateTypes';
-import { API_URLS } from '@/config/api';
+import { DOC_TYPES, buildPreviewHtml, type Template, type Block } from './docTemplateTypes';
+import { useDocTemplates } from './useDocTemplates';
 
 export default function SettingsDocTemplates() {
-  const [templates, setTemplates] = useState<Template[]>([]);
-  // savedTemplates — версии с сервера, не меняются при редактировании
-  const savedTemplatesRef = useRef<Template[]>([]);
   const [selectedDocType, setSelectedDocType] = useState('contract');
-  const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [editingBlock, setEditingBlock] = useState<string | null>(null);
-  const [saving, setSaving] = useState(false);
-  const [loading, setLoading] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
-  const [isDirty, setIsDirty] = useState(false);
-  const [pendingSwitch, setPendingSwitch] = useState<Template | null>(null);
-  const [downloadingDocx, setDownloadingDocx] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const loadTemplates = useCallback(async (keepSelectedId?: string) => {
-    setLoading(true);
-    try {
-      const res = await fetch(`${API}/?doc_type=${selectedDocType}`, { headers: authHeaders() });
-      const data = await res.json();
-      const list = Array.isArray(data) ? data : [];
-      setTemplates(list);
-      savedTemplatesRef.current = list; // сохраняем оригиналы с сервера
-      if (list.length > 0) {
-        const keep = keepSelectedId ? list.find((t: Template) => t.id === keepSelectedId) : null;
-        const def = keep || list.find((t: Template) => t.is_default) || list[0];
-        setSelectedTemplate(def);
-      } else {
-        setSelectedTemplate(null);
-      }
-    } catch {
-      toast.error('Ошибка загрузки шаблонов');
-    } finally {
-      setLoading(false);
-    }
-  }, [selectedDocType]);
+  const {
+    templates, selectedTemplate, saving, loading, isDirty, pendingSwitch, downloadingDocx,
+    loadTemplates, saveTemplate, switchTemplate, confirmSwitch,
+    createTemplate, deleteTemplate, setDefault, duplicateTemplate,
+    handleApplyTemplate, downloadDocx, handleUpdateTemplate,
+  } = useDocTemplates(selectedDocType);
 
   useEffect(() => { loadTemplates(); }, [loadTemplates]);
 
-  const createTemplate = async () => {
-    const res = await fetch(`${API}/`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({
-        doc_type: selectedDocType,
-        name: 'Мой шаблон',
-        settings: { fontSize: 9.5, lineHeight: 1.0, marginMm: 10 },
-        is_default: templates.length === 0,
-      }),
-    });
-    const data = await res.json();
-    if (data.id) {
-      toast.success('Шаблон создан');
-      loadTemplates();
-    }
-  };
-
-  const saveTemplate = async (tpl?: Template) => {
-    const target = tpl ?? selectedTemplate;
-    if (!target) return;
-    setSaving(true);
-    try {
-      await fetch(`${API}/?id=${target.id}`, {
-        method: 'PUT',
-        headers: authHeaders(),
-        body: JSON.stringify({
-          name: target.name,
-          blocks: target.blocks,
-          settings: target.settings,
-        }),
-      });
-      // Обновляем серверную копию после успешного сохранения
-      savedTemplatesRef.current = savedTemplatesRef.current.map(t =>
-        t.id === target.id ? { ...t, name: target.name, blocks: target.blocks, settings: target.settings } : t
-      );
-      setIsDirty(false);
-      if (!tpl) toast.success('Сохранено');
-    } catch {
-      toast.error('Ошибка сохранения');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const doSwitch = (t: Template) => {
-    // Берём версию с сервера (savedTemplatesRef), а не изменённую локально
-    const fresh = savedTemplatesRef.current.find(tpl => tpl.id === t.id) ?? t;
-    setSelectedTemplate(fresh);
-    // Восстанавливаем templates обратно к серверной версии (откат несохранённых изменений)
-    setTemplates(savedTemplatesRef.current);
-    setEditingBlock(null);
-    setIsDirty(false);
-    setPendingSwitch(null);
-  };
-
-  const switchTemplate = (t: Template) => {
-    if (selectedTemplate && selectedTemplate.id === t.id) return;
-    if (isDirty && selectedTemplate) {
-      setPendingSwitch(t);
-      return;
-    }
-    doSwitch(t);
-  };
-
-  const confirmSwitch = async (save: boolean) => {
-    if (!pendingSwitch) return;
-    if (save) {
-      // Берём актуальную версию из templates (с несохранёнными изменениями)
-      const dirty = selectedTemplate
-        ? templates.find(t => t.id === selectedTemplate.id) ?? selectedTemplate
-        : undefined;
-      await saveTemplate(dirty);
-    }
-    doSwitch(pendingSwitch);
-  };
-
-  const deleteTemplate = async (id: string) => {
-    if (!confirm('Удалить шаблон?')) return;
-    await fetch(`${API}/?id=${id}`, { method: 'DELETE', headers: authHeaders() });
-    toast.success('Удалён');
-    await loadTemplates();
-  };
-
-  const setDefault = async (id: string) => {
-    await fetch(`${API}/?id=${id}`, {
-      method: 'PUT',
-      headers: authHeaders(),
-      body: JSON.stringify({ is_default: true }),
-    });
-    toast.success('Шаблон применён — теперь он активный для этого типа документа');
-    await loadTemplates(id);
-  };
-
-  const duplicateTemplate = async () => {
-    if (!selectedTemplate) return;
-    const res = await fetch(`${API}/`, {
-      method: 'POST',
-      headers: authHeaders(),
-      body: JSON.stringify({
-        doc_type: selectedDocType,
-        name: `${selectedTemplate.name} (копия)`,
-        blocks: selectedTemplate.blocks,
-        settings: selectedTemplate.settings,
-        is_default: false,
-      }),
-    });
-    const data = await res.json();
-    if (data.id) {
-      toast.success('Шаблон скопирован');
-      loadTemplates();
-    }
-  };
-
-  const handleApplyTemplate = async () => {
-    if (!selectedTemplate) return;
-    const docLabel = DOC_TYPES.find(d => d.id === selectedDocType)?.label || selectedDocType;
-    const confirmed = window.confirm(
-      `Применить шаблон «${selectedTemplate.name}» ко всем документам типа «${docLabel}»?\n\nВсе существующие договоры этого типа будут формироваться по новому шаблону. Это действие нельзя отменить автоматически.`
-    );
-    if (!confirmed) return;
-    if (isDirty) await saveTemplate();
-    await setDefault(selectedTemplate.id);
-  };
-
   const updatePreview = useCallback((t: Template) => {
     if (!iframeRef.current || !showPreview) return;
-    // Сохраняем позицию скролла
     const iframe = iframeRef.current;
     const scrollY = iframe.contentWindow?.scrollY ?? 0;
     const html = buildPreviewHtml(t);
-
-    // Если iframe ещё не загружен — используем srcdoc (первая загрузка)
-    if (!iframe.contentDocument?.body) {
-      iframe.srcdoc = html;
-      return;
-    }
-
-    // Обновляем содержимое без пересоздания iframe
+    if (!iframe.contentDocument?.body) { iframe.srcdoc = html; return; }
     try {
       iframe.contentDocument.open();
       iframe.contentDocument.write(html);
       iframe.contentDocument.close();
-      // Восстанавливаем позицию скролла после перерисовки
-      requestAnimationFrame(() => {
-        iframe.contentWindow?.scrollTo(0, scrollY);
-      });
+      requestAnimationFrame(() => { iframe.contentWindow?.scrollTo(0, scrollY); });
     } catch {
       iframe.srcdoc = html;
     }
   }, [showPreview]);
 
-  const handleUpdateTemplate = (t: Template) => {
-    setSelectedTemplate(t);
-    setTemplates(prev => prev.map(tpl => tpl.id === t.id ? t : tpl));
-    setIsDirty(true);
-    // Дебаунс 400мс — не перерисовываем при каждом символе
+  const onUpdate = (t: Template) => {
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
     previewDebounceRef.current = setTimeout(() => updatePreview(t), 400);
-  };
-
-  const handlePreview = () => {
-    setShowPreview(p => !p);
-  };
-
-  const handleDownloadDocx = async () => {
-    if (!selectedTemplate) return;
-    if (isDirty) {
-      await saveTemplate();
-    }
-    setDownloadingDocx(true);
-    try {
-      // Используем первого доступного клиента как тестовый, либо пустой объект
-      const url = `${API_URLS.docBuilder}/?action=doc_docx&client_id=preview&doc=${selectedTemplate.doc_type}`;
-      const res = await fetch(url, { headers: authHeaders() });
-      const data = await res.json();
-      if (data.data) {
-        const binary = atob(data.data);
-        const bytes = new Uint8Array(binary.length);
-        for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-        const blob = new Blob([bytes], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
-        const blobUrl = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = blobUrl;
-        a.download = `${selectedTemplate.name} — пример.docx`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
-        toast.success('Пример DOCX скачан');
-      } else {
-        toast.error('Ошибка генерации файла');
-      }
-    } catch {
-      toast.error('Ошибка скачивания');
-    } finally {
-      setDownloadingDocx(false);
-    }
+    handleUpdateTemplate(t);
   };
 
   const docLabel = DOC_TYPES.find(d => d.id === selectedDocType)?.label || selectedDocType;
 
-  // Начальный HTML для iframe — только при смене шаблона/типа документа, не при каждом символе
   const initialPreviewHtml = useMemo(
     () => selectedTemplate ? buildPreviewHtml(selectedTemplate) : '',
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -260,18 +56,13 @@ export default function SettingsDocTemplates() {
       {/* ── Тулбар ── */}
       <div className="px-4 py-2.5 border-b border-border flex items-center justify-between shrink-0 bg-[hsl(220,14%,10%)]">
         <div className="flex items-center gap-3">
-          {/* Логотип + заголовок */}
           <div className="flex items-center gap-2">
             <div className="flex items-center justify-center w-6 h-6 rounded bg-emerald-500/15 border border-emerald-500/25">
               <Icon name="FileText" size={13} className="text-emerald-400" />
             </div>
             <span className="text-sm font-semibold text-foreground tracking-tight">Конструктор PDF</span>
           </div>
-
-          {/* Разделитель */}
           <span className="text-border text-base font-light select-none">|</span>
-
-          {/* Выпадающий список типа документа */}
           <div className="relative">
             <select
               value={selectedDocType}
@@ -283,10 +74,8 @@ export default function SettingsDocTemplates() {
             <Icon name="ChevronDown" size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] pointer-events-none" />
           </div>
         </div>
-
-        {/* Кнопка превью */}
         <button
-          onClick={handlePreview}
+          onClick={() => setShowPreview(p => !p)}
           title={showPreview ? 'Скрыть превью' : 'Показать превью'}
           className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-all ${
             showPreview
@@ -321,9 +110,7 @@ export default function SettingsDocTemplates() {
                         : 'border-b-transparent text-[hsl(var(--text-muted))] hover:text-foreground'
                     }`}
                   >
-                    {t.is_default && (
-                      <Icon name="Star" size={9} className="text-yellow-400 shrink-0" />
-                    )}
+                    {t.is_default && <Icon name="Star" size={9} className="text-yellow-400 shrink-0" />}
                     {t.name}
                     {isActive && isDirty && (
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Есть несохранённые изменения" />
@@ -371,12 +158,6 @@ export default function SettingsDocTemplates() {
               >
                 Не сохранять
               </button>
-              <button
-                onClick={() => setPendingSwitch(null)}
-                className="text-[hsl(var(--text-muted))] hover:text-foreground transition-all p-0.5 rounded"
-              >
-                <Icon name="X" size={13} />
-              </button>
             </div>
           </div>
         </div>
@@ -393,15 +174,15 @@ export default function SettingsDocTemplates() {
                 saving={saving}
                 isDirty={isDirty}
                 editingBlock={editingBlock}
-                onUpdate={handleUpdateTemplate}
+                onUpdate={onUpdate}
                 onSave={saveTemplate}
-                onApply={handleApplyTemplate}
+                onApply={() => handleApplyTemplate(docLabel)}
                 onDelete={() => deleteTemplate(selectedTemplate.id)}
                 onSetDefault={() => setDefault(selectedTemplate.id)}
-                onPreview={handlePreview}
+                onPreview={() => setShowPreview(p => !p)}
                 onDuplicate={duplicateTemplate}
                 onEditBlock={setEditingBlock}
-                onDownloadDocx={handleDownloadDocx}
+                onDownloadDocx={downloadDocx}
                 downloadingDocx={downloadingDocx}
               />
             </div>
