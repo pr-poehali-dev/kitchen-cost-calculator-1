@@ -448,42 +448,55 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
         mt      = block.get('marginTop')
         mb      = block.get('marginBottom')
 
-        def _make_single_para(text_content, para_align=None, para_bold=False, para_italic=False, para_under=False, para_size=None, first=True):
-            """Создаёт один параграф. Одиночные \n внутри — мягкий перенос (w:br)."""
+        def _add_line_para(line_text, para_align=None, para_bold=False, para_italic=False, para_under=False, para_size=None, space_before_pt=0, space_after_pt=1):
+            """Добавляет один параграф с одной строкой текста."""
             p = doc.add_paragraph()
             p.alignment = para_align if para_align is not None else align
-            p.paragraph_format.space_before = Pt(float(mt) * 2.835) if (mt and first) else Pt(0)
-            p.paragraph_format.space_after  = Pt(float(mb) * 2.835) if mb else Pt(1)
+            p.paragraph_format.space_before = Pt(space_before_pt)
+            p.paragraph_format.space_after  = Pt(space_after_pt)
             p.paragraph_format.line_spacing = Pt(_base_pt * 1.25)
-            lines = text_content.split('\n')
-            for i, line in enumerate(lines):
-                if i > 0:
-                    p.add_run().add_break()
-                r = p.add_run(line)
-                r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
-                r.font.name  = _font_name
-                r.font.size  = Pt(para_size or fsize)
-                r.bold       = para_bold or bold
-                r.italic     = para_italic or italic
-                r.underline  = para_under or under
+            r = p.add_run(line_text)
+            r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+            r.font.name  = _font_name
+            r.font.size  = Pt(para_size or fsize)
+            r.bold       = para_bold or bold
+            r.italic     = para_italic or italic
+            r.underline  = para_under or under
             return p
 
         def make_para(text_content, para_align=None, para_bold=False, para_italic=False, para_under=False, para_size=None):
             """
-            Разбивает текст по двойным переносам (\n\n) на отдельные параграфы.
-            Одиночные \n внутри абзаца — мягкий перенос строки (w:br).
+            Каждый \n → отдельный параграф Word (без w:br).
+            \n\n → параграфы с увеличенным отступом после.
+            Это устраняет растяжку строк при justify-выравнивании.
             """
-            # Нормализуем: \r\n → \n, тройные+ → двойные
             import re as _re
             normalized = _re.sub(r'\r\n|\r', '\n', text_content)
-            normalized = _re.sub(r'\n{3,}', '\n\n', normalized)
-            chunks = normalized.split('\n\n')
+            normalized = _re.sub(r'\n{3,}', '\n\n', normalized.strip())
+
+            mt_pt = float(mt) * 2.835 if mt else 0
+            mb_pt = float(mb) * 2.835 if mb else 0
+
+            # Разбиваем на «блоки» по \n\n (логические абзацы)
+            blocks_list = normalized.split('\n\n')
             last_p = None
-            for idx, chunk in enumerate(chunks):
-                chunk = chunk.strip('\n')
-                if not chunk:
+            for bi, block_text in enumerate(blocks_list):
+                block_text = block_text.strip('\n')
+                if not block_text:
                     continue
-                last_p = _make_single_para(chunk, para_align, para_bold, para_italic, para_under, para_size, first=(idx == 0))
+                lines = block_text.split('\n')
+                for li, line in enumerate(lines):
+                    is_first = (bi == 0 and li == 0)
+                    is_last_in_block = (li == len(lines) - 1)
+                    is_last_block = (bi == len(blocks_list) - 1)
+
+                    sb = mt_pt if is_first else 0
+                    # После последней строки блока — небольшой отступ (аналог пустой строки)
+                    sa = (mb_pt if (is_last_in_block and is_last_block) else
+                          (3 if is_last_in_block else 0))
+
+                    last_p = _add_line_para(line, para_align, para_bold, para_italic, para_under, para_size,
+                                            space_before_pt=sb, space_after_pt=sa)
             return last_p
 
         if btype == 'header':
@@ -590,31 +603,45 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
                 el.set(_qn('w:val'), 'none')
 
             def _fill_cell_multiline(cell, txt):
-                """Заполняет ячейку: \n\n = новый параграф, \n = мягкий перенос."""
-                from docx.shared import Cm as _Cm2
-                normalized = _re2.sub(r'\r\n|\r', '\n', txt)
+                """Каждый \n → отдельный параграф ячейки (без w:br, без растяжки justify)."""
+                normalized = _re2.sub(r'\r\n|\r', '\n', txt.strip())
                 normalized = _re2.sub(r'\n{3,}', '\n\n', normalized)
-                chunks = [c.strip('\n') for c in normalized.split('\n\n') if c.strip('\n')]
-                for pi, chunk in enumerate(chunks):
-                    if pi == 0:
+                all_lines = []
+                for block_chunk in normalized.split('\n\n'):
+                    block_chunk = block_chunk.strip('\n')
+                    if not block_chunk:
+                        continue
+                    for li, line in enumerate(block_chunk.split('\n')):
+                        all_lines.append((line, li == len(block_chunk.split('\n')) - 1))
+                    all_lines.append(None)  # разделитель блоков (пустая строка)
+
+                first = True
+                for item in all_lines:
+                    if item is None:
+                        # пустая строка между блоками
+                        if not first:
+                            ep = cell.add_paragraph()
+                            ep.paragraph_format.space_before = Pt(0)
+                            ep.paragraph_format.space_after  = Pt(0)
+                            ep.paragraph_format.line_spacing = Pt(_base_pt * 0.6)
+                        continue
+                    line, _ = item
+                    if first:
                         p = cell.paragraphs[0]
+                        first = False
                     else:
                         p = cell.add_paragraph()
                     p.alignment = WD_ALIGN_PARAGRAPH.LEFT
                     p.paragraph_format.space_before = Pt(0)
-                    p.paragraph_format.space_after  = Pt(2)
+                    p.paragraph_format.space_after  = Pt(0)
                     p.paragraph_format.line_spacing = Pt(_base_pt * 1.25)
-                    lines = chunk.split('\n')
-                    for li, line in enumerate(lines):
-                        if li > 0:
-                            p.add_run().add_break()
-                        r = p.add_run(line)
-                        r.font.name  = _font_name
-                        r.font.size  = Pt(fsize)
-                        r.bold       = bold
-                        r.italic     = italic
-                        r.underline  = under
-                        r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+                    r = p.add_run(line)
+                    r.font.name  = _font_name
+                    r.font.size  = Pt(fsize)
+                    r.bold       = bold
+                    r.italic     = italic
+                    r.underline  = under
+                    r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
 
             for ci, txt in enumerate([left_text, right_text]):
                 from docx.shared import Cm as _Cm
