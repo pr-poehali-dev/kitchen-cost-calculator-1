@@ -397,8 +397,38 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
         'justify': WD_ALIGN_PARAGRAPH.JUSTIFY,
     }
 
+    def _eval_condition(block, c):
+        cond = block.get('condition')
+        if not cond: return True
+        field = cond.get('field','')
+        op    = cond.get('operator','eq')
+        val   = cond.get('value','')
+        if field == 'payment_type':   fval = str(c.get('payment_type') or '')
+        elif field == 'has_delivery': fval = 'yes' if float(c.get('delivery_cost') or 0) > 0 else 'no'
+        elif field == 'has_assembly': fval = 'yes' if float(c.get('assembly_cost') or 0) > 0 else 'no'
+        elif field == 'has_credit':
+            pt = str(c.get('payment_type') or '').lower()
+            fval = 'yes' if pt in ('credit','installment') else 'no'
+        elif field == 'prepaid_percent':
+            t = float(c.get('total_amount') or 0)
+            p = float(c.get('prepaid_amount') or 0)
+            fval = str(round(p/t*100) if t > 0 else 0)
+        elif field == 'total_amount': fval = str(float(c.get('total_amount') or 0))
+        else: return True
+        if op == 'set':     return bool(fval and fval not in ('','no','0'))
+        if op == 'not_set': return not bool(fval and fval not in ('','no','0'))
+        if op == 'eq':  return fval == val
+        if op == 'neq': return fval != val
+        try:
+            if op == 'gt': return float(fval) > float(val)
+            if op == 'lt': return float(fval) < float(val)
+        except: pass
+        return True
+
     for block in blocks:
         if not block.get('enabled', True):
+            continue
+        if not _eval_condition(block, c):
             continue
 
         btype   = block.get('type', 'paragraph')
@@ -512,6 +542,41 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
                     r = p.add_run(val)
                     r.font.name = _font_name
                     r.font.size = Pt(fsize)
+                    r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+
+        elif btype == 'two_col':
+            sep = '\n---\n'
+            idx = content.find(sep)
+            left_text  = content[:idx].strip()  if idx >= 0 else content.strip()
+            right_text = content[idx+5:].strip() if idx >= 0 else ''
+            t = doc.add_table(rows=1, cols=2)
+            t.style = 'Table Grid'
+            total_width_cm = 16.0
+            from docx.oxml.ns import qn as _qn
+            from lxml import etree as _etree
+            # убираем границы таблицы
+            tbl = t._tbl
+            tblPr = tbl.tblPr if tbl.tblPr is not None else _etree.SubElement(tbl, _qn('w:tblPr'))
+            tblBorders = _etree.SubElement(tblPr, _qn('w:tblBorders'))
+            for side in ('top','left','bottom','right','insideH','insideV'):
+                el = _etree.SubElement(tblBorders, _qn(f'w:{side}'))
+                el.set(_qn('w:val'), 'none')
+            for ci, txt in enumerate([left_text, right_text]):
+                from docx.shared import Cm as _Cm
+                t.rows[0].cells[ci].width = _Cm(total_width_cm / 2)
+                cell = t.rows[0].cells[ci]
+                p = cell.paragraphs[0]
+                p.alignment = align
+                lines = txt.split('\n')
+                for i, line in enumerate(lines):
+                    if i > 0:
+                        p.add_run().add_break()
+                    r = p.add_run(line)
+                    r.font.name  = _font_name
+                    r.font.size  = Pt(fsize)
+                    r.bold       = bold
+                    r.italic     = italic
+                    r.underline  = under
                     r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
 
         elif btype == 'calc_table':

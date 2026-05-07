@@ -27,6 +27,7 @@ const ADD_BLOCK_TYPES = [
   { type: 'divider',    label: 'Линия',          icon: 'Minus' },
   { type: 'spacer',     label: 'Отступ',         icon: 'ArrowUpDown' },
   { type: 'lines',      label: 'Линии',          icon: 'SeparatorHorizontal' },
+  { type: 'two_col',    label: '2 колонки',      icon: 'Columns2' },
   { type: 'table',      label: 'Таблица',        icon: 'Table' },
   { type: 'calc_table', label: 'Из расчёта',     icon: 'Calculator' },
   { type: 'image',      label: 'Фото',           icon: 'Image' },
@@ -41,6 +42,7 @@ const BLOCK_DEFAULTS: Record<string, Partial<Block>> = {
   table:      { label: 'Таблица',               content: 'Колонка 1;Колонка 2;Колонка 3\nЗначение 1;Значение 2;Значение 3' },
   calc_table: { label: 'Спецификация из расчёта', content: '', calcTableSettings: DEFAULT_CALC_TABLE_SETTINGS },
   image:      { label: 'Фото проекта',          content: '' },
+  two_col:    { label: 'Две колонки',           content: 'Левая колонка\nТекст слева\n---\nПравая колонка\nТекст справа' },
 };
 
 const SETTINGS_SLIDERS = [

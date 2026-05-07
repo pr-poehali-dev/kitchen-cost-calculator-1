@@ -7,6 +7,8 @@ import { API_URLS } from '@/config/api';
 
 export default function SettingsDocTemplates() {
   const [templates, setTemplates] = useState<Template[]>([]);
+  // savedTemplates — версии с сервера, не меняются при редактировании
+  const savedTemplatesRef = useRef<Template[]>([]);
   const [selectedDocType, setSelectedDocType] = useState('contract');
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [editingBlock, setEditingBlock] = useState<string | null>(null);
@@ -24,10 +26,12 @@ export default function SettingsDocTemplates() {
     try {
       const res = await fetch(`${API}/?doc_type=${selectedDocType}`, { headers: authHeaders() });
       const data = await res.json();
-      setTemplates(Array.isArray(data) ? data : []);
-      if (Array.isArray(data) && data.length > 0) {
-        const keep = keepSelectedId ? data.find((t: Template) => t.id === keepSelectedId) : null;
-        const def = keep || data.find((t: Template) => t.is_default) || data[0];
+      const list = Array.isArray(data) ? data : [];
+      setTemplates(list);
+      savedTemplatesRef.current = list; // сохраняем оригиналы с сервера
+      if (list.length > 0) {
+        const keep = keepSelectedId ? list.find((t: Template) => t.id === keepSelectedId) : null;
+        const def = keep || list.find((t: Template) => t.is_default) || list[0];
         setSelectedTemplate(def);
       } else {
         setSelectedTemplate(null);
@@ -73,6 +77,10 @@ export default function SettingsDocTemplates() {
           settings: target.settings,
         }),
       });
+      // Обновляем серверную копию после успешного сохранения
+      savedTemplatesRef.current = savedTemplatesRef.current.map(t =>
+        t.id === target.id ? { ...t, name: target.name, blocks: target.blocks, settings: target.settings } : t
+      );
       setIsDirty(false);
       if (!tpl) toast.success('Сохранено');
     } catch {
@@ -83,8 +91,11 @@ export default function SettingsDocTemplates() {
   };
 
   const doSwitch = (t: Template) => {
-    const fresh = templates.find(tpl => tpl.id === t.id) ?? t;
+    // Берём версию с сервера (savedTemplatesRef), а не изменённую локально
+    const fresh = savedTemplatesRef.current.find(tpl => tpl.id === t.id) ?? t;
     setSelectedTemplate(fresh);
+    // Восстанавливаем templates обратно к серверной версии (откат несохранённых изменений)
+    setTemplates(savedTemplatesRef.current);
     setEditingBlock(null);
     setIsDirty(false);
     setPendingSwitch(null);

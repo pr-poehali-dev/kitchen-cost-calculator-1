@@ -76,7 +76,7 @@ export default function DocTemplateBlockItem({
           block.type === 'calc_table' ? 'border-cyan-500/40 text-cyan-400 bg-cyan-500/10' :
           'border-border text-[hsl(var(--text-muted))]'
         }`}>
-          {{ section:'раздел', header:'шапка', divider:'линия', spacer:'отступ', lines:'линии', table:'таблица', paragraph:'текст', image:'фото', calc_table:'из расчёта' }[block.type] || block.type}
+          {{ section:'раздел', header:'шапка', divider:'линия', spacer:'отступ', lines:'линии', table:'таблица', paragraph:'текст', image:'фото', calc_table:'из расчёта', two_col:'2 колонки' }[block.type] || block.type}
         </span>
 
         <span className="flex-1 text-xs text-foreground truncate">{block.label}</span>

@@ -513,6 +513,23 @@ export function buildPreviewHtml(template: Template): string {
         ${body.map(r => `<tr>${r.split(';').map(c => `<td style="border:1px solid #000;padding:3px 5px;word-break:break-word">${c}</td>`).join('')}</tr>`).join('')}
       </table>`;
     }
+    if (b.type === 'two_col') {
+      // Формат content: левый текст\n---\nправый текст
+      const sep = b.content.indexOf('\n---\n');
+      const leftRaw  = sep >= 0 ? b.content.slice(0, sep)  : b.content;
+      const rightRaw = sep >= 0 ? b.content.slice(sep + 5) : '';
+      const leftHtml  = applyPreviewVars(leftRaw).replace(/\n/g, '<br/>');
+      const rightHtml = applyPreviewVars(rightRaw).replace(/\n/g, '<br/>');
+      const twoStyle = [
+        `margin-top:${mt ?? '6px'}`,
+        `margin-bottom:${mb ?? '6px'}`,
+        b.fontSize ? `font-size:${b.fontSize}pt` : `font-size:${globalFontSize}pt`,
+      ].join(';');
+      return `<div style="display:table;width:100%;${twoStyle}">
+        <div style="display:table-cell;width:50%;vertical-align:top;padding-right:4mm">${leftHtml}</div>
+        <div style="display:table-cell;width:50%;vertical-align:top;padding-left:4mm">${rightHtml}</div>
+      </div>`;
+    }
     // paragraph и прочие
     if (b.type === 'calc_table') {
       const cts = b.calcTableSettings || { columns: ['name','qty','unit','total'], showBlockHeaders: true, showServices: true, showTotal: true, priceMode: 'client' };

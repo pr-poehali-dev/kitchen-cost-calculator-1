@@ -12,7 +12,7 @@ const ALIGN_OPTIONS: { value: BlockAlign; icon: string; title: string }[] = [
   { value: 'justify', icon: 'AlignJustify', title: 'По ширине' },
 ];
 
-const HAS_TYPOGRAPHY = ['paragraph', 'section', 'header', 'table'];
+const HAS_TYPOGRAPHY = ['paragraph', 'section', 'header', 'table', 'two_col'];
 const HAS_CONTENT    = ['paragraph', 'section', 'header'];
 
 function VarPicker({ onInsert }: { onInsert: (v: string) => void }) {
@@ -343,6 +343,47 @@ export default function BlockEditorPanels({ block, textareaRef, onUpdate, insert
             <p className="text-[10px] text-[hsl(var(--text-muted))]">
               Таблица автоматически заполняется из смет, привязанных к карточке клиента.
             </p>
+          </div>
+        );
+      })()}
+
+      {/* Две колонки */}
+      {block.type === 'two_col' && (() => {
+        const sep = block.content.indexOf('\n---\n');
+        const leftVal  = sep >= 0 ? block.content.slice(0, sep)  : block.content;
+        const rightVal = sep >= 0 ? block.content.slice(sep + 5) : '';
+        const update = (left: string, right: string) => onUpdate('content', left + '\n---\n' + right);
+        return (
+          <div className="space-y-2">
+            <p className="text-[10px] text-[hsl(var(--text-muted))]">
+              Блок делится на две равные колонки. Разделитель <code className="bg-[hsl(220,14%,10%)] px-1 rounded">---</code> нельзя удалять.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] text-[hsl(var(--text-muted))]">Левая колонка</label>
+                  <VarPicker onInsert={v => update(leftVal + v, rightVal)} />
+                </div>
+                <textarea
+                  value={leftVal}
+                  onChange={e => update(e.target.value, rightVal)}
+                  rows={8}
+                  className="w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1.5 text-xs text-foreground resize-y font-mono leading-relaxed"
+                />
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] text-[hsl(var(--text-muted))]">Правая колонка</label>
+                  <VarPicker onInsert={v => update(leftVal, rightVal + v)} />
+                </div>
+                <textarea
+                  value={rightVal}
+                  onChange={e => update(leftVal, e.target.value)}
+                  rows={8}
+                  className="w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1.5 text-xs text-foreground resize-y font-mono leading-relaxed"
+                />
+              </div>
+            </div>
           </div>
         );
       })()}
