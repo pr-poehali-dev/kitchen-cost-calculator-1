@@ -112,7 +112,13 @@ export default function SettingsDocTemplates() {
 
   const confirmSwitch = async (save: boolean) => {
     if (!pendingSwitch) return;
-    if (save) await saveTemplate(selectedTemplate ?? undefined);
+    if (save) {
+      // Берём актуальную версию из templates (с несохранёнными изменениями)
+      const dirty = selectedTemplate
+        ? templates.find(t => t.id === selectedTemplate.id) ?? selectedTemplate
+        : undefined;
+      await saveTemplate(dirty);
+    }
     doSwitch(pendingSwitch);
   };
 

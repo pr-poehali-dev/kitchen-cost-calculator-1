@@ -110,6 +110,7 @@ export const VAR_GROUPS: { label: string; vars: { key: string; desc: string; pre
   {
     label: 'Технический проект',
     vars: [
+      { key: '{{фото_проекта}}',       desc: 'Фото рендера из карточки клиента', preview: '(url фото)' },
       { key: '{{корпус}}',             desc: 'Корпус 1',                       preview: 'ЛДСП Белый 16мм' },
       { key: '{{корпус2}}',            desc: 'Корпус 2',                       preview: 'ЛДСП Дуб Сонома' },
       { key: '{{фасад}}',              desc: 'Фасад 1',                        preview: 'МДФ Белый матовый' },
@@ -145,7 +146,8 @@ export const VAR_GROUPS: { label: string; vars: { key: string; desc: string; pre
   {
     label: 'Ответственные',
     vars: [
-      { key: '{{менеджер}}',              desc: 'Имя менеджера',                  preview: 'Сазонов Василий Николаевич' },
+      { key: '{{менеджер}}',              desc: 'Имя менеджера',                   preview: 'Сазонов Василий Николаевич' },
+      { key: '{{менеджер_рп}}',          desc: 'Имя менеджера (род. падеж)',      preview: 'Сазонова Василия Николаевича' },
       { key: '{{номер_доверенности}}',   desc: 'Номер доверенности менеджера',   preview: '20' },
       { key: '{{дата_доверенности}}',    desc: 'Дата доверенности менеджера',    preview: '12.01.2026' },
       { key: '{{дизайнер}}',             desc: 'Имя дизайнера',                  preview: 'Петрова Анна Сергеевна' },
@@ -355,6 +357,9 @@ const PREVIEW_VALUES: Record<string, string> = {
   '{{аванс_кредит}}':         '175 000',
   '{{остаток_кредит}}':       '175 000',
   // Техпроект
+  // Фото проекта
+  '{{фото_проекта}}':         'https://placehold.co/800x500/1a1a2e/4ade80?text=Фото+проекта',
+  // Техпроект
   '{{корпус}}':               'ЛДСП Белый 16мм',
   '{{корпус2}}':              'ЛДСП Дуб Сонома',
   '{{фасад}}':                'МДФ Белый матовый',
@@ -383,6 +388,7 @@ const PREVIEW_VALUES: Record<string, string> = {
   '{{корр_счёт}}':            '30101810200000000645',
   // Ответственные
   '{{менеджер}}':             'Сазонов Василий Николаевич',
+  '{{менеджер_рп}}':          'Сазонова Василия Николаевича',
   '{{дизайнер}}':             'Петрова Анна Сергеевна',
   '{{замерщик}}':             'Козлов Дмитрий Игоревич',
   // Доверенность менеджера
@@ -470,17 +476,19 @@ export function buildPreviewHtml(template: Template): string {
     }
     if (b.type === 'spacer')  return `<div style="height:${b.content || 20}px${mt ? `;margin-top:${mt}` : ''}${mb ? `;margin-bottom:${mb}` : ''}"></div>`;
     if (b.type === 'image') {
-      const url = b.content || '';
+      const url = applyPreviewVars(b.content || '');
       const w = b.imageWidth;
       const h = b.imageHeight;
       const align = b.align ?? 'center';
       const imgStyle = [
-        w ? `width:${w}mm;` : 'max-width:100%;',
-        h ? `height:${h}mm;object-fit:cover;` : 'max-height:180mm;object-fit:contain;',
+        'display:block;',
+        w ? `width:${w}mm;max-width:100%;` : 'width:100%;max-width:100%;',
+        h ? `height:${h}mm;object-fit:cover;` : 'height:auto;object-fit:contain;',
       ].join('');
       const wrapStyle = `text-align:${align};${mt ? `margin-top:${mt};` : 'margin-top:6px;'}${mb ? `margin-bottom:${mb}` : 'margin-bottom:6px'}`;
-      if (!url) return `<div style="${wrapStyle};border:1px dashed #ccc;padding:20px;color:#999;font-size:9pt">[ Фото технического проекта ]</div>`;
-      return `<div style="${wrapStyle}"><img src="${url}" style="${imgStyle}" /></div>`;
+      const marginStyle = align === 'center' ? 'margin-left:auto;margin-right:auto;' : align === 'right' ? 'margin-left:auto;' : '';
+      if (!url) return `<div style="${wrapStyle};border:1px dashed #ccc;padding:20px;color:#999;font-size:9pt;text-align:center">[ Фото технического проекта ]</div>`;
+      return `<div style="${wrapStyle}"><img src="${url}" style="${imgStyle}${marginStyle}" /></div>`;
     }
     if (b.type === 'lines') {
       const count = parseInt(b.content) || 6;

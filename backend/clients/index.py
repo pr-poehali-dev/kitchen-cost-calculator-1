@@ -1170,6 +1170,7 @@ def _apply_vars(text: str, c: dict, company: dict) -> str:
         '{{аванс_кредит}}':          _fmt_money(float(c.get('credit_prepaid') or prepaid)),
         '{{остаток_кредит}}':        _fmt_money(float(c.get('credit_balance') or balance)),
         # ── Техпроект ───────────────────────────────────────────
+        '{{фото_проекта}}':          str(c.get('tech_image_url','') or ''),
         '{{корпус}}':                str(c.get('tech_korpus','') or ''),
         '{{корпус2}}':               str(c.get('tech_korpus2','') or ''),
         '{{фасад}}':                 str(c.get('tech_fasad1','') or ''),
@@ -1198,6 +1199,7 @@ def _apply_vars(text: str, c: dict, company: dict) -> str:
         '{{корр_счёт}}':             _co(company, 'ks', ''),
         # ── Ответственные ───────────────────────────────────────
         '{{менеджер}}':              str(c.get('manager_name','') or '___________'),
+        '{{менеджер_рп}}':           _genitive_name(str(c.get('manager_name','') or '')) if c.get('manager_name') else '___________',
         '{{дизайнер}}':              str(c.get('designer_name') or c.get('designer','') or '___________'),
         '{{замерщик}}':              str(c.get('measurer','') or ''),
         '{{номер_доверенности}}':    str(c.get('manager_poa_number','') or '____'),
