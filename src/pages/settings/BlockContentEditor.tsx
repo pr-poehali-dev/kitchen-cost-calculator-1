@@ -1,6 +1,21 @@
 import { RefObject } from 'react';
 import Icon from '@/components/ui/icon';
 import type { Block, BlockAlign, CalcTableSettings } from './docTemplateTypes';
+
+function wrapBold(textarea: HTMLTextAreaElement, onChange: (val: string) => void) {
+  const { selectionStart: s, selectionEnd: e, value } = textarea;
+  const selected = value.slice(s, e);
+  if (!selected) return;
+  const isBold = selected.startsWith('**') && selected.endsWith('**') && selected.length > 4;
+  const replacement = isBold ? selected.slice(2, -2) : `**${selected}**`;
+  const next = value.slice(0, s) + replacement + value.slice(e);
+  onChange(next);
+  requestAnimationFrame(() => {
+    textarea.focus();
+    const newEnd = isBold ? s + replacement.length : e + 4;
+    textarea.setSelectionRange(s, newEnd);
+  });
+}
 import { CALC_TABLE_COLUMNS } from './docTemplateTypes';
 import BlockTableEditor from './BlockTableEditor';
 import BlockVarPicker from './BlockVarPicker';
@@ -29,7 +44,20 @@ export default function BlockContentEditor({ block, textareaRef, onUpdate, inser
         <div>
           <div className="flex items-center justify-between mb-1">
             <label className="text-[10px] text-[hsl(var(--text-muted))]">Содержимое</label>
-            <BlockVarPicker onInsert={insertVar} />
+            <div className="flex items-center gap-1">
+              <button
+                type="button"
+                title="Жирный (выдели текст и нажми)"
+                onMouseDown={e => {
+                  e.preventDefault();
+                  if (textareaRef.current) wrapBold(textareaRef.current, v => onUpdate('content', v));
+                }}
+                className="px-2 py-0.5 rounded border border-border text-[11px] font-bold text-[hsl(var(--text-muted))] hover:text-foreground hover:border-amber-500/50 hover:bg-amber-500/10 transition-all"
+              >
+                Ж
+              </button>
+              <BlockVarPicker onInsert={insertVar} />
+            </div>
           </div>
           <textarea
             ref={textareaRef}
@@ -39,6 +67,7 @@ export default function BlockContentEditor({ block, textareaRef, onUpdate, inser
             className="w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1.5 text-xs text-foreground resize-y font-mono leading-relaxed"
             style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}
           />
+          <p className="text-[9px] text-[hsl(var(--text-muted))] mt-1">Выдели слова и нажми «Ж» — станут жирными</p>
         </div>
       )}
 

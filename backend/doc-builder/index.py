@@ -448,6 +448,22 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
         mt      = block.get('marginTop')
         mb      = block.get('marginBottom')
 
+        def _add_runs_with_bold(p, line, para_bold, para_italic, para_under, para_size):
+            import re as _re_b
+            parts = _re_b.split(r'(\*\*.+?\*\*)', line)
+            for part in parts:
+                if part.startswith('**') and part.endswith('**') and len(part) > 4:
+                    r = p.add_run(part[2:-2])
+                    r.bold = True
+                else:
+                    r = p.add_run(part)
+                    r.bold = para_bold or bold
+                r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+                r.font.name  = _font_name
+                r.font.size  = Pt(para_size or fsize)
+                r.italic     = para_italic or italic
+                r.underline  = para_under or under
+
         def _make_single_para(text_content, para_align=None, para_bold=False, para_italic=False, para_under=False, para_size=None, first=True):
             p = doc.add_paragraph()
             p.alignment = para_align if para_align is not None else align
@@ -458,13 +474,7 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
             for i, line in enumerate(lines):
                 if i > 0:
                     p.add_run().add_break()
-                r = p.add_run(line)
-                r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
-                r.font.name  = _font_name
-                r.font.size  = Pt(para_size or fsize)
-                r.bold       = para_bold or bold
-                r.italic     = para_italic or italic
-                r.underline  = para_under or under
+                _add_runs_with_bold(p, line, para_bold, para_italic, para_under, para_size)
             return p
 
         def make_para(text_content, para_align=None, para_bold=False, para_italic=False, para_under=False, para_size=None):
@@ -598,13 +608,7 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
                     for li, line in enumerate(chunk.split('\n')):
                         if li > 0:
                             p.add_run().add_break()
-                        r = p.add_run(line)
-                        r.font.name  = _font_name
-                        r.font.size  = Pt(fsize)
-                        r.bold       = bold
-                        r.italic     = italic
-                        r.underline  = under
-                        r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+                        _add_runs_with_bold(p, line, False, False, False, None)
 
             for ci, txt in enumerate([left_text, right_text]):
                 from docx.shared import Cm as _Cm

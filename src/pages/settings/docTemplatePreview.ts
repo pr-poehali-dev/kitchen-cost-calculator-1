@@ -111,6 +111,10 @@ export function applyPreviewVars(text: string): string {
   );
 }
 
+export function applyBold(text: string): string {
+  return text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+}
+
 // ── Условия блоков для превью ───────────────────────────────────────────────
 const PREVIEW_CONDITION_VALS: Record<string, string> = {
   payment_type: 'cash',
@@ -135,7 +139,7 @@ function evalCondition(condition: Block['condition']): boolean {
 
 // ── Рендер блоков ───────────────────────────────────────────────────────────
 function renderBlock(b: Block, globalFontSize: number): string {
-  const text = applyPreviewVars(b.content).replace(/\n/g, '<br/>');
+  const text = applyBold(applyPreviewVars(b.content).replace(/\n/g, '<br/>'));
   const style = blockStyle(b, globalFontSize);
   const mt = b.marginTop    != null ? `${b.marginTop}mm`    : null;
   const mb = b.marginBottom != null ? `${b.marginBottom}mm` : null;
