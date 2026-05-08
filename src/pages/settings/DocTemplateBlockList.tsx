@@ -64,7 +64,7 @@ function SortableBlockItem({ block, children }: { block: Block; children: ReactN
 export default function DocTemplateBlockList({
   template, editingBlock, onUpdate, onEditBlock, onRegisterInsert,
 }: Props) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(() => localStorage.getItem('tpl_blocks_open') !== 'false');
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -112,7 +112,7 @@ export default function DocTemplateBlockList({
     <div className="mx-4 mb-4 border border-border rounded-lg overflow-hidden">
       {/* Заголовок секции — кликабельный */}
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen(o => { localStorage.setItem('tpl_blocks_open', String(!o)); return !o; })}
         className="w-full flex items-center justify-between px-3 py-2.5 bg-[hsl(220,14%,10%)] hover:bg-[hsl(220,14%,12%)] transition-colors"
       >
         <div className="flex items-center gap-2">

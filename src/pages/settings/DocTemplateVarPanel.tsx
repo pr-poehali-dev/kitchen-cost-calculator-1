@@ -8,7 +8,7 @@ interface Props {
 }
 
 export default function DocTemplateVarPanel({ onInsert }: Props) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(() => localStorage.getItem('tpl_vars_open') !== 'false');
   const [query, setQuery] = useState('');
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
   const q = query.trim().toLowerCase();
@@ -26,7 +26,7 @@ export default function DocTemplateVarPanel({ onInsert }: Props) {
     <div className="border border-border rounded-lg overflow-hidden">
       {/* Шапка — кликабельная */}
       <button
-        onClick={() => setOpen(o => !o)}
+        onClick={() => setOpen(o => { localStorage.setItem('tpl_vars_open', String(!o)); return !o; })}
         className="w-full px-3 py-2 bg-[hsl(220,14%,10%)] hover:bg-[hsl(220,14%,12%)] transition-colors flex items-center gap-2"
       >
         <Icon name="Braces" size={12} className="text-blue-400 shrink-0" />
