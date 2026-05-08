@@ -18,6 +18,7 @@ interface Props {
   onSetDefault: () => void;
   onPreview: () => void;
   onDuplicate: () => void;
+  onToggleLock: () => void;
   onEditBlock: (id: string | null) => void;
   onDownloadDocx?: () => void;
   downloadingDocx?: boolean;
@@ -25,13 +26,13 @@ interface Props {
 
 export default function DocTemplateEditor({
   template, saving, isDirty, isAdmin, editingBlock,
-  onUpdate, onSave, onApply, onDelete, onSetDefault, onPreview, onDuplicate, onEditBlock,
+  onUpdate, onSave, onApply, onDelete, onSetDefault, onPreview, onDuplicate, onToggleLock, onEditBlock,
   onDownloadDocx, downloadingDocx,
 }: Props) {
   const [insertFn, setInsertFn] = useState<((v: string) => void) | null>(null);
+  const locked = template.is_locked;
 
   const handleRegisterInsert = (fn: ((v: string) => void) | null) => {
-    // useState с функцией требует обёртку чтобы не вызвался как initializer
     setInsertFn(fn ? () => (v: string) => fn(v) : null);
   };
 
@@ -49,26 +50,30 @@ export default function DocTemplateEditor({
         onDelete={onDelete}
         onPreview={onPreview}
         onDuplicate={onDuplicate}
+        onToggleLock={onToggleLock}
         onDownloadDocx={onDownloadDocx}
         downloadingDocx={downloadingDocx}
       />
 
-      <DocTemplatePageSettings
-        template={template}
-        onUpdate={onUpdate}
-      />
+      {/* Lock overlay — блокирует настройки страницы, блоки и переменные */}
+      <div className={locked ? 'pointer-events-none opacity-50 select-none' : ''}>
+        <DocTemplatePageSettings
+          template={template}
+          onUpdate={onUpdate}
+        />
 
-      <div className="px-4">
-        <DocTemplateVarPanel onInsert={insertFn} />
+        <div className="px-4">
+          <DocTemplateVarPanel onInsert={insertFn} />
+        </div>
+
+        <DocTemplateBlockList
+          template={template}
+          editingBlock={editingBlock}
+          onUpdate={onUpdate}
+          onEditBlock={onEditBlock}
+          onRegisterInsert={handleRegisterInsert}
+        />
       </div>
-
-      <DocTemplateBlockList
-        template={template}
-        editingBlock={editingBlock}
-        onUpdate={onUpdate}
-        onEditBlock={onEditBlock}
-        onRegisterInsert={handleRegisterInsert}
-      />
 
     </div>
   );

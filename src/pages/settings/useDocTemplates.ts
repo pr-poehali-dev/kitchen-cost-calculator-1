@@ -123,6 +123,62 @@ export function useDocTemplates(selectedDocType: string) {
     await loadTemplates();
   }, [loadTemplates]);
 
+  const toggleLock = useCallback(async () => {
+    const cur = currentTemplateRef.current;
+    if (!cur) return;
+    const newLocked = !cur.is_locked;
+    await fetch(`${API}/?id=${cur.id}`, {
+      method: 'PUT',
+      headers: authHeaders(),
+      body: JSON.stringify({ is_locked: newLocked }),
+    });
+    const updated = { ...cur, is_locked: newLocked };
+    currentTemplateRef.current = updated;
+    savedTemplatesRef.current = savedTemplatesRef.current.map(t => t.id === cur.id ? updated : t);
+    setSelectedTemplate(updated);
+    setTemplates(prev => prev.map(t => t.id === cur.id ? updated : t));
+    toast.success(newLocked ? 'Шаблон заблокирован от редактирования' : 'Шаблон разблокирован');
+  }, []);
+
+  const exportBackup = useCallback(async () => {
+    const res = await fetch(`${API}/?action=export`, { headers: authHeaders() });
+    if (!res.ok) { toast.error('Ошибка экспорта'); return; }
+    const data = await res.json();
+    const json = JSON.stringify(data, null, 2);
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    const date = new Date().toISOString().slice(0, 10);
+    a.href = url; a.download = `templates_backup_${date}.json`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 5000);
+    const count = data.templates?.length ?? 0;
+    toast.success(`Резервная копия скачана — ${count} шаблонов`);
+  }, []);
+
+  const importBackup = useCallback(async (file: File) => {
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      const templates = data.templates;
+      if (!Array.isArray(templates) || templates.length === 0) {
+        toast.error('Файл не содержит шаблонов');
+        return;
+      }
+      const res = await fetch(`${API}/?action=import`, {
+        method: 'POST',
+        headers: authHeaders(),
+        body: JSON.stringify({ templates }),
+      });
+      const result = await res.json();
+      if (!res.ok) { toast.error(result.error || 'Ошибка импорта'); return; }
+      toast.success(`Восстановлено ${result.imported} шаблонов`);
+      await loadTemplates();
+    } catch {
+      toast.error('Не удалось прочитать файл резервной копии');
+    }
+  }, [loadTemplates]);
+
   const setDefault = useCallback(async (id: string) => {
     await fetch(`${API}/?id=${id}`, {
       method: 'PUT',
@@ -210,5 +266,6 @@ export function useDocTemplates(selectedDocType: string) {
     loadTemplates, saveTemplate, switchTemplate, confirmSwitch,
     createTemplate, deleteTemplate, setDefault, duplicateTemplate,
     handleApplyTemplate, downloadDocx, handleUpdateTemplate,
+    toggleLock, exportBackup, importBackup,
   };
 }

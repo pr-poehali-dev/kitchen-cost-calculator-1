@@ -167,9 +167,65 @@ def handler(event: dict, context) -> dict:
                 return ok(rows)
 
         body = json.loads(event.get('body') or '{}')
+        action = qs.get('action', '')
 
-        # POST — создать шаблон
+        # GET export — скачать все шаблоны как JSON-бэкап
+        if method == 'GET' and action == 'export':
+            cur.execute(
+                f'SELECT id, doc_type, name, is_default, is_locked, blocks, settings, created_at, updated_at FROM {SCHEMA}.doc_templates WHERE user_id = %s ORDER BY doc_type, is_default DESC',
+                (user_id,)
+            )
+            cols = [d[0] for d in cur.description]
+            rows = [dict(zip(cols, r)) for r in cur.fetchall()]
+            for r in rows:
+                if r.get('created_at'): r['created_at'] = str(r['created_at'])
+                if r.get('updated_at'): r['updated_at'] = str(r['updated_at'])
+            backup = {
+                'version': 1,
+                'exported_at': datetime.utcnow().isoformat() + 'Z',
+                'user_id': user_id,
+                'templates': rows,
+            }
+            return {
+                'statusCode': 200,
+                'headers': {**CORS, 'Content-Type': 'application/json', 'Content-Disposition': 'attachment; filename="templates_backup.json"'},
+                'body': json.dumps(backup, ensure_ascii=False, indent=2),
+            }
+
+        # POST — создать шаблон или импортировать бэкап
         if method == 'POST':
+            # Импорт бэкапа
+            if action == 'import':
+                templates_data = body.get('templates') or []
+                if not templates_data:
+                    return err('Нет данных для импорта')
+                imported = 0
+                for t in templates_data:
+                    doc_type = t.get('doc_type', '')
+                    if not doc_type:
+                        continue
+                    tname = t.get('name', 'Импорт')
+                    blocks = t.get('blocks') or []
+                    settings = t.get('settings') or {}
+                    is_default = bool(t.get('is_default', False))
+                    is_locked = bool(t.get('is_locked', False))
+                    new_id = str(uuid.uuid4())
+                    if is_default:
+                        cur.execute(
+                            f'UPDATE {SCHEMA}.doc_templates SET is_default = false WHERE user_id = %s AND doc_type = %s',
+                            (user_id, doc_type)
+                        )
+                    cur.execute(
+                        f'''INSERT INTO {SCHEMA}.doc_templates (id, user_id, doc_type, name, is_default, is_locked, blocks, settings)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)''',
+                        (new_id, user_id, doc_type, tname, is_default, is_locked,
+                         json.dumps(blocks, ensure_ascii=False),
+                         json.dumps(settings, ensure_ascii=False))
+                    )
+                    imported += 1
+                return ok({'imported': imported}, 201)
+
+            # Создание нового шаблона
             doc_type = body.get('doc_type', '')
             name = body.get('name', 'Новый шаблон')
             blocks = body.get('blocks') or _default_blocks(doc_type)
@@ -181,7 +237,6 @@ def handler(event: dict, context) -> dict:
 
             new_id = str(uuid.uuid4())
 
-            # Если новый шаблон — default, снимаем флаг с остальных
             if is_default:
                 cur.execute(
                     f'UPDATE {SCHEMA}.doc_templates SET is_default = false WHERE user_id = %s AND doc_type = %s',
@@ -189,8 +244,8 @@ def handler(event: dict, context) -> dict:
                 )
 
             cur.execute(
-                f'''INSERT INTO {SCHEMA}.doc_templates (id, user_id, doc_type, name, is_default, blocks, settings)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)''',
+                f'''INSERT INTO {SCHEMA}.doc_templates (id, user_id, doc_type, name, is_default, is_locked, blocks, settings)
+                    VALUES (%s, %s, %s, %s, %s, false, %s, %s)''',
                 (new_id, user_id, doc_type, name, is_default,
                  json.dumps(blocks, ensure_ascii=False),
                  json.dumps(settings, ensure_ascii=False))
@@ -206,13 +261,18 @@ def handler(event: dict, context) -> dict:
             blocks = body.get('blocks')
             settings = body.get('settings')
             is_default = body.get('is_default')
+            is_locked = body.get('is_locked')
 
-            # Проверяем что шаблон принадлежит пользователю
-            cur.execute(f'SELECT doc_type FROM {SCHEMA}.doc_templates WHERE id = %s AND user_id = %s', (template_id, user_id))
+            # Проверяем что шаблон принадлежит пользователю и не заблокирован (кроме изменения самой блокировки)
+            cur.execute(f'SELECT doc_type, is_locked FROM {SCHEMA}.doc_templates WHERE id = %s AND user_id = %s', (template_id, user_id))
             row = cur.fetchone()
             if not row:
                 return err('Шаблон не найден', 404)
-            doc_type = row[0]
+            doc_type, locked_now = row
+
+            # Если шаблон заблокирован — разрешаем только смену is_locked (разблокировку)
+            if locked_now and is_locked is None:
+                return err('Шаблон заблокирован от редактирования', 423)
 
             if is_default:
                 cur.execute(
@@ -226,6 +286,7 @@ def handler(event: dict, context) -> dict:
             if blocks is not None: fields.append('blocks = %s'); values.append(json.dumps(blocks, ensure_ascii=False))
             if settings is not None: fields.append('settings = %s'); values.append(json.dumps(settings, ensure_ascii=False))
             if is_default is not None: fields.append('is_default = %s'); values.append(is_default)
+            if is_locked is not None: fields.append('is_locked = %s'); values.append(is_locked)
             fields.append('updated_at = now()')
             values.extend([template_id, user_id])
 

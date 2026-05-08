@@ -22,6 +22,7 @@ export default function SettingsDocTemplates() {
     loadTemplates, saveTemplate, switchTemplate, confirmSwitch,
     createTemplate, deleteTemplate, setDefault, duplicateTemplate,
     handleApplyTemplate, downloadDocx, handleUpdateTemplate,
+    toggleLock, exportBackup, importBackup,
   } = useDocTemplates(selectedDocType);
 
   useEffect(() => { loadTemplates(); }, [loadTemplates]);
@@ -80,18 +81,44 @@ export default function SettingsDocTemplates() {
             <Icon name="ChevronDown" size={11} className="absolute right-2 top-1/2 -translate-y-1/2 text-[hsl(var(--text-muted))] pointer-events-none" />
           </div>
         </div>
-        <button
-          onClick={() => setShowPreview(p => !p)}
-          title={showPreview ? 'Скрыть превью' : 'Показать превью'}
-          className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-all ${
-            showPreview
-              ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/15'
-              : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground hover:border-border/70'
-          }`}
-        >
-          <Icon name={showPreview ? 'EyeOff' : 'Eye'} size={13} />
-          {showPreview ? 'Скрыть' : 'Превью'}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Бэкап */}
+          <div className="hidden md:flex items-center gap-1">
+            <button
+              onClick={exportBackup}
+              title="Скачать резервную копию всех шаблонов"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border text-xs text-[hsl(var(--text-muted))] hover:text-sky-400 hover:border-sky-500/40 transition-all"
+            >
+              <Icon name="Download" size={12} />
+              Бэкап
+            </button>
+            <label
+              title="Восстановить шаблоны из резервной копии"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border text-xs text-[hsl(var(--text-muted))] hover:text-sky-400 hover:border-sky-500/40 transition-all cursor-pointer"
+            >
+              <Icon name="Upload" size={12} />
+              Восстановить
+              <input
+                type="file"
+                accept=".json"
+                className="hidden"
+                onChange={e => { const f = e.target.files?.[0]; if (f) { importBackup(f); e.target.value = ''; } }}
+              />
+            </label>
+          </div>
+          <button
+            onClick={() => setShowPreview(p => !p)}
+            title={showPreview ? 'Скрыть превью' : 'Показать превью'}
+            className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-all ${
+              showPreview
+                ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/15'
+                : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground hover:border-border/70'
+            }`}
+          >
+            <Icon name={showPreview ? 'EyeOff' : 'Eye'} size={13} />
+            {showPreview ? 'Скрыть' : 'Превью'}
+          </button>
+        </div>
       </div>
 
       {/* ── Таб-бар шаблонов ── */}
@@ -116,7 +143,8 @@ export default function SettingsDocTemplates() {
                         : 'border-b-transparent text-[hsl(var(--text-muted))] hover:text-foreground'
                     }`}
                   >
-                    {t.is_default && <Icon name="Star" size={9} className="text-yellow-400 shrink-0" />}
+                    {t.is_locked && <Icon name="Lock" size={9} className="text-amber-400 shrink-0" />}
+                    {!t.is_locked && t.is_default && <Icon name="Star" size={9} className="text-yellow-400 shrink-0" />}
                     {t.name}
                     {isActive && isDirty && (
                       <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0" title="Есть несохранённые изменения" />
@@ -188,6 +216,7 @@ export default function SettingsDocTemplates() {
                 onSetDefault={() => setDefault(selectedTemplate.id)}
                 onPreview={() => setShowPreview(p => !p)}
                 onDuplicate={duplicateTemplate}
+                onToggleLock={toggleLock}
                 onEditBlock={setEditingBlock}
                 onDownloadDocx={downloadDocx}
                 downloadingDocx={downloadingDocx}

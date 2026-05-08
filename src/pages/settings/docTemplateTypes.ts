@@ -268,6 +268,7 @@ export interface Template {
   doc_type: string;
   name: string;
   is_default: boolean;
+  is_locked: boolean;
   blocks: Block[];
   settings: Record<string, string | number | boolean>;
 }
