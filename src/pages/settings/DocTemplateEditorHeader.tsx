@@ -5,6 +5,7 @@ interface Props {
   template: Template;
   saving: boolean;
   isDirty: boolean;
+  isAdmin: boolean;
   onUpdate: (t: Template) => void;
   onSave: () => void;
   onApply: () => void;
@@ -16,7 +17,7 @@ interface Props {
 }
 
 export default function DocTemplateEditorHeader({
-  template, saving, isDirty,
+  template, saving, isDirty, isAdmin,
   onUpdate, onSave, onApply, onDelete, onPreview, onDuplicate,
   onDownloadDocx, downloadingDocx,
 }: Props) {
@@ -108,14 +109,16 @@ export default function DocTemplateEditorHeader({
           Сохранить
         </button>
 
-        {/* Удалить */}
-        <button
-          onClick={onDelete}
-          title="Удалить шаблон"
-          className="p-1.5 border border-border rounded-md text-red-400/50 hover:text-red-400 hover:border-red-500/40 transition-all"
-        >
-          <Icon name="Trash2" size={13} />
-        </button>
+        {/* Удалить — только для админа */}
+        {isAdmin && (
+          <button
+            onClick={onDelete}
+            title="Удалить шаблон (только администратор)"
+            className="p-1.5 border border-border rounded-md text-red-400/50 hover:text-red-400 hover:border-red-500/40 transition-all"
+          >
+            <Icon name="Trash2" size={13} />
+          </button>
+        )}
       </div>
     </div>
   );

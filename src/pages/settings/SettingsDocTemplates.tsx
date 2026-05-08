@@ -1,15 +1,21 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import Icon from '@/components/ui/icon';
 import DocTemplateEditor from './DocTemplateEditor';
+import DeleteTemplateDialog from './DeleteTemplateDialog';
 import { DOC_TYPES, buildPreviewHtml, type Template, type Block } from './docTemplateTypes';
 import { useDocTemplates } from './useDocTemplates';
+import { useAuth } from '@/auth/useAuth';
 
 export default function SettingsDocTemplates() {
   const [selectedDocType, setSelectedDocType] = useState('contract');
   const [editingBlock, setEditingBlock] = useState<string | null>(null);
   const [showPreview, setShowPreview] = useState(true);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const previewDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const { state: authState } = useAuth();
+  const isAdmin = authState.status === 'authenticated' && authState.user.role === 'admin';
 
   const {
     templates, selectedTemplate, saving, loading, isDirty, pendingSwitch, downloadingDocx,
@@ -173,11 +179,12 @@ export default function SettingsDocTemplates() {
                 template={selectedTemplate}
                 saving={saving}
                 isDirty={isDirty}
+                isAdmin={isAdmin}
                 editingBlock={editingBlock}
                 onUpdate={onUpdate}
                 onSave={() => saveTemplate()}
                 onApply={() => handleApplyTemplate(docLabel)}
-                onDelete={() => deleteTemplate(selectedTemplate.id)}
+                onDelete={() => setDeleteDialogOpen(true)}
                 onSetDefault={() => setDefault(selectedTemplate.id)}
                 onPreview={() => setShowPreview(p => !p)}
                 onDuplicate={duplicateTemplate}
@@ -185,6 +192,16 @@ export default function SettingsDocTemplates() {
                 onDownloadDocx={downloadDocx}
                 downloadingDocx={downloadingDocx}
               />
+              {deleteDialogOpen && selectedTemplate && (
+                <DeleteTemplateDialog
+                  templateName={selectedTemplate.name}
+                  onConfirm={() => {
+                    setDeleteDialogOpen(false);
+                    deleteTemplate(selectedTemplate.id);
+                  }}
+                  onCancel={() => setDeleteDialogOpen(false)}
+                />
+              )}
             </div>
           ) : (
             <div className="flex flex-col items-center justify-center h-full gap-3 text-center px-8">

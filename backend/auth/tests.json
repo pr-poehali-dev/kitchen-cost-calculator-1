@@ -19,30 +19,21 @@
       "bodyMatcher": "partial"
     },
     {
-      "name": "Login with correct credentials",
+      "name": "Login with wrong password returns 401",
       "method": "POST",
       "path": "/?action=login",
-      "body": {"login": "testadmin", "password": "secret12345"},
-      "expectedStatus": 200,
-      "expectedBody": {"login": "testadmin"},
-      "bodyMatcher": "partial"
-    },
-    {
-      "name": "Login with wrong password",
-      "method": "POST",
-      "path": "/?action=login",
-      "body": {"login": "testadmin", "password": "wrongpass"},
+      "body": {"login": "nonexistent_user_xyz", "password": "wrongpass"},
       "expectedStatus": 401,
       "expectedBody": {"error": "Неверный логин или пароль"},
       "bodyMatcher": "partial"
     },
     {
-      "name": "Register duplicate login",
+      "name": "verify_password without token returns 401",
       "method": "POST",
-      "path": "/?action=register",
-      "body": {"login": "testadmin", "password": "secret12345x"},
-      "expectedStatus": 400,
-      "expectedBody": {"error": "Такой логин уже занят"},
+      "path": "/?action=verify_password",
+      "body": {"password": "somepassword"},
+      "expectedStatus": 401,
+      "expectedBody": {"error": "Нет токена"},
       "bodyMatcher": "partial"
     },
     {

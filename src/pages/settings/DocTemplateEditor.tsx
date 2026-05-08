@@ -9,6 +9,7 @@ interface Props {
   template: Template;
   saving: boolean;
   isDirty: boolean;
+  isAdmin: boolean;
   editingBlock: string | null;
   onUpdate: (t: Template) => void;
   onSave: () => void;
@@ -23,7 +24,7 @@ interface Props {
 }
 
 export default function DocTemplateEditor({
-  template, saving, isDirty, editingBlock,
+  template, saving, isDirty, isAdmin, editingBlock,
   onUpdate, onSave, onApply, onDelete, onSetDefault, onPreview, onDuplicate, onEditBlock,
   onDownloadDocx, downloadingDocx,
 }: Props) {
@@ -41,6 +42,7 @@ export default function DocTemplateEditor({
         template={template}
         saving={saving}
         isDirty={isDirty}
+        isAdmin={isAdmin}
         onUpdate={onUpdate}
         onSave={onSave}
         onApply={onApply}

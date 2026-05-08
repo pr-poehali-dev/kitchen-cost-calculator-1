@@ -235,10 +235,13 @@ def handler(event: dict, context) -> dict:
             )
             return ok({'ok': True})
 
-        # DELETE — удалить шаблон
+        # DELETE — удалить шаблон (только администратор)
         if method == 'DELETE':
             if not template_id:
                 return err('Не указан id')
+            user_role = str(payload.get('role') or '')
+            if user_role != 'admin':
+                return err('Недостаточно прав. Удаление шаблонов доступно только администратору.', 403)
             cur.execute(f'DELETE FROM {SCHEMA}.doc_templates WHERE id = %s AND user_id = %s', (template_id, user_id))
             return ok({'ok': True})
 

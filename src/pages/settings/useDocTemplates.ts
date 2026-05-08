@@ -118,9 +118,8 @@ export function useDocTemplates(selectedDocType: string) {
   }, [selectedDocType, loadTemplates]);
 
   const deleteTemplate = useCallback(async (id: string) => {
-    if (!confirm('Удалить шаблон?')) return;
     await fetch(`${API}/?id=${id}`, { method: 'DELETE', headers: authHeaders() });
-    toast.success('Удалён');
+    toast.success('Шаблон удалён');
     await loadTemplates();
   }, [loadTemplates]);
 

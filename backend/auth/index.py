@@ -154,4 +154,31 @@ def handler(event: dict, context) -> dict:
             return err('Доступ заблокирован', 403)
         return ok({'id': uid, 'login': login, 'role': role, 'plan': plan})
 
+    # POST verify_password — проверить пароль текущего пользователя (для подтверждения опасных действий)
+    if method == 'POST' and action == 'verify_password':
+        auth = event.get('headers', {}).get('X-Authorization') or event.get('headers', {}).get('Authorization', '')
+        token = auth.replace('Bearer ', '').strip()
+        if not token:
+            return err('Нет токена', 401)
+        try:
+            payload = verify_token(token)
+        except Exception:
+            return err('Недействительный токен', 401)
+        body = json.loads(event.get('body') or '{}')
+        password = (body.get('password') or '').strip()
+        if not password:
+            return err('Не указан пароль')
+        with get_db() as conn:
+            cur = conn.cursor()
+            cur.execute('SELECT password_hash, role FROM users WHERE id = %s', (payload['sub'],))
+            row = cur.fetchone()
+        if not row:
+            return err('Пользователь не найден', 404)
+        pw_hash, role = row
+        if not bcrypt.checkpw(password.encode(), pw_hash.encode()):
+            return err('Неверный пароль', 403)
+        if role != 'admin':
+            return err('Недостаточно прав', 403)
+        return ok({'ok': True})
+
     return err('Not found', 404)
