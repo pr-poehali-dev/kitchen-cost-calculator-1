@@ -106,18 +106,14 @@ export function DocCard({ doc, clientId, clientName, onSave, hasDraft, onAfterSh
     setShowDownloadMenu(false);
     try {
       await ensureSaved();
-      const res = await apiFetch('doc_html', clientId, doc.id);
-      if (!res.ok) { toast.error('Ошибка загрузки документа'); return; }
-      const html = await res.text();
-      const htmlWithPrint = html.replace('</body>', `<script>
-        window.addEventListener('load', function() { setTimeout(function() { window.print(); }, 400); });
-      </script></body>`);
-      const blob = new Blob([htmlWithPrint], { type: 'text/html;charset=utf-8' });
-      const blobUrl = URL.createObjectURL(blob);
-      const win = window.open(blobUrl, '_blank');
-      if (win) win.addEventListener('afterprint', () => { win.close(); URL.revokeObjectURL(blobUrl); });
-      toast.success('В диалоге выберите "Сохранить как PDF"');
-    } finally { setLoading(null); }
+      const res = await apiFetch('doc_link', clientId, doc.id);
+      const data = await res.json();
+      if (!data.url) { toast.error('Ошибка создания ссылки'); return; }
+      const win = window.open(data.url + '?print=1', '_blank');
+      if (!win) { toast.error('Браузер заблокировал открытие окна'); return; }
+      toast.success('В открывшемся окне нажмите Ctrl+P → Сохранить как PDF');
+    } catch { toast.error('Ошибка'); }
+    finally { setLoading(null); }
   }
 
   async function copyLink() {
