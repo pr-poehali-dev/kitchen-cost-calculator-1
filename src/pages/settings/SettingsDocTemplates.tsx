@@ -25,7 +25,8 @@ export default function SettingsDocTemplates() {
     toggleLock, exportBackup, importBackup,
   } = useDocTemplates(selectedDocType);
 
-  useEffect(() => { loadTemplates(); }, [loadTemplates]);
+  // Зависимость от selectedDocType (не от loadTemplates-функции) — исключает бесконечный цикл
+  useEffect(() => { loadTemplates(); }, [selectedDocType]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const updatePreview = useCallback((t: Template) => {
     if (!iframeRef.current || !showPreview) return;
@@ -43,11 +44,11 @@ export default function SettingsDocTemplates() {
     }
   }, [showPreview]);
 
-  const onUpdate = (t: Template) => {
+  const onUpdate = useCallback((t: Template) => {
     if (previewDebounceRef.current) clearTimeout(previewDebounceRef.current);
     previewDebounceRef.current = setTimeout(() => updatePreview(t), 400);
     handleUpdateTemplate(t);
-  };
+  }, [handleUpdateTemplate, updatePreview]);
 
   const docLabel = DOC_TYPES.find(d => d.id === selectedDocType)?.label || selectedDocType;
 

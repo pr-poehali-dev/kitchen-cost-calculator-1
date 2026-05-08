@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import type { Template } from './docTemplateTypes';
 import DocTemplateEditorHeader from './DocTemplateEditorHeader';
 import DocTemplatePageSettings from './DocTemplatePageSettings';
@@ -32,9 +32,9 @@ export default function DocTemplateEditor({
   const [insertFn, setInsertFn] = useState<((v: string) => void) | null>(null);
   const locked = template.is_locked;
 
-  const handleRegisterInsert = (fn: ((v: string) => void) | null) => {
+  const handleRegisterInsert = useCallback((fn: ((v: string) => void) | null) => {
     setInsertFn(fn ? () => (v: string) => fn(v) : null);
-  };
+  }, []);
 
   return (
     <div className="space-y-3 border border-border rounded-xl overflow-hidden">

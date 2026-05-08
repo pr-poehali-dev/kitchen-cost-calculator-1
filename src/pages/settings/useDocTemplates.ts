@@ -255,9 +255,12 @@ export function useDocTemplates(selectedDocType: string) {
   ) => {
     currentTemplateRef.current = t;
     isDirtyRef.current = true;
+    // Все три setState в одном микро-таске — React батчит их в один ренедер
     setSelectedTemplate(t);
-    setTemplates(prev => prev.map(tpl => tpl.id === t.id ? t : tpl));
-    setIsDirty(true);
+    setTemplates(prev => {
+      setIsDirty(true);
+      return prev.map(tpl => tpl.id === t.id ? t : tpl);
+    });
     updatePreviewFn?.(t);
   }, []);
 
