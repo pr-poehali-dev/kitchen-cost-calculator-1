@@ -227,15 +227,21 @@ function renderBlock(b: Block, globalFontSize: number): string {
     const rightRaw = sep >= 0 ? b.content.slice(sep + 5) : '';
     const leftHtml  = applyPreviewVars(leftRaw).replace(/\n/g, '<br/>');
     const rightHtml = applyPreviewVars(rightRaw).replace(/\n/g, '<br/>');
+    const gap = b.twoColGap ?? 4;
     const twoStyle = [
       `margin-top:${mt ?? '6px'}`,
       `margin-bottom:${mb ?? '6px'}`,
-      b.fontSize ? `font-size:${b.fontSize}pt` : `font-size:${globalFontSize}pt`,
-    ].join(';');
-    const rightTextAlign = b.twoColRightAlign ? 'text-align:right;' : '';
+      b.fontSize  ? `font-size:${b.fontSize}pt`    : `font-size:${globalFontSize}pt`,
+      b.bold      ? 'font-weight:bold'              : '',
+      b.italic    ? 'font-style:italic'             : '',
+      b.underline ? 'text-decoration:underline'     : '',
+    ].filter(Boolean).join(';');
+    // Выравнивание: новые поля имеют приоритет; twoColRightAlign — обратная совместимость
+    const leftAlign  = b.twoColLeftAlign  ?? 'left';
+    const rightAlign = b.twoColRightAlignVal ?? (b.twoColRightAlign ? 'right' : 'left');
     return `<div style="display:table;width:100%;${twoStyle}">
-      <div style="display:table-cell;width:50%;vertical-align:top;padding-right:4mm">${leftHtml}</div>
-      <div style="display:table-cell;width:50%;vertical-align:top;padding-left:4mm;${rightTextAlign}">${rightHtml}</div>
+      <div style="display:table-cell;width:50%;vertical-align:top;padding-right:${gap}mm;text-align:${leftAlign}">${leftHtml}</div>
+      <div style="display:table-cell;width:50%;vertical-align:top;padding-left:${gap}mm;text-align:${rightAlign}">${rightHtml}</div>
     </div>`;
   }
 

@@ -140,45 +140,82 @@ export default function BlockContentEditor({ block, textareaRef, onUpdate, inser
         const leftVal  = sep >= 0 ? block.content.slice(0, sep)  : block.content;
         const rightVal = sep >= 0 ? block.content.slice(sep + 5) : '';
         const update = (left: string, right: string) => onUpdate('content', left + '\n---\n' + right);
+
+        const leftAlign  = (block.twoColLeftAlign     ?? 'left') as string;
+        const rightAlign = (block.twoColRightAlignVal ?? (block.twoColRightAlign ? 'right' : 'left')) as string;
+        const gap        = (block.twoColGap as number) ?? 4;
+
+        const alignOptions = [
+          { value: 'left',   icon: 'AlignLeft',   title: 'По левому краю' },
+          { value: 'center', icon: 'AlignCenter',  title: 'По центру' },
+          { value: 'right',  icon: 'AlignRight',   title: 'По правому краю' },
+        ];
+
+        const textAlignClass = (a: string) =>
+          a === 'right' ? 'text-right' : a === 'center' ? 'text-center' : 'text-left';
+
         return (
           <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] text-[hsl(var(--text-muted))]">
-                Блок делится на две равные колонки.
-              </p>
-              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+            {/* Настройки */}
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[10px] text-[hsl(var(--text-muted))]">Отступ:</span>
                 <input
-                  type="checkbox"
-                  checked={!!block.twoColRightAlign}
-                  onChange={e => onUpdate('twoColRightAlign', e.target.checked)}
-                  className="w-3 h-3 accent-gold cursor-pointer"
+                  type="number" min={0} max={20} step={1}
+                  value={gap}
+                  onChange={e => onUpdate('twoColGap', parseInt(e.target.value) || 0)}
+                  className="w-12 bg-[hsl(220,14%,12%)] border border-border rounded px-1.5 py-0.5 text-[10px] text-foreground text-center"
                 />
-                <span className="text-[10px] text-[hsl(var(--text-muted))]">Правая — по правому краю</span>
-              </label>
+                <span className="text-[10px] text-[hsl(var(--text-muted))]">мм</span>
+              </div>
             </div>
+
             <div className="grid grid-cols-2 gap-2">
+              {/* Левая колонка */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-[10px] text-[hsl(var(--text-muted))]">Левая колонка</label>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[10px] text-[hsl(var(--text-muted))]">Левая</label>
+                    <div className="flex gap-0.5">
+                      {alignOptions.map(o => (
+                        <button key={o.value} title={o.title}
+                          onClick={() => onUpdate('twoColLeftAlign', o.value)}
+                          className={`w-5 h-5 flex items-center justify-center rounded border transition-all ${leftAlign === o.value ? 'border-emerald-500/60 bg-emerald-500/20 text-emerald-400' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+                        ><Icon name={o.icon} size={10} /></button>
+                      ))}
+                    </div>
+                  </div>
                   <BlockVarPicker onInsert={v => update(leftVal + v, rightVal)} />
                 </div>
                 <textarea
                   value={leftVal}
                   onChange={e => update(e.target.value, rightVal)}
                   rows={8}
-                  className="w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1.5 text-xs text-foreground resize-y font-mono leading-relaxed"
+                  className={`w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1.5 text-xs text-foreground resize-y font-mono leading-relaxed ${textAlignClass(leftAlign)}`}
                 />
               </div>
+
+              {/* Правая колонка */}
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <label className="text-[10px] text-[hsl(var(--text-muted))]">Правая колонка</label>
+                  <div className="flex items-center gap-1">
+                    <label className="text-[10px] text-[hsl(var(--text-muted))]">Правая</label>
+                    <div className="flex gap-0.5">
+                      {alignOptions.map(o => (
+                        <button key={o.value} title={o.title}
+                          onClick={() => onUpdate('twoColRightAlignVal', o.value)}
+                          className={`w-5 h-5 flex items-center justify-center rounded border transition-all ${rightAlign === o.value ? 'border-emerald-500/60 bg-emerald-500/20 text-emerald-400' : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'}`}
+                        ><Icon name={o.icon} size={10} /></button>
+                      ))}
+                    </div>
+                  </div>
                   <BlockVarPicker onInsert={v => update(leftVal, rightVal + v)} />
                 </div>
                 <textarea
                   value={rightVal}
                   onChange={e => update(leftVal, e.target.value)}
                   rows={8}
-                  className={`w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1.5 text-xs text-foreground resize-y font-mono leading-relaxed${block.twoColRightAlign ? ' text-right' : ''}`}
+                  className={`w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1.5 text-xs text-foreground resize-y font-mono leading-relaxed ${textAlignClass(rightAlign)}`}
                 />
               </div>
             </div>

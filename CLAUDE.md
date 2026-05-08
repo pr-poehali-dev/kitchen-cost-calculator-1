@@ -561,7 +561,7 @@ image       — изображение (URL в content, imageWidth/imageHeight �
 lines       — строки для подписи (количество в content)
 table       — таблица (content = CSV через ; и \n)
 calc_table  — таблица материалов из калькулятора (calcTableSettings)
-two_col     — два столбца (разделитель \n---\n в content)
+two_col     — два столбца (разделитель \n---\n в content, twoColLeftAlign/twoColRightAlignVal='left'|'center'|'right', twoColGap=мм, bold/italic применяются)
 ```
 
 ### Переменные в тексте

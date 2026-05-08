@@ -258,6 +258,9 @@ export interface Block {
   imageWidth?: number;
   imageHeight?: number;
   twoColRightAlign?: boolean;
+  twoColLeftAlign?:  'left' | 'center' | 'right';
+  twoColRightAlignVal?: 'left' | 'center' | 'right';
+  twoColGap?: number;
 }
 
 export interface Template {
