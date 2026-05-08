@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { useStore, undoProjects, canUndo, undoListeners } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
 import CalcHeader from './calc/CalcHeader';
@@ -143,7 +143,35 @@ export default function CalcPage({ onOpenClient }: CalcPageProps) {
     refreshTimer.current = setTimeout(() => setRefreshed(false), 2500);
   };
 
-  if (!project) {
+  const totals = useMemo(
+    () => project ? store.calcProjectTotals(project) : null,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [project?.blocks, project?.serviceBlocks, store.expenses]
+  );
+
+  const totalPurchase = useMemo(
+    () => project ? project.blocks.reduce((sum, b) =>
+      sum + b.rows.reduce((s, r) => s + (r.basePrice ?? 0) * r.qty, 0), 0) : 0,
+    [project?.blocks]
+  );
+
+  // Проверяем есть ли строки с устаревшими ценами
+  const hasStalePrices = useMemo(
+    () => project ? project.blocks.some(b =>
+      b.rows.some(r => {
+        if (!r.name.trim() || !r.materialId) return false;
+        const mat = store.materials.find(m => m.id === r.materialId);
+        if (!mat) return false;
+        const variant = r.variantId ? (mat.variants || []).find(v => v.id === r.variantId) : null;
+        const bp = variant ? variant.basePrice : mat.basePrice;
+        return r.price !== store.calcPriceWithMarkup(bp, 'materials');
+      })
+    ) : false,
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [project?.blocks, store.materials, store.expenses]
+  );
+
+  if (!project || !totals) {
     return (
       <div className="flex flex-col items-center justify-center h-full gap-4">
         <p className="text-[hsl(var(--text-muted))] text-sm">Нет активного проекта</p>
@@ -154,22 +182,7 @@ export default function CalcPage({ onOpenClient }: CalcPageProps) {
     );
   }
 
-  const totals = store.calcProjectTotals(project);
   const { rawMaterials: totalMaterials, rawServices: totalServices, base: baseTotal, baseForOverhead, grandTotal } = totals;
-  const totalPurchase = project.blocks.reduce((sum, b) =>
-    sum + b.rows.reduce((s, r) => s + (r.basePrice ?? 0) * r.qty, 0), 0);
-
-  // Проверяем есть ли строки с устаревшими ценами
-  const hasStalePrices = project.blocks.some(b =>
-    b.rows.some(r => {
-      if (!r.name.trim() || !r.materialId) return false;
-      const mat = store.materials.find(m => m.id === r.materialId);
-      if (!mat) return false;
-      const variant = r.variantId ? (mat.variants || []).find(v => v.id === r.variantId) : null;
-      const bp = variant ? variant.basePrice : mat.basePrice;
-      return r.price !== store.calcPriceWithMarkup(bp, 'materials');
-    })
-  );
 
   const handleFinishEditName = (blockId: string, blockName: string) => {
     store.updateBlock(project.id, blockId, { name: editingBlockName || blockName });

@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useStore } from '@/store/useStore';
 import Icon from '@/components/ui/icon';
 import { fmt } from './constants';
@@ -91,8 +91,6 @@ export default function CalcSummary({
     indent?: boolean; section?: 'materials' | 'types' | 'services' | 'expenses';
   };
 
-  const activeExp = allExpenses.filter(e => e.enabled !== false);
-
   const groupByGid = <T extends { groupId?: string }>(items: T[]) => {
     const map: Record<string, T[]> = {};
     items.forEach(e => { const k = e.groupId || '__ug'; map[k] = [...(map[k] || []), e]; });
@@ -100,121 +98,127 @@ export default function CalcSummary({
   };
 
   // ── Строки менеджера ───────────────────────────────────────
-  const managerRows: SummaryRow[] = [];
+  const managerRows = useMemo<SummaryRow[]>(() => {
+    const rows: SummaryRow[] = [];
+    const activeExp = allExpenses.filter(e => e.enabled !== false);
 
-  if (groupingMode === 'groups' || groupingMode === 'both') {
-    totals.blockExtras.forEach(b => {
-      if (b.base <= 0) return;
-      managerRows.push({ id: `block-${b.blockId}`, label: b.blockName, value: b.base, section: 'materials' });
-      if (b.extra > 0)
-        managerRows.push({ id: `block-extra-${b.blockId}`, label: '+ надбавка на блок', value: b.extra, sign: '+', color: 'gold', indent: true, section: 'materials' });
-    });
-  }
-
-  if (groupingMode === 'types' || groupingMode === 'both') {
-    const typeMap: Record<string, number> = {};
-    project.blocks.forEach(block => block.rows.forEach(row => {
-      if (!row.name.trim() || row.qty <= 0) return;
-      const tid = row.typeId || '__other';
-      typeMap[tid] = (typeMap[tid] || 0) + row.price * row.qty;
-    }));
-    const totalMat = Object.values(typeMap).reduce((s, v) => s + v, 0);
-    Object.entries(typeMap).filter(([, v]) => v > 0).sort(([, a], [, b]) => b - a)
-      .forEach(([tid, amount]) => {
-        const name = tid === '__other' ? 'Прочие материалы' : store.getTypeName(tid) || 'Прочие материалы';
-        const pct = totalMat > 0 ? Math.round(amount / totalMat * 100) : 0;
-        managerRows.push({ id: `type-${tid}`, label: name, value: Math.round(amount), pct, section: 'types' });
+    if (groupingMode === 'groups' || groupingMode === 'both') {
+      totals.blockExtras.forEach(b => {
+        if (b.base <= 0) return;
+        rows.push({ id: `block-${b.blockId}`, label: b.blockName, value: b.base, section: 'materials' });
+        if (b.extra > 0)
+          rows.push({ id: `block-extra-${b.blockId}`, label: '+ надбавка на блок', value: b.extra, sign: '+', color: 'gold', indent: true, section: 'materials' });
       });
-  }
+    }
 
-  if (totalServices > 0)
-    managerRows.push({ id: 'services', label: 'Услуги', value: totalServices, section: 'services' });
+    if (groupingMode === 'types' || groupingMode === 'both') {
+      const typeMap: Record<string, number> = {};
+      project.blocks.forEach(block => block.rows.forEach(row => {
+        if (!row.name.trim() || row.qty <= 0) return;
+        const tid = row.typeId || '__other';
+        typeMap[tid] = (typeMap[tid] || 0) + row.price * row.qty;
+      }));
+      const totalMat = Object.values(typeMap).reduce((s, v) => s + v, 0);
+      Object.entries(typeMap).filter(([, v]) => v > 0).sort(([, a], [, b]) => b - a)
+        .forEach(([tid, amount]) => {
+          const name = tid === '__other' ? 'Прочие материалы' : store.getTypeName(tid) || 'Прочие материалы';
+          const pct = totalMat > 0 ? Math.round(amount / totalMat * 100) : 0;
+          rows.push({ id: `type-${tid}`, label: name, value: Math.round(amount), pct, section: 'types' });
+        });
+    }
 
-  if (totals.totalMarkupAmount !== 0) {
-    const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
-    Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
-      const grp = gid !== '__ug' ? expGroups.find(g => g.id === gid) : null;
-      const pct = grpItems.reduce((s, e) => s + e.value, 0);
-      const amt = Math.round(totals.base * pct / 100);
-      if (amt !== 0) {
-        const label = pct < 0 ? 'Скидка на итог' : 'Надбавка на итог';
-        managerRows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? label} (${pct}%)`, value: Math.abs(amt), sign: amt > 0 ? '+' : '-', color: amt > 0 ? 'gold' : 'green', section: 'expenses' });
-      }
-    });
-  }
+    if (totalServices > 0)
+      rows.push({ id: 'services', label: 'Услуги', value: totalServices, section: 'services' });
 
-  const baseForOverhead = totals.base + totals.totalMarkupAmount + totals.blockExtraTotal;
+    if (totals.totalMarkupAmount !== 0) {
+      const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
+      Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
+        const grp = gid !== '__ug' ? expGroups.find(g => g.id === gid) : null;
+        const pct = grpItems.reduce((s, e) => s + e.value, 0);
+        const amt = Math.round(totals.base * pct / 100);
+        if (amt !== 0) {
+          const label = pct < 0 ? 'Скидка на итог' : 'Надбавка на итог';
+          rows.push({ id: `totalMarkup-${gid}`, label: `${grp?.name ?? label} (${pct}%)`, value: Math.abs(amt), sign: amt > 0 ? '+' : '-', color: amt > 0 ? 'gold' : 'green', section: 'expenses' });
+        }
+      });
+    }
 
-  const percentItems = activeExp.filter(e => e.type === 'percent');
-  if (percentItems.length > 0) {
-    Object.entries(groupByGid(percentItems)).forEach(([gid, items]) => {
-      const grp = gid !== '__ug' ? expGroups.find(g => g.id === gid) : null;
-      const pct = items.reduce((s, e) => s + e.value, 0);
-      const amt = Math.round(items.reduce((s, e) => s + baseForOverhead * e.value / 100, 0));
-      if (amt > 0) managerRows.push({ id: `percent-${gid}`, label: `${grp?.name ?? 'Расходы'} (${pct}%)`, value: amt, sign: '+', color: 'blue', section: 'expenses' });
-    });
-  }
+    const bfoh = totals.base + totals.totalMarkupAmount + totals.blockExtraTotal;
+    const percentItems = activeExp.filter(e => e.type === 'percent');
+    if (percentItems.length > 0) {
+      Object.entries(groupByGid(percentItems)).forEach(([gid, items]) => {
+        const grp = gid !== '__ug' ? expGroups.find(g => g.id === gid) : null;
+        const pct = items.reduce((s, e) => s + e.value, 0);
+        const amt = Math.round(items.reduce((s, e) => s + bfoh * e.value / 100, 0));
+        if (amt > 0) rows.push({ id: `percent-${gid}`, label: `${grp?.name ?? 'Расходы'} (${pct}%)`, value: amt, sign: '+', color: 'blue', section: 'expenses' });
+      });
+    }
 
-  const fixedItems = activeExp.filter(e => e.type === 'fixed');
-  if (fixedItems.length > 0) {
-    Object.entries(groupByGid(fixedItems)).forEach(([gid, items]) => {
-      const grp = gid !== '__ug' ? expGroups.find(g => g.id === gid) : null;
-      const amt = items.reduce((s, e) => s + e.value, 0);
-      if (amt > 0) managerRows.push({ id: `fixed-${gid}`, label: grp?.name ?? 'Постоянные расходы', value: amt, sign: '+', section: 'expenses' });
-    });
-  }
+    const fixedItems = activeExp.filter(e => e.type === 'fixed');
+    if (fixedItems.length > 0) {
+      Object.entries(groupByGid(fixedItems)).forEach(([gid, items]) => {
+        const grp = gid !== '__ug' ? expGroups.find(g => g.id === gid) : null;
+        const amt = items.reduce((s, e) => s + e.value, 0);
+        if (amt > 0) rows.push({ id: `fixed-${gid}`, label: grp?.name ?? 'Постоянные расходы', value: amt, sign: '+', section: 'expenses' });
+      });
+    }
+
+    return rows;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [totals, totalServices, groupingMode, allExpenses, expGroups, project.blocks]);
 
   // ── Строки клиента ─────────────────────────────────────────
-  const clientRows: SummaryRow[] = [];
+  const clientRows = useMemo<SummaryRow[]>(() => {
+    const rows: SummaryRow[] = [];
+    const activeExp = allExpenses.filter(e => e.enabled !== false);
+    const blocksTotal = totals.blockExtras.reduce((s, b) => s + b.base + b.extra, 0);
 
-  // Сумма блоков с надбавками на блок (реальная base для расчёта долей)
-  const blocksTotal = totals.blockExtras.reduce((s, b) => s + b.base + b.extra, 0);
+    if (distributeExpenses && blocksTotal > 0) {
+      const targetMaterialsTotal = grandTotal - totalServices;
+      const distributed = totals.blockExtras
+        .filter(b => b.base > 0)
+        .map(b => ({
+          ...b,
+          value: Math.round((b.base + b.extra) / blocksTotal * targetMaterialsTotal),
+        }));
+      const sum = distributed.reduce((s, b) => s + b.value, 0);
+      if (distributed.length > 0) distributed[distributed.length - 1].value += targetMaterialsTotal - sum;
+      distributed.forEach(b =>
+        rows.push({ id: `client-block-${b.blockId}`, label: b.blockName, value: b.value, section: 'materials' })
+      );
+    } else {
+      totals.blockExtras.forEach(b => {
+        if (b.base <= 0) return;
+        rows.push({ id: `client-block-${b.blockId}`, label: b.blockName, value: b.base, section: 'materials' });
+      });
+    }
 
-  if (distributeExpenses && blocksTotal > 0) {
-    // Распределяем все расходы пропорционально в блоки
-    const targetMaterialsTotal = grandTotal - totalServices;
-    const distributed = totals.blockExtras
-      .filter(b => b.base > 0)
-      .map(b => ({
-        ...b,
-        value: Math.round((b.base + b.extra) / blocksTotal * targetMaterialsTotal),
-      }));
-    // Корректируем последний блок для точного совпадения
-    const sum = distributed.reduce((s, b) => s + b.value, 0);
-    if (distributed.length > 0) distributed[distributed.length - 1].value += targetMaterialsTotal - sum;
-    distributed.forEach(b =>
-      clientRows.push({ id: `client-block-${b.blockId}`, label: b.blockName, value: b.value, section: 'materials' })
-    );
-  } else {
-    totals.blockExtras.forEach(b => {
-      if (b.base <= 0) return;
-      clientRows.push({ id: `client-block-${b.blockId}`, label: b.blockName, value: b.base, section: 'materials' });
-    });
-  }
+    if (totalServices > 0)
+      rows.push({ id: 'client-services', label: 'Услуги', value: totalServices, section: 'services' });
 
-  if (totalServices > 0)
-    clientRows.push({ id: 'client-services', label: 'Услуги', value: totalServices, section: 'services' });
+    if (!distributeExpenses && totals.totalMarkupAmount !== 0) {
+      const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
+      Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
+        const grp = gid !== '__ug' ? expGroups.find(g => g.id === gid) : null;
+        const pct = grpItems.reduce((s, e) => s + e.value, 0);
+        const amt = Math.round(totals.base * pct / 100);
+        if (amt !== 0) {
+          const label = pct < 0 ? 'Скидка' : 'Надбавка';
+          rows.push({
+            id: `client-markup-${gid}`,
+            label: grp?.name ?? `${label} (${Math.abs(pct)}%)`,
+            value: Math.abs(amt),
+            sign: amt > 0 ? '+' : '-',
+            color: amt < 0 ? 'green' : undefined,
+            section: 'expenses',
+          });
+        }
+      });
+    }
 
-  // Скидки/надбавки на итог — опционально (только если не распределяем)
-  if (!distributeExpenses && totals.totalMarkupAmount !== 0) {
-    const items = activeExp.filter(e => e.type === 'markup' && e.applyTo === 'total');
-    Object.entries(groupByGid(items)).forEach(([gid, grpItems]) => {
-      const grp = gid !== '__ug' ? expGroups.find(g => g.id === gid) : null;
-      const pct = grpItems.reduce((s, e) => s + e.value, 0);
-      const amt = Math.round(totals.base * pct / 100);
-      if (amt !== 0) {
-        const label = pct < 0 ? 'Скидка' : 'Надбавка';
-        clientRows.push({
-          id: `client-markup-${gid}`,
-          label: grp?.name ?? `${label} (${Math.abs(pct)}%)`,
-          value: Math.abs(amt),
-          sign: amt > 0 ? '+' : '-',
-          color: amt < 0 ? 'green' : undefined,
-          section: 'expenses',
-        });
-      }
-    });
-  }
+    return rows;
+   
+  }, [totals, totalServices, grandTotal, distributeExpenses, allExpenses, expGroups]);
 
   // ── Итоговые наборы ────────────────────────────────────────
   const rows = isClient ? clientRows : managerRows;

@@ -207,7 +207,7 @@ export function undoProjects(): boolean {
   globalState = { ...globalState, projects: snap.projects, activeProjectId: snap.activeProjectId };
   saveLocalStateImmediate(globalState);
   scheduleSaveToDb(globalState);
-  listeners.forEach(fn => fn());
+  scheduleNotify();
   notifyUndo();
   return true;
 }
@@ -215,6 +215,17 @@ export function undoProjects(): boolean {
 // ── Глобальный state ──────────────────────────────────────────────────────────
 let globalState: AppState = loadLocalCache();
 export const listeners: Set<() => void> = new Set();
+
+// Батчим нотификации: несколько setState подряд → один flush
+let notifyScheduled = false;
+function scheduleNotify() {
+  if (notifyScheduled) return;
+  notifyScheduled = true;
+  queueMicrotask(() => {
+    notifyScheduled = false;
+    listeners.forEach(fn => fn());
+  });
+}
 
 export function setState(updater: (s: AppState) => AppState, options: { pushUndo?: boolean } = {}) {
   if (options.pushUndo !== false) {
@@ -224,7 +235,7 @@ export function setState(updater: (s: AppState) => AppState, options: { pushUndo
   globalState = { ...globalState, savedAt: Date.now() };
   saveLocalState(globalState);
   scheduleSaveToDb(globalState);
-  listeners.forEach(fn => fn());
+  scheduleNotify();
 }
 
 export function forceSetGlobalState(state: AppState) {
@@ -232,7 +243,7 @@ export function forceSetGlobalState(state: AppState) {
   saveLocalStateImmediate(state);
   hasPendingChanges = false;
   setSaveStatus('saved');
-  listeners.forEach(fn => fn());
+  scheduleNotify();
 }
 
 export function saveStateToDb() {
