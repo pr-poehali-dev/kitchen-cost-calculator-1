@@ -947,42 +947,40 @@ def _doc_style(title='', contract_num=''):
 }}
 *{{box-sizing:border-box;margin:0;padding:0}}
 html{{background:#e8e8e8;min-height:100vh}}
-body{{font-family:'PT Serif',Georgia,serif;font-size:9.5pt;line-height:1.0;color:#000;background:transparent}}
-.page{{width:210mm;min-height:297mm;margin:8px auto;padding:8mm 8mm 8mm 13mm;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)}}
+body{{font-family:'PT Serif',Georgia,serif;font-size:9.5pt;line-height:1.15;color:#000;background:transparent}}
+.page{{width:210mm;margin:8px auto;padding:10mm 10mm 10mm 20mm;background:#fff;box-shadow:0 4px 20px rgba(0,0,0,.5)}}
 @media screen and (max-width:900px){{
-  .page{{width:100%;min-height:auto;padding:12mm 8mm 12mm 10mm;font-size:10pt}}
+  .page{{width:100%;padding:12mm 8mm 12mm 10mm;font-size:10pt}}
 }}
 h1{{font-size:12pt;text-align:center;font-weight:bold;margin:0 0 3px;text-transform:uppercase;letter-spacing:.1em}}
 h2{{font-size:10pt;text-align:center;font-weight:normal;margin:0 0 10px}}
 .city-date{{display:flex;justify-content:space-between;margin:8px 0 10px;font-size:10pt}}
-p{{margin:0 0 1px;text-align:justify;text-indent:1.27cm;line-height:1.0;orphans:3;widows:3}}
+p{{margin:0 0 2px;text-align:justify;text-indent:1.27cm;line-height:1.15;orphans:4;widows:4}}
 p.no-indent{{text-indent:0}}
 p.center{{text-align:center;text-indent:0}}
-.sec{{font-weight:bold;margin:12px 0 4px;text-indent:0;font-size:9pt;text-align:center;page-break-after:avoid}}
-.sec-block{{page-break-inside:avoid}}
-table{{width:100%;border-collapse:collapse;margin:8px 0;font-size:10pt;page-break-inside:avoid}}
-th,td{{border:1px solid #000;padding:5px 8px}}
-th{{background:#f0f0f0;font-weight:bold;text-align:center;font-size:10pt;letter-spacing:.04em}}
+.sec{{font-weight:bold;margin:10px 0 3px;text-indent:0;font-size:9pt;text-align:center;break-after:avoid;page-break-after:avoid}}
+table{{width:100%;border-collapse:collapse;margin:8px 0;font-size:9.5pt;break-inside:avoid;page-break-inside:avoid}}
+th,td{{border:1px solid #000;padding:4px 6px}}
+th{{background:#f0f0f0;font-weight:bold;text-align:center;font-size:9.5pt;letter-spacing:.04em}}
 td{{vertical-align:top}}
 td.num{{text-align:center;width:5%}}
-td.right{{text-align:right;font-variant-numeric:tabular-nums}}
+td.right{{text-align:right}}
 tbody tr:nth-child(even){{background:#f8f8f8}}
 .ul{{border-bottom:1px solid #000;display:inline-block;min-width:180px}}
-.sig-wrap{{margin-top:24px;border-top:1px solid #000;padding-top:10px}}
+.sig-wrap{{margin-top:20px;border-top:1px solid #000;padding-top:8px;break-inside:avoid;page-break-inside:avoid}}
 .sig-table{{width:100%;border-collapse:collapse}}
 .sig-table td{{border:none;padding:4px 8px;vertical-align:top;width:50%}}
 .sig-table .sig-label{{font-weight:bold;font-size:10pt;text-transform:uppercase;letter-spacing:.08em;padding-bottom:6px}}
 .sig-table .sig-line{{border-bottom:1px solid #000;min-width:180px;display:inline-block;margin-right:8px}}
 a{{color:#000;text-decoration:none}}
 @media print{{
-  html,body{{background:#fff;margin:0;padding:0}}
-  body{{font-size:9.5pt}}
-  .page{{width:auto;min-height:0;margin:0;padding:0;box-shadow:none;background:transparent}}
-  @page{{size:A4 portrait;margin:15mm 10mm 15mm 20mm}}
+  html,body{{background:#fff !important;margin:0 !important;padding:0 !important}}
+  .page{{display:block;width:auto !important;min-height:0 !important;margin:0 !important;padding:0 !important;box-shadow:none !important;background:transparent !important;border:none !important}}
+  @page{{size:A4 portrait;margin:20mm 10mm 15mm 20mm}}
   a{{color:#000;text-decoration:none}}
-  .sec-block{{page-break-inside:avoid}}
-  .sig-wrap{{page-break-inside:avoid}}
-  table{{page-break-inside:avoid}}
+  .sig-wrap{{break-inside:avoid;page-break-inside:avoid}}
+  table{{break-inside:avoid;page-break-inside:avoid}}
+  h1,h2,.sec{{break-after:avoid;page-break-after:avoid}}
 }}
 </style>'''
 
