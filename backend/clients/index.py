@@ -975,11 +975,14 @@ tbody tr:nth-child(even){{background:#f8f8f8}}
 .sig-table .sig-line{{border-bottom:1px solid #000;min-width:180px;display:inline-block;margin-right:8px}}
 a{{color:#000;text-decoration:none}}
 @media print{{
-  html{{background:#fff}}
-  body{{margin:0;font-size:10pt}}
-  .page{{width:auto;min-height:auto;margin:0;padding:0;box-shadow:none}}
-  @page{{size:A4 portrait;margin:8mm 8mm 8mm 13mm}}
+  html,body{{background:#fff;margin:0;padding:0}}
+  body{{font-size:9.5pt}}
+  .page{{width:auto;min-height:0;margin:0;padding:0;box-shadow:none;background:transparent}}
+  @page{{size:A4 portrait;margin:15mm 10mm 15mm 20mm}}
   a{{color:#000;text-decoration:none}}
+  .sec-block{{page-break-inside:avoid}}
+  .sig-wrap{{page-break-inside:avoid}}
+  table{{page-break-inside:avoid}}
 }}
 </style>'''
 
