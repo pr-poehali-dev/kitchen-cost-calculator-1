@@ -1,5 +1,6 @@
 import { blockStyle } from './docTemplateTypes';
 import type { Block, Template } from './docTemplateTypes';
+import { getLetterhead, type LetterheadContext } from './docTemplateLetterheads';
 
 // ── Превью-значения переменных ──────────────────────────────────────────────
 const PREVIEW_VALUES: Record<string, string> = {
@@ -283,18 +284,41 @@ export function buildPreviewHtml(template: Template): string {
   const pageW = landscape ? '297mm' : '210mm';
   const pageH = landscape ? '210mm' : '297mm';
 
+  // ── Letterhead ──────────────────────────────────────────────────────────
+  const lhId = (s.letterhead as string) || 'none';
+  const lhColor = (s.accentColor as string) || '#c0392b';
+  const lhCtx: LetterheadContext = {
+    accentColor: lhColor,
+    company:  applyPreviewVars((s.lhCompany  as string) || '{{компания}}'),
+    phone:    applyPreviewVars((s.lhPhone    as string) || '{{телефон_компании}}'),
+    email:    applyPreviewVars((s.lhEmail    as string) || '{{email_компании}}'),
+    address:  applyPreviewVars((s.lhAddress  as string) || '{{адрес_компании}}'),
+    website:  applyPreviewVars((s.lhWebsite  as string) || '{{сайт_компании}}'),
+  };
+  const lhDef = getLetterhead(lhId);
+  const lh = lhDef.build(lhCtx);
+
+  // Добавляем letterhead к отступам страницы, чтобы контент не наползал
+  const contentPaddingTop    = mTop + lh.headerHeightMm;
+  const contentPaddingBottom = mBottom + lh.footerHeightMm;
+
   const rendered = blocks.map(b => renderBlock(b, globalFontSize)).join('\n');
 
   return `<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
-  @page{size:${pageW} ${pageH};margin:${mTop}mm ${mRight}mm ${mBottom}mm ${mLeft}mm}
+  @page{size:${pageW} ${pageH};margin:0}
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:#e8e8e8;font-family:'${fontFamily}',serif;font-size:${globalFontSize}pt;line-height:${lineHeight}}
   p{margin:0 0 2px;white-space:pre-wrap}
-  .page{width:${pageW};min-height:${pageH};background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);padding:${mTop}mm ${mRight}mm ${mBottom}mm ${mLeft}mm;margin:12px auto;position:relative}
+  .page{width:${pageW};min-height:${pageH};background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);padding:${contentPaddingTop}mm ${mRight}mm ${contentPaddingBottom}mm ${mLeft}mm;margin:12px auto;position:relative;overflow:hidden}
   @media print{html,body{background:#fff}.page{margin:0;box-shadow:none;page-break-after:always}}
+  ${lh.css}
 </style>
 </head><body>
-<div class="page">${rendered || '<p style="color:#aaa;text-align:center;padding-top:40mm">Нет активных блоков</p>'}</div>
+<div class="page">
+  ${lh.headerHtml}
+  ${rendered || '<p style="color:#aaa;text-align:center;padding-top:20mm">Нет активных блоков</p>'}
+  ${lh.footerHtml}
+</div>
 </body></html>`;
 }
