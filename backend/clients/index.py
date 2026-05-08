@@ -664,6 +664,8 @@ def handler(event: dict, context) -> dict:
         manager_poa = _get_manager_poa(client.get('manager_name', ''))
         if manager_poa.get('poa_number') or manager_poa.get('poa_date'):
             company = {**company, 'poaNumber': manager_poa.get('poa_number', ''), 'poaDate': manager_poa.get('poa_date', '')}
+            client['manager_poa_number'] = manager_poa.get('poa_number', '')
+            client['manager_poa_date'] = manager_poa.get('poa_date', '')
         fallback_html = _build_contract_html(client, doc_type, company)
         tpl_blocks, tpl_settings = _get_template_blocks(user_id, doc_type)
         projects = _get_client_projects(user_id, client) if any(b.get('type') == 'calc_table' for b in tpl_blocks) else []
@@ -694,6 +696,8 @@ def handler(event: dict, context) -> dict:
         manager_poa = _get_manager_poa(client.get('manager_name', ''))
         if manager_poa.get('poa_number') or manager_poa.get('poa_date'):
             company = {**company, 'poaNumber': manager_poa.get('poa_number', ''), 'poaDate': manager_poa.get('poa_date', '')}
+            client['manager_poa_number'] = manager_poa.get('poa_number', '')
+            client['manager_poa_date'] = manager_poa.get('poa_date', '')
         fallback_html = _build_contract_html(client, doc_type, company)
         tpl_blocks, tpl_settings = _get_template_blocks(user_id, doc_type)
         projects = _get_client_projects(user_id, client) if any(b.get('type') == 'calc_table' for b in tpl_blocks) else []

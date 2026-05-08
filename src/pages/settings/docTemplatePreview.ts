@@ -328,7 +328,7 @@ export function buildPreviewHtml(template: Template): string {
   *{box-sizing:border-box}
   html,body{margin:0;padding:0;background:#e8e8e8;font-family:'${fontFamily}',serif;font-size:${globalFontSize}pt;line-height:${lineHeight}}
   p{margin:0 0 2px;white-space:pre-wrap}
-  .page{width:${pageW};min-height:${pageH};background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);padding:${contentPaddingTop}mm ${mRight}mm ${contentPaddingBottom}mm ${mLeft}mm;margin:12px auto;position:relative;overflow:hidden}
+  .page{width:${pageW};min-height:${pageH};background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);padding:${contentPaddingTop}mm ${mRight}mm ${contentPaddingBottom}mm ${mLeft}mm;margin:12px auto;position:relative}
   @media print{html,body{background:#fff}.page{margin:0;box-shadow:none;page-break-after:always}}
   ${lh.css}
 </style>
