@@ -129,28 +129,28 @@ export default function TabDocuments({ client, hasDraft, onSave, saving }: {
       )}
 
       {/* Подсказка + кнопки скачать */}
-      <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg p-4 flex items-center justify-between gap-4">
+      <div className="bg-[hsl(220,14%,11%)] border border-border rounded-lg p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="space-y-1.5 text-xs text-[hsl(var(--text-muted))]">
           <div className="flex items-start gap-1.5"><span className="text-gold">•</span><span><strong className="text-white">Просмотр</strong> — открывает в браузере</span></div>
           <div className="flex items-start gap-1.5"><span className="text-gold">•</span><span><strong className="text-white">Скачать</strong> — Word (.docx) или PDF</span></div>
           <div className="flex items-start gap-1.5"><span className="text-gold">•</span><span><strong className="text-white">Отправить</strong> — ссылка клиенту на телефон</span></div>
         </div>
-        <div className="flex flex-col gap-2 shrink-0">
+        <div className="flex flex-row sm:flex-col gap-2">
           <button
             onClick={handleDownloadZip}
             disabled={downloadingZip || downloadingZipPdf}
-            className="flex items-center gap-2 px-4 py-2 border border-emerald-500/40 rounded text-xs text-emerald-400 hover:text-emerald-300 hover:border-emerald-500 transition-all disabled:opacity-60"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-emerald-500/40 rounded text-xs text-emerald-400 hover:text-emerald-300 hover:border-emerald-500 transition-all disabled:opacity-60"
           >
             {downloadingZip ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="FolderArchive" size={13} />}
-            Скачать ZIP docx
+            <span>ZIP docx</span>
           </button>
           <button
             onClick={handleDownloadZipPdf}
             disabled={downloadingZipPdf || downloadingZip}
-            className="flex items-center gap-2 px-4 py-2 border border-emerald-500/40 rounded text-xs text-emerald-400 hover:text-emerald-300 hover:border-emerald-500 transition-all disabled:opacity-60"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-4 py-2 border border-emerald-500/40 rounded text-xs text-emerald-400 hover:text-emerald-300 hover:border-emerald-500 transition-all disabled:opacity-60"
           >
             {downloadingZipPdf ? <Icon name="Loader2" size={13} className="animate-spin" /> : <Icon name="FolderArchive" size={13} />}
-            Скачать ZIP pdf
+            <span>ZIP pdf</span>
           </button>
         </div>
       </div>

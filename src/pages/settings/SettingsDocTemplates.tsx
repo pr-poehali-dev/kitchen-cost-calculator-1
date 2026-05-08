@@ -77,7 +77,7 @@ export default function SettingsDocTemplates() {
         <button
           onClick={() => setShowPreview(p => !p)}
           title={showPreview ? 'Скрыть превью' : 'Показать превью'}
-          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-all ${
+          className={`hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-md border text-xs font-medium transition-all ${
             showPreview
               ? 'border-emerald-500/50 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/15'
               : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground hover:border-border/70'
@@ -164,9 +164,9 @@ export default function SettingsDocTemplates() {
       )}
 
       {/* ── Split layout ── */}
-      <div className="flex flex-1 overflow-hidden min-h-0">
+      <div className="flex flex-col md:flex-row flex-1 overflow-hidden min-h-0">
         {/* Левая панель — редактор */}
-        <div className={`overflow-y-auto transition-all bg-[hsl(220,14%,11%)] ${showPreview ? 'w-1/2' : 'w-full'}`}>
+        <div className={`overflow-y-auto transition-all bg-[hsl(220,14%,11%)] w-full ${showPreview ? 'md:w-1/2' : 'md:w-full'}`}>
           {selectedTemplate ? (
             <div className="p-4">
               <DocTemplateEditor
@@ -200,9 +200,9 @@ export default function SettingsDocTemplates() {
           )}
         </div>
 
-        {/* Правая панель — live preview */}
+        {/* Правая панель — live preview (только на md+) */}
         {showPreview && (
-          <div className="w-1/2 border-l border-border flex flex-col overflow-hidden">
+          <div className="hidden md:flex md:w-1/2 border-l border-border flex-col overflow-hidden">
             <div className="px-3 py-2 border-b border-border flex items-center gap-2 shrink-0 bg-[hsl(220,14%,10%)]">
               <Icon name="Eye" size={12} className="text-[hsl(var(--text-muted))]" />
               <span className="text-xs text-[hsl(var(--text-muted))]">Предпросмотр — обновляется в реальном времени</span>
