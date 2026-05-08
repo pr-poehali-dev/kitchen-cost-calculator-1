@@ -7,6 +7,7 @@ export function useDocTemplates(selectedDocType: string) {
   const [templates, setTemplates] = useState<Template[]>([]);
   const savedTemplatesRef = useRef<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
+  const selectedTemplateRef = useRef<Template | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -24,8 +25,10 @@ export function useDocTemplates(selectedDocType: string) {
       if (list.length > 0) {
         const keep = keepSelectedId ? list.find((t: Template) => t.id === keepSelectedId) : null;
         const def = keep || list.find((t: Template) => t.is_default) || list[0];
+        selectedTemplateRef.current = def;
         setSelectedTemplate(def);
       } else {
+        selectedTemplateRef.current = null;
         setSelectedTemplate(null);
       }
     } catch {
@@ -35,8 +38,8 @@ export function useDocTemplates(selectedDocType: string) {
     }
   }, [selectedDocType]);
 
-  const saveTemplate = async (tpl?: Template) => {
-    const target = tpl ?? selectedTemplate;
+  const saveTemplate = useCallback(async (tpl?: Template) => {
+    const target = tpl ?? selectedTemplateRef.current ?? selectedTemplate;
     if (!target) return;
     setSaving(true);
     try {
@@ -55,10 +58,11 @@ export function useDocTemplates(selectedDocType: string) {
     } finally {
       setSaving(false);
     }
-  };
+  }, [selectedTemplate]);
 
   const doSwitch = (t: Template) => {
     const fresh = savedTemplatesRef.current.find(tpl => tpl.id === t.id) ?? t;
+    selectedTemplateRef.current = fresh;
     setSelectedTemplate(fresh);
     setTemplates(savedTemplatesRef.current);
     setIsDirty(false);
@@ -175,6 +179,7 @@ export function useDocTemplates(selectedDocType: string) {
     t: Template,
     updatePreviewFn?: (t: Template) => void
   ) => {
+    selectedTemplateRef.current = t;
     setSelectedTemplate(t);
     setTemplates(prev => prev.map(tpl => tpl.id === t.id ? t : tpl));
     setIsDirty(true);
