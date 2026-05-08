@@ -293,7 +293,8 @@ export function buildPreviewHtml(template: Template): string {
   h1{text-align:center;font-size:${globalFontSize + 1}pt}
   p{margin:0 0 2px;white-space:pre-wrap}
   .pages-wrap{padding:12px;display:flex;flex-direction:column;gap:12px;align-items:center}
-  .page{width:${pageW};height:${pageH};background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);padding:${mTop}mm ${mRight}mm ${mBottom}mm ${mLeft}mm;overflow:hidden;position:relative;page-break-after:always}
+  .page{width:${pageW};min-height:${pageH};background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);padding:${mTop}mm ${mRight}mm ${mBottom}mm ${mLeft}mm;position:relative;page-break-after:always}
+  .empty-hint{color:#aaa;font-size:11pt;text-align:center;padding-top:40mm}
   @media print{html,body{background:#fff}.pages-wrap{padding:0;gap:0}.page{box-shadow:none;page-break-after:always}}
 </style>
 <script>
@@ -306,6 +307,11 @@ window.addEventListener('load', function() {
     p.className = 'page';
     pagesWrap.appendChild(p);
     return p;
+  }
+  if (children.length === 0) {
+    var pg = makePage();
+    pg.innerHTML = '<p class="empty-hint">Добавьте блоки в шаблон</p>';
+    return;
   }
   var cur = makePage();
   children.forEach(function(el) {

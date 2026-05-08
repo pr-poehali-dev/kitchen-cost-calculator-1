@@ -5,14 +5,18 @@ import { API_URLS } from '@/config/api';
 
 export function useDocTemplates(selectedDocType: string) {
   const [templates, setTemplates] = useState<Template[]>([]);
-  const savedTemplatesRef = useRef<Template[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
-  const selectedTemplateRef = useRef<Template | null>(null);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
   const [pendingSwitch, setPendingSwitch] = useState<Template | null>(null);
   const [downloadingDocx, setDownloadingDocx] = useState(false);
+
+  // Refs — всегда актуальные значения без проблем с замыканиями
+  const savedTemplatesRef = useRef<Template[]>([]);
+  const currentTemplateRef = useRef<Template | null>(null);
+  const isDirtyRef = useRef(false);
+  const pendingSwitchRef = useRef<Template | null>(null);
 
   const loadTemplates = useCallback(async (keepSelectedId?: string) => {
     setLoading(true);
@@ -25,10 +29,10 @@ export function useDocTemplates(selectedDocType: string) {
       if (list.length > 0) {
         const keep = keepSelectedId ? list.find((t: Template) => t.id === keepSelectedId) : null;
         const def = keep || list.find((t: Template) => t.is_default) || list[0];
-        selectedTemplateRef.current = def;
+        currentTemplateRef.current = def;
         setSelectedTemplate(def);
       } else {
-        selectedTemplateRef.current = null;
+        currentTemplateRef.current = null;
         setSelectedTemplate(null);
       }
     } catch {
@@ -38,55 +42,65 @@ export function useDocTemplates(selectedDocType: string) {
     }
   }, [selectedDocType]);
 
+  // Сохраняет переданный шаблон — или берёт из ref (всегда актуальный)
   const saveTemplate = useCallback(async (tpl?: Template) => {
-    const target = tpl ?? selectedTemplateRef.current ?? selectedTemplate;
+    const target = tpl ?? currentTemplateRef.current;
     if (!target) return;
     setSaving(true);
     try {
-      await fetch(`${API}/?id=${target.id}`, {
+      const res = await fetch(`${API}/?id=${target.id}`, {
         method: 'PUT',
         headers: authHeaders(),
         body: JSON.stringify({ name: target.name, blocks: target.blocks, settings: target.settings }),
       });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      // Обновляем серверную копию
       savedTemplatesRef.current = savedTemplatesRef.current.map(t =>
         t.id === target.id ? { ...t, name: target.name, blocks: target.blocks, settings: target.settings } : t
       );
+      isDirtyRef.current = false;
       setIsDirty(false);
       if (!tpl) toast.success('Сохранено');
-    } catch {
+    } catch (e) {
       toast.error('Ошибка сохранения');
+      console.error('[saveTemplate]', e);
     } finally {
       setSaving(false);
     }
-  }, [selectedTemplate]);
+  }, []);
 
-  const doSwitch = (t: Template) => {
+  const doSwitch = useCallback((t: Template) => {
     const fresh = savedTemplatesRef.current.find(tpl => tpl.id === t.id) ?? t;
-    selectedTemplateRef.current = fresh;
+    currentTemplateRef.current = fresh;
     setSelectedTemplate(fresh);
     setTemplates(savedTemplatesRef.current);
+    isDirtyRef.current = false;
     setIsDirty(false);
+    pendingSwitchRef.current = null;
     setPendingSwitch(null);
-  };
+  }, []);
 
-  const switchTemplate = (t: Template) => {
-    if (selectedTemplate && selectedTemplate.id === t.id) return;
-    if (isDirty && selectedTemplate) { setPendingSwitch(t); return; }
-    doSwitch(t);
-  };
-
-  const confirmSwitch = async (save: boolean) => {
-    if (!pendingSwitch) return;
-    if (save) {
-      const dirty = selectedTemplate
-        ? templates.find(t => t.id === selectedTemplate.id) ?? selectedTemplate
-        : undefined;
-      await saveTemplate(dirty);
+  const switchTemplate = useCallback((t: Template) => {
+    const cur = currentTemplateRef.current;
+    if (cur && cur.id === t.id) return;
+    if (isDirtyRef.current && cur) {
+      pendingSwitchRef.current = t;
+      setPendingSwitch(t);
+      return;
     }
-    doSwitch(pendingSwitch);
-  };
+    doSwitch(t);
+  }, [doSwitch]);
 
-  const createTemplate = async () => {
+  const confirmSwitch = useCallback(async (save: boolean) => {
+    const target = pendingSwitchRef.current;
+    if (!target) return;
+    if (save) {
+      await saveTemplate(currentTemplateRef.current ?? undefined);
+    }
+    doSwitch(target);
+  }, [saveTemplate, doSwitch]);
+
+  const createTemplate = useCallback(async () => {
     const res = await fetch(`${API}/`, {
       method: 'POST',
       headers: authHeaders(),
@@ -94,21 +108,21 @@ export function useDocTemplates(selectedDocType: string) {
         doc_type: selectedDocType,
         name: 'Мой шаблон',
         settings: { fontSize: 9.5, lineHeight: 1.0, marginMm: 10 },
-        is_default: templates.length === 0,
+        is_default: savedTemplatesRef.current.length === 0,
       }),
     });
     const data = await res.json();
     if (data.id) { toast.success('Шаблон создан'); loadTemplates(); }
-  };
+  }, [selectedDocType, loadTemplates]);
 
-  const deleteTemplate = async (id: string) => {
+  const deleteTemplate = useCallback(async (id: string) => {
     if (!confirm('Удалить шаблон?')) return;
     await fetch(`${API}/?id=${id}`, { method: 'DELETE', headers: authHeaders() });
     toast.success('Удалён');
     await loadTemplates();
-  };
+  }, [loadTemplates]);
 
-  const setDefault = async (id: string) => {
+  const setDefault = useCallback(async (id: string) => {
     await fetch(`${API}/?id=${id}`, {
       method: 'PUT',
       headers: authHeaders(),
@@ -116,41 +130,44 @@ export function useDocTemplates(selectedDocType: string) {
     });
     toast.success('Шаблон применён — теперь он активный для этого типа документа');
     await loadTemplates(id);
-  };
+  }, [loadTemplates]);
 
-  const duplicateTemplate = async () => {
-    if (!selectedTemplate) return;
+  const duplicateTemplate = useCallback(async () => {
+    const cur = currentTemplateRef.current;
+    if (!cur) return;
     const res = await fetch(`${API}/`, {
       method: 'POST',
       headers: authHeaders(),
       body: JSON.stringify({
         doc_type: selectedDocType,
-        name: `${selectedTemplate.name} (копия)`,
-        blocks: selectedTemplate.blocks,
-        settings: selectedTemplate.settings,
+        name: `${cur.name} (копия)`,
+        blocks: cur.blocks,
+        settings: cur.settings,
         is_default: false,
       }),
     });
     const data = await res.json();
     if (data.id) { toast.success('Шаблон скопирован'); loadTemplates(); }
-  };
+  }, [selectedDocType, loadTemplates]);
 
-  const handleApplyTemplate = async (docLabel: string) => {
-    if (!selectedTemplate) return;
+  const handleApplyTemplate = useCallback(async (docLabel: string) => {
+    const cur = currentTemplateRef.current;
+    if (!cur) return;
     const confirmed = window.confirm(
-      `Применить шаблон «${selectedTemplate.name}» ко всем документам типа «${docLabel}»?\n\nВсе существующие договоры этого типа будут формироваться по новому шаблону. Это действие нельзя отменить автоматически.`
+      `Применить шаблон «${cur.name}» ко всем документам типа «${docLabel}»?\n\nВсе существующие договоры этого типа будут формироваться по новому шаблону. Это действие нельзя отменить автоматически.`
     );
     if (!confirmed) return;
-    if (isDirty) await saveTemplate();
-    await setDefault(selectedTemplate.id);
-  };
+    if (isDirtyRef.current) await saveTemplate();
+    await setDefault(cur.id);
+  }, [saveTemplate, setDefault]);
 
-  const downloadDocx = async () => {
-    if (!selectedTemplate) return;
-    if (isDirty) await saveTemplate();
+  const downloadDocx = useCallback(async () => {
+    const cur = currentTemplateRef.current;
+    if (!cur) return;
+    if (isDirtyRef.current) await saveTemplate();
     setDownloadingDocx(true);
     try {
-      const url = `${API_URLS.docBuilder}/?action=doc_docx&client_id=preview&doc=${selectedTemplate.doc_type}`;
+      const url = `${API_URLS.docBuilder}/?action=doc_docx&client_id=preview&doc=${cur.doc_type}`;
       const res = await fetch(url, { headers: authHeaders() });
       const data = await res.json();
       if (data.data) {
@@ -161,7 +178,7 @@ export function useDocTemplates(selectedDocType: string) {
         const blobUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = blobUrl;
-        a.download = `${selectedTemplate.name} — пример.docx`;
+        a.download = `${cur.name} — пример.docx`;
         document.body.appendChild(a); a.click(); document.body.removeChild(a);
         setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
         toast.success('Пример DOCX скачан');
@@ -173,18 +190,19 @@ export function useDocTemplates(selectedDocType: string) {
     } finally {
       setDownloadingDocx(false);
     }
-  };
+  }, [saveTemplate]);
 
-  const handleUpdateTemplate = (
+  const handleUpdateTemplate = useCallback((
     t: Template,
     updatePreviewFn?: (t: Template) => void
   ) => {
-    selectedTemplateRef.current = t;
+    currentTemplateRef.current = t;
+    isDirtyRef.current = true;
     setSelectedTemplate(t);
     setTemplates(prev => prev.map(tpl => tpl.id === t.id ? t : tpl));
     setIsDirty(true);
     updatePreviewFn?.(t);
-  };
+  }, []);
 
   return {
     templates, selectedTemplate, saving, loading, isDirty, pendingSwitch, downloadingDocx,
