@@ -1394,23 +1394,197 @@ def _render_block_html(block: dict, global_font_size: float, c: dict, company: d
         col_widths = block.get('colWidths')
         if not col_widths or len(col_widths) != len(header):
             col_widths = [round(100 / len(header))] * len(header)
+        col_aligns = block.get('colAligns') or []
+        if len(col_aligns) != len(header):
+            col_aligns = ['left'] * len(header)
+        row_height = block.get('rowHeight')
+        rh_s = f'height:{row_height}mm;' if row_height else ''
+        cell_pad = 'padding:0 5px;vertical-align:middle;' if row_height else 'padding:3px 5px;'
         colgroup = ''.join([f'<col style="width:{w}%"/>' for w in col_widths])
-        t_style = base_style('width:100%;border-collapse:collapse;table-layout:fixed')
-        ths = ''.join([f'<th style="border:1px solid #000;padding:3px 5px;background:#f0f0f0;font-weight:bold;word-break:break-word">{h}</th>' for h in header])
+        t_style = f'width:100%;border-collapse:collapse;table-layout:fixed;font-size:{fs}pt;{mt_s or "margin-top:6px;"}{mb_s or "margin-bottom:6px;"}'
+        ths = ''.join([f'<th style="border:1px solid #000;{cell_pad}background:#f0f0f0;font-weight:bold;word-break:break-word;text-align:{col_aligns[i]}">{h}</th>' for i, h in enumerate(header)])
         trs = ''.join([
-            '<tr>' + ''.join([f'<td style="border:1px solid #000;padding:3px 5px;word-break:break-word">{cell}</td>' for cell in row.split(';')]) + '</tr>'
+            f'<tr style="{rh_s}">' + ''.join([f'<td style="border:1px solid #000;{cell_pad}word-break:break-word;text-align:{col_aligns[i] if i < len(col_aligns) else "left"}">{cell}</td>' for i, cell in enumerate(row.split(';'))]) + '</tr>'
             for row in body_rows
         ])
-        return f'<table style="{t_style}"><colgroup>{colgroup}</colgroup><tr>{ths}</tr>{trs}</table>'
+        return f'<table style="{t_style}"><colgroup>{colgroup}</colgroup><tr style="{rh_s}">{ths}</tr>{trs}</table>'
     if btype == 'section':
         s_style = f'font-weight:bold;text-align:{align or "center"};font-size:{fs}pt;{mt_s or "margin-top:8px;"}{mb_s or "margin-bottom:3px;"}'
         if italic: s_style += ';font-style:italic'
         if underline: s_style += ';text-decoration:underline'
         return f'<p style="{s_style}">{content}</p>'
+    if btype == 'header':
+        h_style = f'text-align:{align or "center"};font-size:{fs}pt;{mt_s}{mb_s}'
+        if bold: h_style += ';font-weight:bold'
+        if italic: h_style += ';font-style:italic'
+        if underline: h_style += ';text-decoration:underline'
+        return f'<p style="{h_style}">{content}</p>'
+    if btype == 'two_col':
+        sep = content.find('\n---\n')
+        left_raw  = content[:sep]  if sep >= 0 else content
+        right_raw = content[sep+5:] if sep >= 0 else ''
+        left_html  = left_raw.replace('\n', '<br/>')
+        right_html = right_raw.replace('\n', '<br/>')
+        gap = block.get('twoColGap', 4)
+        left_align  = block.get('twoColLeftAlign', 'left')
+        right_align = block.get('twoColRightAlignVal') or ('right' if block.get('twoColRightAlign') else 'left')
+        wrap_style = f'font-size:{fs}pt;{mt_s or "margin-top:6px;"}{mb_s or "margin-bottom:6px;"}'
+        if bold:      wrap_style += ';font-weight:bold'
+        if italic:    wrap_style += ';font-style:italic'
+        if underline: wrap_style += ';text-decoration:underline'
+        return (f'<div style="display:table;width:100%;{wrap_style}">'
+                f'<div style="display:table-cell;width:50%;vertical-align:top;padding-right:{gap}mm;text-align:{left_align}">{left_html}</div>'
+                f'<div style="display:table-cell;width:50%;vertical-align:top;padding-left:{gap}mm;text-align:{right_align}">{right_html}</div>'
+                f'</div>')
     if btype == 'calc_table':
         return _render_calc_table_html(block, projects or [], global_font_size)
-    # paragraph / header / default
-    return f'<p style="{base_style()}">{content}</p>'
+    # paragraph / default
+    content_html = content.replace('\n', '<br/>')
+    return f'<p style="{base_style()}">{content_html}</p>'
+
+
+def _build_letterhead_html(settings: dict, company: dict, c: dict) -> tuple:
+    """Возвращает (header_html, footer_html, extra_css, header_h_mm, footer_h_mm) для бланка."""
+    lh_id = settings.get('letterhead', 'none')
+    if not lh_id or lh_id == 'none':
+        return '', '', '', 0, 0
+
+    accent = settings.get('accentColor', '#c0392b')
+
+    def lh_val(key, fallback_var):
+        v = settings.get(key, '')
+        if v:
+            return v
+        # применяем переменные компании напрямую
+        return {
+            '{{компания}}': company.get('name', ''),
+            '{{телефон_компании}}': company.get('phone', ''),
+            '{{email_компании}}': company.get('email', ''),
+            '{{адрес_компании}}': company.get('address', ''),
+            '{{сайт_компании}}': company.get('website', ''),
+        }.get(fallback_var, '')
+
+    co_name    = lh_val('lhCompany', '{{компания}}')
+    co_phone   = lh_val('lhPhone',   '{{телефон_компании}}')
+    co_email   = lh_val('lhEmail',   '{{email_компании}}')
+    co_address = lh_val('lhAddress', '{{адрес_компании}}')
+    co_website = lh_val('lhWebsite', '{{сайт_компании}}')
+    logo_url   = settings.get('lhLogoUrl', '')
+    logo_pos   = settings.get('lhLogoPosition', 'left')
+    logo_h     = settings.get('lhLogoHeight', 12)
+    logo_tag   = f'<img src="{logo_url}" style="height:{logo_h}mm;width:auto;object-fit:contain;display:block" />' if logo_url else ''
+
+    def hex2rgb(h):
+        h = h.lstrip('#')
+        return f'{int(h[0:2],16)},{int(h[2:4],16)},{int(h[4:6],16)}'
+
+    rgb = hex2rgb(accent)
+    header_h, footer_h = 18, 14
+
+    if lh_id == 'classic':
+        logo_above = ''
+        logo_left = logo_right = ''
+        if logo_url:
+            if logo_pos in ('left', 'center', 'right'):
+                logo_above = f'<div style="text-align:{logo_pos};margin-bottom:3mm">{logo_tag}</div>'
+                header_h += logo_h + 3
+            elif logo_pos == 'header-left':
+                logo_left = f'<div style="margin-right:4mm">{logo_tag}</div>'
+            elif logo_pos == 'header-right':
+                logo_right = f'<div style="margin-left:4mm">{logo_tag}</div>'
+        header = (f'<div style="border-top:3px solid {accent};margin-bottom:0"></div>'
+                  f'{logo_above}'
+                  f'<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:4mm;margin-bottom:5mm;border-bottom:1.5px solid {accent}">'
+                  f'{logo_left}<div style="font-size:10.5pt;font-weight:bold;letter-spacing:0.04em;text-transform:uppercase">'
+                  f'<span style="display:inline-block;width:10px;height:10px;background:{accent};margin-right:6px;vertical-align:middle"></span>'
+                  f'{co_name or "КОМПАНИЯ"}</div>{logo_right}</div>')
+        footer_items = ''.join([
+            f'<div style="display:flex;align-items:center;gap:2mm"><div style="width:5px;height:5px;border-radius:50%;background:{accent};flex-shrink:0"></div><span>{v}</span></div>'
+            for v in [co_phone, co_email, co_address, co_website] if v
+        ])
+        footer = (f'<div style="position:absolute;bottom:6mm;left:0;right:0;padding:3mm 10mm 0;border-top:1px solid rgba({rgb},0.35);display:flex;gap:8mm;font-size:7.5pt;color:#666">'
+                  f'{footer_items}</div>'
+                  f'<div style="position:absolute;bottom:0;right:0;width:0;height:0;border-style:solid;border-width:0 0 22mm 22mm;border-color:transparent transparent {accent} transparent"></div>')
+        css = f'.lh-page{{border:1.2px solid #d0d0d0}}'
+
+    elif lh_id == 'corporate':
+        logo_in_header = logo_pos in ('header-left', 'header-right')
+        logo_above = '' if logo_in_header else (f'<div style="text-align:{logo_pos};margin-bottom:3mm">{logo_tag}</div>' if logo_url else '')
+        if logo_in_header and logo_url:
+            logo_tag_white = f'<img src="{logo_url}" style="height:{logo_h}mm;width:auto;object-fit:contain;filter:brightness(0) invert(1);opacity:0.9" />'
+        else:
+            logo_tag_white = ''
+        header_h = 22 + (logo_h + 3 if logo_url and not logo_in_header else 0)
+        footer_h = 11
+        header = (f'<div style="position:absolute;top:0;left:0;bottom:0;width:6mm;background:{accent}"></div>'
+                  f'{logo_above}'
+                  f'<div style="background:{accent};margin-bottom:7mm;padding:4mm 6mm 4mm 8mm;display:flex;align-items:center;justify-content:space-between">'
+                  f'{"<div style=margin-right:5mm>" + logo_tag_white + "</div>" if logo_pos == "header-left" and logo_tag_white else ""}'
+                  f'<div><div style="font-size:11pt;font-weight:bold;color:#fff;letter-spacing:0.05em;text-transform:uppercase">{co_name or "КОМПАНИЯ"}</div>'
+                  f'{"<div style=font-size:7.5pt;color:rgba(255,255,255,0.75);margin-top:1mm>" + co_website + "</div>" if co_website else ""}</div>'
+                  f'{"<div style=margin-left:auto>" + logo_tag_white + "</div>" if logo_pos == "header-right" and logo_tag_white else ""}'
+                  f'</div>')
+        footer_parts = ''.join([
+            f'<div style="font-size:7.5pt;color:rgba(255,255,255,0.9)">{v}</div>'
+            for v in [co_phone, co_email, co_address] if v
+        ])
+        footer = (f'<div style="position:absolute;bottom:0;left:0;right:0;background:{accent};padding:2.5mm 6mm 2.5mm 14mm;display:flex;gap:6mm;align-items:center">'
+                  f'{footer_parts}</div>')
+        css = ''
+
+    elif lh_id == 'elegant':
+        logo_above = ''
+        if logo_url and logo_pos not in ('header-left', 'header-right'):
+            logo_above = f'<div style="text-align:{logo_pos if logo_pos else "center"};margin-bottom:2mm">{logo_tag}</div>'
+            header_h += logo_h + 2
+        else:
+            header_h = 22
+        footer_h = 12
+        sub = ' · '.join(v for v in [co_phone, co_email] if v)
+        header = (f'<div style="position:absolute;top:4mm;left:4mm;right:4mm;bottom:4mm;border:1.5px solid {accent};pointer-events:none"></div>'
+                  f'<div style="position:absolute;top:6mm;left:6mm;right:6mm;bottom:6mm;border:0.5px solid rgba({rgb},0.4);pointer-events:none"></div>'
+                  f'<div style="position:absolute;top:3mm;left:3mm;width:8mm;height:8mm;border-top:2.5px solid {accent};border-left:2.5px solid {accent}"></div>'
+                  f'<div style="position:absolute;top:3mm;right:3mm;width:8mm;height:8mm;border-top:2.5px solid {accent};border-right:2.5px solid {accent}"></div>'
+                  f'<div style="position:absolute;bottom:3mm;left:3mm;width:8mm;height:8mm;border-bottom:2.5px solid {accent};border-left:2.5px solid {accent}"></div>'
+                  f'<div style="position:absolute;bottom:3mm;right:3mm;width:8mm;height:8mm;border-bottom:2.5px solid {accent};border-right:2.5px solid {accent}"></div>'
+                  f'<div style="text-align:center;padding-bottom:5mm;margin-bottom:5mm;border-bottom:0.8px solid rgba({rgb},0.4)">'
+                  f'{logo_above}'
+                  f'<div style="font-size:11pt;font-weight:bold;letter-spacing:0.12em;text-transform:uppercase;color:{accent}">{co_name or "КОМПАНИЯ"}</div>'
+                  f'{"<div style=font-size:7.5pt;color:#888;margin-top:1.5mm>" + sub + "</div>" if sub else ""}'
+                  f'</div>')
+        parts = [v for v in [co_phone, co_email, co_address, co_website] if v]
+        footer = (f'<div style="position:absolute;bottom:10mm;left:0;right:0;padding:2.5mm 14mm 0;border-top:0.8px solid rgba({rgb},0.3);text-align:center;font-size:7.5pt;color:#777">'
+                  f'{" | ".join(parts)}</div>') if parts else ''
+        css = ''
+
+    else:  # minimal
+        logo_above = ''
+        logo_in_header = logo_pos in ('header-left', 'header-right')
+        if logo_url and not logo_in_header:
+            logo_above = f'<div style="text-align:{logo_pos};margin-bottom:3mm">{logo_tag}</div>'
+            header_h += logo_h + 3
+        else:
+            header_h = 18
+        footer_h = 10
+        logo_left_tag  = logo_tag if (logo_url and logo_pos == 'header-left')  else ''
+        logo_right_tag = logo_tag if (logo_url and logo_pos == 'header-right') else ''
+        contact = '<br/>'.join(v for v in [co_phone, co_email] if v)
+        header = (f'{logo_above}'
+                  f'<div style="display:flex;align-items:center;justify-content:space-between;padding-bottom:3mm;margin-bottom:6mm;border-bottom:1px solid #e0e0e0;gap:4mm">'
+                  f'<div style="display:flex;align-items:center;gap:4mm">'
+                  f'{"<div style=margin-right:2mm>" + logo_left_tag + "</div>" if logo_left_tag else ""}'
+                  f'<div><div style="font-size:10.5pt;font-weight:bold">{co_name or "КОМПАНИЯ"}</div>'
+                  f'<div style="width:20mm;height:2px;background:{accent};margin-top:2mm"></div></div></div>'
+                  f'<div style="display:flex;align-items:center;gap:4mm">'
+                  f'<div style="font-size:7.5pt;color:#888;text-align:right;line-height:1.5">{contact}</div>'
+                  f'{logo_right_tag}</div></div>')
+        footer_parts = [v for v in [co_address, co_website] if v]
+        footer = (f'<div style="position:absolute;bottom:8mm;left:0;right:0;padding:0 8mm;display:flex;justify-content:space-between;font-size:7.5pt;color:#aaa">'
+                  f'<span style="color:{accent};font-weight:bold">{co_name or ""}</span>'
+                  f'<span>{" · ".join(footer_parts)}</span></div>') if footer_parts else ''
+        css = f'body{{border-left:4px solid {accent}}}'
+
+    return header, footer, css, header_h, footer_h
 
 
 def _render_template_html(blocks: list, settings: dict, c: dict, company: dict, fallback_html: str, projects: list = None) -> str:
@@ -1431,19 +1605,24 @@ def _render_template_html(blocks: list, settings: dict, c: dict, company: dict, 
     page_w = '297mm' if landscape else '210mm'
     page_h = '210mm' if landscape else '297mm'
 
+    lh_header, lh_footer, lh_css, lh_header_h, lh_footer_h = _build_letterhead_html(settings, company, c)
+    pad_top    = float(m_top) + lh_header_h
+    pad_bottom = float(m_bottom) + lh_footer_h
+
     rendered = '\n'.join([_render_block_html(b, global_font_size, c, company, projects) for b in enabled_blocks])
 
     return f'''<!DOCTYPE html><html><head><meta charset="UTF-8">
 <style>
-  @page{{size:{page_w} {page_h};margin:{m_top}mm {m_right}mm {m_bottom}mm {m_left}mm}}
+  @page{{size:{page_w} {page_h};margin:0}}
   *{{box-sizing:border-box}}
   html{{background:#e8e8e8;min-height:100vh}}
-  body{{font-family:'{font_family}';line-height:{line_height};margin:0 auto;padding:12px;font-size:{global_font_size}pt;background:#fff;max-width:{page_w};box-shadow:0 4px 20px rgba(0,0,0,.3)}}
-  p{{margin:0 0 4px 0}}
-  table{{border-collapse:collapse;width:100%}}
-  @media print{{html{{background:#fff}};body{{margin:0;padding:0;box-shadow:none;max-width:none}};@page{{margin:{m_top}mm {m_right}mm {m_bottom}mm {m_left}mm}}}}
+  body{{font-family:'{font_family}',serif;line-height:{line_height};margin:12px auto;padding:{pad_top}mm {m_right}mm {pad_bottom}mm {m_left}mm;font-size:{global_font_size}pt;background:#fff;width:{page_w};box-shadow:0 4px 20px rgba(0,0,0,.3);position:relative;overflow:hidden}}
+  p{{margin:0 0 2px;white-space:pre-wrap}}
+  table{{border-collapse:collapse}}
+  @media print{{html{{background:#fff}}body{{margin:0;box-shadow:none;width:auto}}}}
+  {lh_css}
 </style>
-</head><body>{rendered}</body></html>'''
+</head><body>{lh_header}{rendered}{lh_footer}</body></html>'''
 
 
 def _build_contract_html(c: dict, doc_type: str, company: dict = None) -> str:
