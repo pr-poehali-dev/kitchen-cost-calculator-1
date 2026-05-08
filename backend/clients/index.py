@@ -1620,10 +1620,11 @@ def _render_template_html(blocks: list, settings: dict, c: dict, company: dict, 
   @page{{size:{page_w} {page_h};margin:0}}
   *{{box-sizing:border-box}}
   html{{background:#e8e8e8;min-height:100vh}}
-  body{{font-family:'{font_family}',serif;line-height:{line_height};margin:12px auto;padding:{pad_top}mm {m_right}mm {pad_bottom}mm {m_left}mm;font-size:{global_font_size}pt;background:#fff;width:{page_w};box-shadow:0 4px 20px rgba(0,0,0,.3);position:relative;overflow:hidden}}
-  p{{margin:0 0 2px;white-space:pre-wrap}}
-  table{{border-collapse:collapse}}
-  @media print{{html{{background:#fff}}body{{margin:0;box-shadow:none;width:auto}}}}
+  body{{font-family:'{font_family}',serif;line-height:{line_height};margin:12px auto;padding:{pad_top}mm {m_right}mm {pad_bottom}mm {m_left}mm;font-size:{global_font_size}pt;background:#fff;width:{page_w};box-shadow:0 4px 20px rgba(0,0,0,.3);position:relative}}
+  p{{margin:0 0 2px;white-space:pre-wrap;orphans:3;widows:3}}
+  p.sec{{font-weight:bold;page-break-after:avoid}}
+  table{{border-collapse:collapse;page-break-inside:avoid}}
+  @media print{{html{{background:#fff}}body{{margin:0;box-shadow:none;width:auto;overflow:visible}}}}
   {lh_css}
 </style>
 </head><body>{lh_header}{rendered}{lh_footer}</body></html>'''
