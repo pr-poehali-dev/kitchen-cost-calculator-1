@@ -23,8 +23,8 @@ function DocPreviewModal({ url, title, onClose }: { url: string; title: string; 
           </button>
         </div>
       </div>
-      <div className="flex-1 overflow-hidden bg-[#2d2d2d]">
-        <iframe src={url} className="border-0" title={title} style={{ width: '100%', height: '100%', display: 'block' }} />
+      <div className="flex-1 relative bg-[#2d2d2d]">
+        <iframe src={url} className="border-0 absolute inset-0" title={title} style={{ width: '100%', height: '100%' }} />
       </div>
     </div>
   );

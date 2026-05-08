@@ -322,21 +322,43 @@ export function buildPreviewHtml(template: Template): string {
 
   const rendered = blocks.map(b => renderBlock(b, globalFontSize)).join('\n');
 
-  return `<!DOCTYPE html><html><head><meta charset="UTF-8">
-<style>
+  const pageHpx = Math.round((landscape ? 210 : 297) * 96 / 25.4);
+  return `<!DOCTYPE html><html><head><meta charset="UTF-8"><style>
   @page{size:${pageW} ${pageH};margin:0}
   *{box-sizing:border-box}
-  html,body{margin:0;padding:0;background:#e8e8e8;font-family:'${fontFamily}',serif;font-size:${globalFontSize}pt;line-height:${lineHeight}}
+  html,body{margin:0;padding:0;background:#c8c8c8;font-family:'${fontFamily}',serif;font-size:${globalFontSize}pt;line-height:${lineHeight}}
   p{margin:0 0 2px;white-space:pre-wrap}
-  .page{width:${pageW};min-height:${pageH};background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.25);padding:${contentPaddingTop}mm ${mRight}mm ${contentPaddingBottom}mm ${mLeft}mm;margin:12px auto;position:relative}
-  @media print{html,body{background:#fff}.page{margin:0;box-shadow:none;page-break-after:always}}
+  #page-source{position:absolute;visibility:hidden;top:0;left:0;width:${pageW};padding:${contentPaddingTop}mm ${mRight}mm ${contentPaddingBottom}mm ${mLeft}mm}
+  .page{width:${pageW};height:${pageHpx}px;background:#fff;box-shadow:0 2px 8px rgba(0,0,0,0.18);margin:0 auto;position:relative;overflow:hidden}
+  .page-inner{position:absolute;left:0;right:0;width:100%;padding:${contentPaddingTop}mm ${mRight}mm ${contentPaddingBottom}mm ${mLeft}mm}
+  .page-sep{width:${pageW};margin:0 auto;height:10px;background:#c8c8c8;display:flex;align-items:center;justify-content:flex-end;padding-right:6px;font-size:7pt;color:#aaa;font-family:sans-serif;letter-spacing:.5px}
   ${lh.css}
-</style>
-</head><body>
-<div class="page">
+  @media print{#page-source{display:none}html,body{background:#fff}.page{height:auto!important;overflow:visible!important;box-shadow:none;page-break-after:always}.page-inner{position:static!important;top:auto!important}.page-sep{display:none}}
+</style></head><body>
+<div id="page-source">
   ${lh.headerHtml}
   ${rendered || '<p style="color:#aaa;text-align:center;padding-top:20mm">Нет активных блоков</p>'}
   ${lh.footerHtml}
 </div>
+<script>(function(){
+  var pageHpx = ${pageHpx};
+  function build(){
+    var src = document.getElementById('page-source');
+    if(!src) return;
+    var total = src.scrollHeight;
+    var n = Math.max(1, Math.ceil(total / pageHpx));
+    var body = document.body;
+    for(var i = 0; i < n; i++){
+      if(i > 0){ var sep = document.createElement('div'); sep.className='page-sep'; sep.textContent='— стр. '+(i+1)+' —'; body.appendChild(sep); }
+      var pg = document.createElement('div'); pg.className='page';
+      var inn = document.createElement('div'); inn.className='page-inner';
+      inn.style.top = (-i * pageHpx) + 'px';
+      inn.innerHTML = src.innerHTML;
+      pg.appendChild(inn);
+      body.appendChild(pg);
+    }
+  }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',build); } else { build(); }
+})();</script>
 </body></html>`;
 }

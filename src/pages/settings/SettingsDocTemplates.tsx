@@ -259,13 +259,15 @@ export default function SettingsDocTemplates() {
               </span>
             </div>
             {selectedTemplate ? (
-              <iframe
-                ref={iframeRef}
-                srcDoc={initialPreviewHtml}
-                className="flex-1 w-full"
-                style={{ background: '#e8e8e8' }}
-                title="Предпросмотр"
-              />
+              <div className="flex-1 relative overflow-hidden">
+                <iframe
+                  ref={iframeRef}
+                  srcDoc={initialPreviewHtml}
+                  className="absolute inset-0 w-full h-full border-0"
+                  style={{ background: '#c8c8c8' }}
+                  title="Предпросмотр"
+                />
+              </div>
             ) : (
               <div className="flex-1 flex items-center justify-center text-xs text-[hsl(var(--text-muted))]">
                 Выберите шаблон для предпросмотра
