@@ -974,9 +974,9 @@ tbody tr:nth-child(even){{background:#f8f8f8}}
 .sig-table .sig-line{{border-bottom:1px solid #000;min-width:180px;display:inline-block;margin-right:8px}}
 a{{color:#000;text-decoration:none}}
 @media print{{
-  @page{{size:A4 portrait;margin:20mm 15mm 15mm 25mm}}
+  @page{{size:A4 portrait;margin:0}}
   html,body{{background:#fff !important;margin:0 !important;padding:0 !important}}
-  .page{{display:block;width:auto !important;min-height:0 !important;margin:0 !important;padding:0 !important;box-shadow:none !important;background:transparent !important;border:none !important}}
+  .page{{display:block;width:auto !important;min-height:0 !important;margin:0 !important;padding:20mm 15mm 15mm 25mm !important;box-shadow:none !important;background:#fff !important;border:none !important}}
   a{{color:#000;text-decoration:none}}
   .sig-wrap{{break-inside:avoid;page-break-inside:avoid}}
   table{{break-inside:avoid;page-break-inside:avoid}}
