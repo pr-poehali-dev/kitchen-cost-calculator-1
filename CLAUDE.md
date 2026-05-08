@@ -513,3 +513,57 @@ calcPriceWithMarkup(basePrice, 'materials' | 'services')
 - `backend/auth/index.py` — авторизация
 - `db_migrations/` — только добавлять, не редактировать существующие
 - `src/config/api.ts` — URL берутся из func2url.json автоматически
+
+---
+
+## Конструктор шаблонов документов
+
+Все файлы в `src/pages/settings/`:
+
+| Файл | Роль |
+|------|------|
+| `docTemplateTypes.ts` | Интерфейсы `Block`, `Template`, утилиты `parseTableContent` / `serializeTableContent` |
+| `docTemplatePreview.ts` | `buildPreviewHtml(template)` → HTML-строка для iframe; `renderBlock()` — рендер каждого блока |
+| `docTemplateLetterheads.ts` | Стили бланков: `LetterheadContext` → `build(ctx)` → `{ css, headerHtml, footerHtml }` |
+| `BlockTableEditor.tsx` | Редактор блока-таблицы: `colWidths`, `colAligns`, `rowHeight` |
+| `BlockContentEditor.tsx` | Редактор текстовых блоков (paragraph, section, header) |
+| `BlockEditorPanels.tsx` | Оболочка всех панелей редактора блока |
+| `BlockTypographyRow.tsx` | Строка с кнопками bold/italic/underline/align |
+| `DocTemplateBlockList.tsx` | Список блоков + `updateBlock(blockId, field, value)` |
+| `DocTemplateBlockItem.tsx` | Один блок с `onUpdate` |
+| `DocTemplatePageSettings.tsx` | Настройки страницы: поля, шрифт, letterhead, логотип |
+| `SettingsDocTemplates.tsx` | Главный компонент вкладки шаблонов с iframe-превью |
+
+### Ключевые факты
+
+- **Рендер PDF** — чистый HTML в `<iframe srcDoc={...}>`, печать браузером (`@media print`)
+- **`onUpdate` тип** везде в цепочке:
+  ```typescript
+  (field: keyof Block, value: string | boolean | number | number[] | string[] | undefined) => void
+  ```
+- **Таблица** хранится в `block.content` как строка: `"Кол1;Кол2\nЗнач1;Знач2"` — первая строка заголовок
+- **Ширины колонок** `block.colWidths: number[]` — проценты (0–100), сумма должна быть ~100
+- **Выравнивание колонок** `block.colAligns: ('left'|'center'|'right')[]`
+- **Высота строки** `block.rowHeight: number` — в мм, 0/undefined = авто
+- **Letterhead** подключается в `buildPreviewHtml`: читает `template.settings.letterhead`, строит ctx, вызывает `lhDef.build(ctx)`, вставляет CSS и HTML в страницу
+- **Логотип** хранится в `template.settings.lhLogoUrl`, позиция в `lhLogoPosition`, высота в `lhLogoHeight`
+- **Загрузка логотипа** — POST `API_URLS.clients/?action=upload_asset` с `asset_type: 'logo'`, base64 в body
+
+### Типы блоков
+
+```
+paragraph   — текст (поддерживает переменные {{...}})
+section     — заголовок секции (жирный, по центру)
+header      — колонтитул (мелкий текст)
+divider     — горизонтальная линия
+spacer      — вертикальный отступ (высота в px в content)
+image       — изображение (URL в content, imageWidth/imageHeight в мм)
+lines       — строки для подписи (количество в content)
+table       — таблица (content = CSV через ; и \n)
+calc_table  — таблица материалов из калькулятора (calcTableSettings)
+two_col     — два столбца (разделитель \n---\n в content)
+```
+
+### Переменные в тексте
+
+Вида `{{имя_клиента}}` — подставляются при генерации документа. Список всех переменных — в `PREVIEW_VALUES` в `docTemplatePreview.ts`.
