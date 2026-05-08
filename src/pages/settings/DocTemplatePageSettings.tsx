@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Icon from '@/components/ui/icon';
 import type { Template } from './docTemplateTypes';
 import { LETTERHEADS } from './docTemplateLetterheads';
+import { API_URLS } from '@/config/api';
+import { toast } from 'sonner';
 
 interface Props {
   template: Template;
@@ -34,8 +36,18 @@ const ACCENT_PRESETS = [
   '#374151', '#7c3aed',
 ];
 
+const LOGO_POSITIONS = [
+  { id: 'left',         label: 'Слева',          icon: '▐·' },
+  { id: 'center',       label: 'По центру',       icon: '·▐·' },
+  { id: 'right',        label: 'Справа',          icon: '·▐' },
+  { id: 'header-left',  label: 'В шапке слева',   icon: '◧' },
+  { id: 'header-right', label: 'В шапке справа',  icon: '◨' },
+] as const;
+
 export default function DocTemplatePageSettings({ template, onUpdate }: Props) {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const s = template.settings as Record<string, string | number>;
   const upd = (key: string, value: string | number) =>
@@ -44,6 +56,35 @@ export default function DocTemplatePageSettings({ template, onUpdate }: Props) {
   const currentLh = (s.letterhead as string) || 'none';
   const currentColor = (s.accentColor as string) || '#c0392b';
   const hasLetterhead = currentLh !== 'none';
+  const logoUrl = (s.lhLogoUrl as string) || '';
+  const logoPosition = (s.lhLogoPosition as string) || 'left';
+  const logoHeight = Number(s.lhLogoHeight) || 12;
+
+  const handleLogoUpload = async (file: File) => {
+    setUploadingLogo(true);
+    try {
+      const token = localStorage.getItem('kuhni_pro_token') || '';
+      const b64: string = await new Promise((res, rej) => {
+        const reader = new FileReader();
+        reader.onload = () => res((reader.result as string).split(',')[1]);
+        reader.onerror = rej;
+        reader.readAsDataURL(file);
+      });
+      const resp = await fetch(`${API_URLS.clients}/?action=upload_asset`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: b64, asset_type: 'logo', name: file.name, content_type: file.type }),
+      });
+      const data = await resp.json();
+      if (!resp.ok) throw new Error(data.error || 'Ошибка загрузки');
+      onUpdate({ ...template, settings: { ...template.settings, lhLogoUrl: data.url } });
+      toast.success('Логотип загружен');
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : 'Ошибка загрузки');
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
 
   return (
     <div className="mx-4 border border-border rounded-lg overflow-hidden">
@@ -181,6 +222,117 @@ export default function DocTemplatePageSettings({ template, onUpdate }: Props) {
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Логотип */}
+            {hasLetterhead && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <label className="text-[11px] text-[hsl(var(--text-muted))] block mb-2">Логотип</label>
+
+                {/* Загрузка / превью */}
+                <div className="flex items-start gap-3">
+                  {/* Превью или зона загрузки */}
+                  <div
+                    className={`w-20 h-14 rounded-lg border-2 border-dashed flex items-center justify-center shrink-0 cursor-pointer transition-colors overflow-hidden ${
+                      logoUrl ? 'border-transparent bg-[hsl(220,14%,14%)]' : 'border-border hover:border-emerald-500/50 bg-[hsl(220,14%,12%)]'
+                    }`}
+                    onClick={() => fileInputRef.current?.click()}
+                    title="Нажмите для загрузки логотипа"
+                  >
+                    {logoUrl ? (
+                      <img src={logoUrl} alt="logo" className="max-w-full max-h-full object-contain p-1" />
+                    ) : uploadingLogo ? (
+                      <Icon name="Loader2" size={18} className="text-[hsl(var(--text-muted))] animate-spin" />
+                    ) : (
+                      <div className="text-center">
+                        <Icon name="ImagePlus" size={18} className="text-[hsl(var(--text-muted))] mx-auto" />
+                        <div className="text-[9px] text-[hsl(var(--text-muted))] mt-1">PNG, SVG</div>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    {logoUrl ? (
+                      <div className="flex gap-1.5 mb-2">
+                        <button
+                          onClick={() => fileInputRef.current?.click()}
+                          disabled={uploadingLogo}
+                          className="flex items-center gap-1 px-2 py-1 rounded border border-border text-[10px] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors"
+                        >
+                          <Icon name="RefreshCw" size={10} />
+                          Заменить
+                        </button>
+                        <button
+                          onClick={() => onUpdate({ ...template, settings: { ...template.settings, lhLogoUrl: '' } })}
+                          className="flex items-center gap-1 px-2 py-1 rounded border border-border text-[10px] text-red-400/60 hover:text-red-400 transition-colors"
+                        >
+                          <Icon name="X" size={10} />
+                          Удалить
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingLogo}
+                        className="flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-border text-[11px] text-[hsl(var(--text-muted))] hover:text-emerald-400 hover:border-emerald-500/40 transition-colors mb-2 disabled:opacity-50"
+                      >
+                        {uploadingLogo
+                          ? <Icon name="Loader2" size={11} className="animate-spin" />
+                          : <Icon name="Upload" size={11} />}
+                        Загрузить логотип
+                      </button>
+                    )}
+
+                    {/* Высота логотипа */}
+                    <div className="flex items-center gap-2">
+                      <label className="text-[10px] text-[hsl(var(--text-muted))] shrink-0">Высота:</label>
+                      <input
+                        type="range" min={6} max={25} step={1}
+                        value={logoHeight}
+                        onChange={e => upd('lhLogoHeight', parseInt(e.target.value))}
+                        className="flex-1"
+                      />
+                      <span className="text-[10px] text-foreground tabular-nums w-8">{logoHeight}мм</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Позиция логотипа */}
+                {logoUrl && (
+                  <div className="mt-2.5">
+                    <label className="text-[10px] text-[hsl(var(--text-muted))] block mb-1.5">Позиция</label>
+                    <div className="flex flex-wrap gap-1">
+                      {LOGO_POSITIONS.map(p => (
+                        <button
+                          key={p.id}
+                          onClick={() => upd('lhLogoPosition', p.id)}
+                          title={p.label}
+                          className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] transition-all ${
+                            logoPosition === p.id
+                              ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-400'
+                              : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'
+                          }`}
+                        >
+                          <span className="font-mono text-[11px]">{p.icon}</span>
+                          {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/svg+xml"
+                  className="hidden"
+                  onChange={e => {
+                    const file = e.target.files?.[0];
+                    if (file) handleLogoUpload(file);
+                    e.target.value = '';
+                  }}
+                />
               </div>
             )}
           </div>

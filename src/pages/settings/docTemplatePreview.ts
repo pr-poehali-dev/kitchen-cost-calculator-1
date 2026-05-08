@@ -288,12 +288,15 @@ export function buildPreviewHtml(template: Template): string {
   const lhId = (s.letterhead as string) || 'none';
   const lhColor = (s.accentColor as string) || '#c0392b';
   const lhCtx: LetterheadContext = {
-    accentColor: lhColor,
-    company:  applyPreviewVars((s.lhCompany  as string) || '{{компания}}'),
-    phone:    applyPreviewVars((s.lhPhone    as string) || '{{телефон_компании}}'),
-    email:    applyPreviewVars((s.lhEmail    as string) || '{{email_компании}}'),
-    address:  applyPreviewVars((s.lhAddress  as string) || '{{адрес_компании}}'),
-    website:  applyPreviewVars((s.lhWebsite  as string) || '{{сайт_компании}}'),
+    accentColor:   lhColor,
+    company:       applyPreviewVars((s.lhCompany  as string) || '{{компания}}'),
+    phone:         applyPreviewVars((s.lhPhone    as string) || '{{телефон_компании}}'),
+    email:         applyPreviewVars((s.lhEmail    as string) || '{{email_компании}}'),
+    address:       applyPreviewVars((s.lhAddress  as string) || '{{адрес_компании}}'),
+    website:       applyPreviewVars((s.lhWebsite  as string) || '{{сайт_компании}}'),
+    logoUrl:       (s.lhLogoUrl      as string)  || undefined,
+    logoPosition:  (s.lhLogoPosition as string)  as LetterheadContext['logoPosition'] || 'left',
+    logoHeight:    s.lhLogoHeight ? Number(s.lhLogoHeight) : 12,
   };
   const lhDef = getLetterhead(lhId);
   const lh = lhDef.build(lhCtx);
