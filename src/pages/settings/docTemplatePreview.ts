@@ -226,9 +226,10 @@ function renderBlock(b: Block, globalFontSize: number): string {
       `margin-bottom:${mb ?? '6px'}`,
       b.fontSize ? `font-size:${b.fontSize}pt` : `font-size:${globalFontSize}pt`,
     ].join(';');
+    const rightTextAlign = b.twoColRightAlign ? 'text-align:right;' : '';
     return `<div style="display:table;width:100%;${twoStyle}">
       <div style="display:table-cell;width:50%;vertical-align:top;padding-right:4mm">${leftHtml}</div>
-      <div style="display:table-cell;width:50%;vertical-align:top;padding-left:4mm">${rightHtml}</div>
+      <div style="display:table-cell;width:50%;vertical-align:top;padding-left:4mm;${rightTextAlign}">${rightHtml}</div>
     </div>`;
   }
 

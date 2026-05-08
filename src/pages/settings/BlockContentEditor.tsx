@@ -142,9 +142,20 @@ export default function BlockContentEditor({ block, textareaRef, onUpdate, inser
         const update = (left: string, right: string) => onUpdate('content', left + '\n---\n' + right);
         return (
           <div className="space-y-2">
-            <p className="text-[10px] text-[hsl(var(--text-muted))]">
-              Блок делится на две равные колонки. Разделитель <code className="bg-[hsl(220,14%,10%)] px-1 rounded">---</code> нельзя удалять.
-            </p>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-[hsl(var(--text-muted))]">
+                Блок делится на две равные колонки.
+              </p>
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={!!block.twoColRightAlign}
+                  onChange={e => onUpdate('twoColRightAlign', e.target.checked)}
+                  className="w-3 h-3 accent-gold cursor-pointer"
+                />
+                <span className="text-[10px] text-[hsl(var(--text-muted))]">Правая — по правому краю</span>
+              </label>
+            </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <div className="flex items-center justify-between mb-1">
@@ -167,7 +178,7 @@ export default function BlockContentEditor({ block, textareaRef, onUpdate, inser
                   value={rightVal}
                   onChange={e => update(leftVal, e.target.value)}
                   rows={8}
-                  className="w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1.5 text-xs text-foreground resize-y font-mono leading-relaxed"
+                  className={`w-full bg-[hsl(220,14%,12%)] border border-border rounded px-2 py-1.5 text-xs text-foreground resize-y font-mono leading-relaxed${block.twoColRightAlign ? ' text-right' : ''}`}
                 />
               </div>
             </div>

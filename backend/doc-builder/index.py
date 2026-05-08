@@ -583,13 +583,15 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
                 el = _etree.SubElement(tblBorders, _qn(f'w:{side}'))
                 el.set(_qn('w:val'), 'none')
 
-            def _fill_cell_multiline(cell, txt):
+            right_align = bool(block.get('twoColRightAlign', False))
+
+            def _fill_cell_multiline(cell, txt, cell_align=WD_ALIGN_PARAGRAPH.LEFT):
                 normalized = _re2.sub(r'\r\n|\r', '\n', txt)
                 normalized = _re2.sub(r'\n{3,}', '\n\n', normalized)
                 chunks = [c.strip('\n') for c in normalized.split('\n\n') if c.strip('\n')]
                 for pi, chunk in enumerate(chunks):
                     p = cell.paragraphs[0] if pi == 0 else cell.add_paragraph()
-                    p.alignment = WD_ALIGN_PARAGRAPH.LEFT
+                    p.alignment = cell_align
                     p.paragraph_format.space_before = Pt(0)
                     p.paragraph_format.space_after  = Pt(2)
                     p.paragraph_format.line_spacing = Pt(_base_pt * 1.25)
@@ -607,7 +609,8 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
             for ci, txt in enumerate([left_text, right_text]):
                 from docx.shared import Cm as _Cm
                 t.rows[0].cells[ci].width = _Cm(total_width_cm / 2)
-                _fill_cell_multiline(t.rows[0].cells[ci], txt)
+                cell_align = WD_ALIGN_PARAGRAPH.RIGHT if (ci == 1 and right_align) else WD_ALIGN_PARAGRAPH.LEFT
+                _fill_cell_multiline(t.rows[0].cells[ci], txt, cell_align)
 
         elif btype == 'calc_table':
             if not products:

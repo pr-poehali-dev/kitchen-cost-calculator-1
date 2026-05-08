@@ -255,6 +255,7 @@ export interface Block {
   calcTableSettings?: CalcTableSettings;
   imageWidth?: number;
   imageHeight?: number;
+  twoColRightAlign?: boolean;
 }
 
 export interface Template {
