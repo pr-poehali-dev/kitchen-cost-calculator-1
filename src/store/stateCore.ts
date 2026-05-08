@@ -114,7 +114,20 @@ function loadLocalCache(): AppState {
   return initialState;
 }
 
+let localSaveTimer: ReturnType<typeof setTimeout> | null = null;
+
 export function saveLocalState(state: AppState) {
+  if (localSaveTimer) clearTimeout(localSaveTimer);
+  localSaveTimer = setTimeout(() => {
+    localSaveTimer = null;
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) { void e; }
+  }, 300);
+}
+
+export function saveLocalStateImmediate(state: AppState) {
+  if (localSaveTimer) { clearTimeout(localSaveTimer); localSaveTimer = null; }
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch (e) { void e; }
@@ -192,7 +205,7 @@ export function undoProjects(): boolean {
   const snap = undoStack.pop();
   if (!snap) return false;
   globalState = { ...globalState, projects: snap.projects, activeProjectId: snap.activeProjectId };
-  saveLocalState(globalState);
+  saveLocalStateImmediate(globalState);
   scheduleSaveToDb(globalState);
   listeners.forEach(fn => fn());
   notifyUndo();
@@ -216,7 +229,7 @@ export function setState(updater: (s: AppState) => AppState, options: { pushUndo
 
 export function forceSetGlobalState(state: AppState) {
   globalState = state;
-  saveLocalState(state);
+  saveLocalStateImmediate(state);
   hasPendingChanges = false;
   setSaveStatus('saved');
   listeners.forEach(fn => fn());

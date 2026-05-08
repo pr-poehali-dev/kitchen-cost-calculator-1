@@ -1,7 +1,8 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, memo } from 'react';
 import { createPortal } from 'react-dom';
 import { useStore } from '@/store/useStore';
 import { useCatalog } from '@/hooks/useCatalog';
+import { updateRow as updateRowDirect } from '@/store/slices/projectSlice';
 import type { CalcRow, CalcColumnKey, Material, MaterialVariant } from '@/store/types';
 import Icon from '@/components/ui/icon';
 import { COLUMN_WIDTHS, fmt } from './constants';
@@ -21,7 +22,7 @@ interface Props {
   onCopyTo: (toBlockId: string) => void;
 }
 
-export default function CalcRowComponent({
+function CalcRowComponent({
   row, projectId, blockId, visibleColumns, currency, allowedTypeIds,
   otherBlocks, onDelete, onDuplicate, onCopyTo,
 }: Props) {
@@ -128,7 +129,7 @@ export default function CalcRowComponent({
       <input
         ref={inputRef}
         value={nameFilter}
-        onChange={e => { setNameFilter(e.target.value); store.updateRow(projectId, blockId, row.id, { name: e.target.value, materialId: undefined, variantId: undefined }); setShowSuggest(true); }}
+        onChange={e => { setNameFilter(e.target.value); updateRowDirect(projectId, blockId, row.id, { name: e.target.value, materialId: undefined, variantId: undefined }); setShowSuggest(true); }}
         onFocus={() => { updatePos(); setShowSuggest(true); }}
         onBlur={() => setTimeout(() => setShowSuggest(false), 160)}
         placeholder="Выбрать материал..."
@@ -169,27 +170,27 @@ export default function CalcRowComponent({
       <div className="flex items-center gap-3 mt-2">
         {/* Кол-во */}
         <div className="flex items-center gap-1 shrink-0">
-          <button tabIndex={-1} onClick={() => store.updateRow(projectId, blockId, row.id, { qty: Math.max(0, parseFloat(((row.qty || 0) - 1).toFixed(4))) })}
+          <button tabIndex={-1} onClick={() => updateRowDirect(projectId, blockId, row.id, { qty: Math.max(0, parseFloat(((row.qty || 0) - 1).toFixed(4))) })}
             className="w-6 h-6 flex items-center justify-center rounded bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,22%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors text-xs">−</button>
           <input type="number" step="0.01" min="0"
             value={row.qty === 0 ? '0' : (row.qty || '')}
-            onChange={e => store.updateRow(projectId, blockId, row.id, { qty: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+            onChange={e => updateRowDirect(projectId, blockId, row.id, { qty: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
             className="bg-transparent text-sm font-mono text-center outline-none border-b border-transparent focus:border-gold w-10 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
           />
-          <button tabIndex={-1} onClick={() => store.updateRow(projectId, blockId, row.id, { qty: (row.qty || 0) + 1 })}
+          <button tabIndex={-1} onClick={() => updateRowDirect(projectId, blockId, row.id, { qty: (row.qty || 0) + 1 })}
             className="w-6 h-6 flex items-center justify-center rounded bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,22%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors text-xs">+</button>
         </div>
         {/* Цена */}
         <div className="flex items-center gap-1 flex-1 min-w-0 relative group/mprice">
           <span className="text-[11px] text-[hsl(var(--text-muted))] shrink-0">₽</span>
-          <input type="number" value={row.price || ''} onChange={e => store.updateRow(projectId, blockId, row.id, { price: parseFloat(e.target.value) || 0 })}
+          <input type="number" value={row.price || ''} onChange={e => updateRowDirect(projectId, blockId, row.id, { price: parseFloat(e.target.value) || 0 })}
             placeholder="0"
             className={`bg-transparent text-sm font-mono w-full outline-none border-b border-transparent focus:border-gold [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-[hsl(var(--text-muted))] ${isPriceStale ? 'text-[hsl(38,80%,60%)]' : 'text-foreground'}`}
           />
           {isPriceStale && expectedPrice !== null && (
             <button
               title={`Обновить до ${fmt(expectedPrice)}`}
-              onClick={() => store.updateRow(projectId, blockId, row.id, { price: expectedPrice })}
+              onClick={() => updateRowDirect(projectId, blockId, row.id, { price: expectedPrice })}
               className="opacity-0 group-hover/mprice:opacity-100 transition-opacity text-[hsl(38,80%,60%)] hover:text-gold shrink-0"
             >
               <Icon name="RefreshCw" size={11} />
@@ -223,7 +224,7 @@ export default function CalcRowComponent({
                 <input
                   ref={inputRef}
                   value={nameFilter}
-                  onChange={e => { setNameFilter(e.target.value); store.updateRow(projectId, blockId, row.id, { name: e.target.value, materialId: undefined, variantId: undefined }); setShowSuggest(true); }}
+                  onChange={e => { setNameFilter(e.target.value); updateRowDirect(projectId, blockId, row.id, { name: e.target.value, materialId: undefined, variantId: undefined }); setShowSuggest(true); }}
                   onFocus={() => { updatePos(); setShowSuggest(true); }}
                   onBlur={() => setTimeout(() => setShowSuggest(false), 160)}
                   placeholder="Выбрать материал..."
@@ -265,7 +266,7 @@ export default function CalcRowComponent({
               <input
                 key={col}
                 value={row.article || ''}
-                onChange={e => store.updateRow(projectId, blockId, row.id, { article: e.target.value || undefined })}
+                onChange={e => updateRowDirect(projectId, blockId, row.id, { article: e.target.value || undefined })}
                 placeholder="—"
                 className="bg-transparent text-xs text-[hsl(var(--text-dim))] w-full outline-none border-b border-transparent focus:border-gold transition-colors placeholder:text-[hsl(var(--text-muted))] pr-2"
               />
@@ -275,7 +276,7 @@ export default function CalcRowComponent({
               <input
                 key={col}
                 value={row.color || ''}
-                onChange={e => store.updateRow(projectId, blockId, row.id, { color: e.target.value || undefined })}
+                onChange={e => updateRowDirect(projectId, blockId, row.id, { color: e.target.value || undefined })}
                 placeholder="—"
                 className="bg-transparent text-xs text-[hsl(var(--text-dim))] w-full outline-none border-b border-transparent focus:border-gold transition-colors placeholder:text-[hsl(var(--text-muted))] pr-2"
               />
@@ -291,7 +292,7 @@ export default function CalcRowComponent({
               <div key={col} className="flex items-center justify-between gap-1">
                 <button
                   tabIndex={-1}
-                  onClick={() => store.updateRow(projectId, blockId, row.id, { qty: Math.max(0, parseFloat(((row.qty || 0) - 1).toFixed(4))) })}
+                  onClick={() => updateRowDirect(projectId, blockId, row.id, { qty: Math.max(0, parseFloat(((row.qty || 0) - 1).toFixed(4))) })}
                   className="w-5 h-5 flex items-center justify-center rounded bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,22%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors shrink-0 text-xs leading-none"
                 >−</button>
                 <input
@@ -299,12 +300,12 @@ export default function CalcRowComponent({
                   step="0.01"
                   min="0"
                   value={row.qty === 0 ? '0' : (row.qty || '')}
-                  onChange={e => store.updateRow(projectId, blockId, row.id, { qty: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
+                  onChange={e => updateRowDirect(projectId, blockId, row.id, { qty: e.target.value === '' ? 0 : parseFloat(e.target.value) || 0 })}
                   className="bg-transparent text-sm font-mono text-center outline-none border-b border-transparent focus:border-[hsl(var(--gold))] w-12 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                 />
                 <button
                   tabIndex={-1}
-                  onClick={() => store.updateRow(projectId, blockId, row.id, { qty: (row.qty || 0) + 1 })}
+                  onClick={() => updateRowDirect(projectId, blockId, row.id, { qty: (row.qty || 0) + 1 })}
                   className="w-5 h-5 flex items-center justify-center rounded bg-[hsl(220,12%,16%)] hover:bg-[hsl(220,12%,22%)] text-[hsl(var(--text-muted))] hover:text-foreground transition-colors shrink-0 text-xs leading-none"
                 >+</button>
               </div>
@@ -323,14 +324,14 @@ export default function CalcRowComponent({
                 <input
                   type="number"
                   value={row.price || ''}
-                  onChange={e => store.updateRow(projectId, blockId, row.id, { price: parseFloat(e.target.value) || 0 })}
+                  onChange={e => updateRowDirect(projectId, blockId, row.id, { price: parseFloat(e.target.value) || 0 })}
                   placeholder="—"
                   className={`bg-transparent text-sm font-mono text-right w-full outline-none border-b border-transparent focus:border-[hsl(var(--gold))] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none placeholder:text-[hsl(var(--text-muted))] ${isPriceStale ? 'text-[hsl(38,80%,60%)]' : 'text-foreground'}`}
                 />
                 {isPriceStale && expectedPrice !== null && (
                   <button
                     title={`Цена устарела. Обновить до ${fmt(expectedPrice)}?`}
-                    onClick={() => store.updateRow(projectId, blockId, row.id, { price: expectedPrice })}
+                    onClick={() => updateRowDirect(projectId, blockId, row.id, { price: expectedPrice })}
                     className="absolute -top-0.5 right-0 opacity-0 group-hover/price:opacity-100 transition-opacity text-[hsl(38,80%,60%)] hover:text-gold"
                   >
                     <Icon name="RefreshCw" size={11} />
@@ -423,3 +424,5 @@ export default function CalcRowComponent({
     </>
   );
 }
+
+export default memo(CalcRowComponent);

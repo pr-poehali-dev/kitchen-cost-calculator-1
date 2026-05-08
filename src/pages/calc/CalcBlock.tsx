@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, memo, useCallback } from 'react';
 import { useStore } from '@/store/useStore';
+import { deleteRow as deleteRowDirect, duplicateRow as duplicateRowDirect, copyRowToBlock as copyRowToBlockDirect } from '@/store/slices/projectSlice';
 import { confirmDialog } from '@/components/ui/ConfirmDialog';
 import type { CalcBlock as CalcBlockType, CalcColumnKey } from '@/store/types';
 import Icon from '@/components/ui/icon';
@@ -33,7 +34,38 @@ const BLOCK_COLORS = [
   { id: 'cyan',    color: '#06b6d4', label: 'Голубой' },
 ];
 
-function SortableRow({
+// Обёртка со стабильными коллбэками — memo не ломается на каждый рендер родителя
+const MemoizedSortableRowWrapper = memo(function SortableRowWrapper({
+  row, projectId, blockId, visibleColumns, currency, allowedTypeIds, otherBlocks,
+}: {
+  row: CalcRow;
+  projectId: string;
+  blockId: string;
+  visibleColumns: CalcColumnKey[];
+  currency: string;
+  allowedTypeIds: string[];
+  otherBlocks: { id: string; name: string }[];
+}) {
+  const onDelete = useCallback(() => deleteRowDirect(projectId, blockId, row.id), [projectId, blockId, row.id]);
+  const onDuplicate = useCallback(() => duplicateRowDirect(projectId, blockId, row.id), [projectId, blockId, row.id]);
+  const onCopyTo = useCallback((toBlockId: string) => copyRowToBlockDirect(projectId, blockId, row.id, toBlockId), [projectId, blockId, row.id]);
+  return (
+    <SortableRow
+      row={row}
+      projectId={projectId}
+      blockId={blockId}
+      visibleColumns={visibleColumns}
+      currency={currency}
+      allowedTypeIds={allowedTypeIds}
+      otherBlocks={otherBlocks}
+      onDelete={onDelete}
+      onDuplicate={onDuplicate}
+      onCopyTo={onCopyTo}
+    />
+  );
+});
+
+const SortableRow = memo(function SortableRow({
   row, projectId, blockId, visibleColumns, currency, allowedTypeIds, otherBlocks,
   onDelete, onDuplicate, onCopyTo,
 }: {
@@ -81,7 +113,7 @@ function SortableRow({
       </div>
     </div>
   );
-}
+});
 
 interface Props {
   block: CalcBlockType;
@@ -290,7 +322,7 @@ export default function CalcBlock({
               <DndContext sensors={rowSensors} collisionDetection={closestCenter} onDragEnd={handleRowDragEnd}>
                 <SortableContext items={block.rows.map(r => r.id)} strategy={verticalListSortingStrategy}>
                   {block.rows.map(row => (
-                    <SortableRow
+                    <MemoizedSortableRowWrapper
                       key={row.id}
                       row={row}
                       projectId={projectId}
@@ -299,9 +331,6 @@ export default function CalcBlock({
                       currency={currency}
                       allowedTypeIds={block.allowedTypeIds}
                       otherBlocks={otherBlocks}
-                      onDelete={() => store.deleteRow(projectId, block.id, row.id)}
-                      onDuplicate={() => store.duplicateRow(projectId, block.id, row.id)}
-                      onCopyTo={(toBlockId) => store.copyRowToBlock(projectId, block.id, row.id, toBlockId)}
                     />
                   ))}
                 </SortableContext>
@@ -314,7 +343,7 @@ export default function CalcBlock({
             <DndContext sensors={rowSensors} collisionDetection={closestCenter} onDragEnd={handleRowDragEnd}>
               <SortableContext items={block.rows.map(r => r.id)} strategy={verticalListSortingStrategy}>
                 {block.rows.map(row => (
-                  <SortableRow
+                  <MemoizedSortableRowWrapper
                     key={row.id}
                     row={row}
                     projectId={projectId}
@@ -323,9 +352,6 @@ export default function CalcBlock({
                     currency={currency}
                     allowedTypeIds={block.allowedTypeIds}
                     otherBlocks={otherBlocks}
-                    onDelete={() => store.deleteRow(projectId, block.id, row.id)}
-                    onDuplicate={() => store.duplicateRow(projectId, block.id, row.id)}
-                    onCopyTo={(toBlockId) => store.copyRowToBlock(projectId, block.id, row.id, toBlockId)}
                   />
                 ))}
               </SortableContext>
