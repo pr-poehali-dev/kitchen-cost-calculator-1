@@ -252,6 +252,7 @@ export interface Block {
   marginTop?: number;
   marginBottom?: number;
   colWidths?: number[];
+  rowHeight?: number;
   calcTableSettings?: CalcTableSettings;
   imageWidth?: number;
   imageHeight?: number;
