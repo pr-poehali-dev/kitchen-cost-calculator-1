@@ -175,7 +175,7 @@ export default function SettingsDocTemplates() {
                 isDirty={isDirty}
                 editingBlock={editingBlock}
                 onUpdate={onUpdate}
-                onSave={saveTemplate}
+                onSave={() => saveTemplate()}
                 onApply={() => handleApplyTemplate(docLabel)}
                 onDelete={() => deleteTemplate(selectedTemplate.id)}
                 onSetDefault={() => setDefault(selectedTemplate.id)}
