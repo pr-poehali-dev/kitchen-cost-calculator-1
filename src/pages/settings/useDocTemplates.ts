@@ -45,15 +45,17 @@ export function useDocTemplates(selectedDocType: string) {
   // Сохраняет переданный шаблон — или берёт из ref (всегда актуальный)
   const saveTemplate = useCallback(async (tpl?: Template) => {
     const target = tpl ?? currentTemplateRef.current;
-    if (!target) return;
+    if (!target || !target.id) { console.warn('[saveTemplate] no target or id, target=', target); return; }
     setSaving(true);
     try {
+      const body = JSON.stringify({ name: target.name, blocks: target.blocks, settings: target.settings });
       const res = await fetch(`${API}/?id=${target.id}`, {
         method: 'PUT',
         headers: authHeaders(),
-        body: JSON.stringify({ name: target.name, blocks: target.blocks, settings: target.settings }),
+        body,
       });
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      console.log('[saveTemplate] success');
       // Обновляем серверную копию
       savedTemplatesRef.current = savedTemplatesRef.current.map(t =>
         t.id === target.id ? { ...t, name: target.name, blocks: target.blocks, settings: target.settings } : t
@@ -63,7 +65,7 @@ export function useDocTemplates(selectedDocType: string) {
       if (!tpl) toast.success('Сохранено');
     } catch (e) {
       toast.error('Ошибка сохранения');
-      console.error('[saveTemplate]', e);
+      console.error('[saveTemplate] error:', e);
     } finally {
       setSaving(false);
     }
