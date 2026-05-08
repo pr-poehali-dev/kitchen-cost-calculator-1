@@ -209,12 +209,15 @@ function renderBlock(b: Block, globalFontSize: number): string {
       mb ? `margin-bottom:${mb}` : 'margin-bottom:6px',
     ].filter(Boolean).join(';');
     const colgroup = colWidths.map(w => `<col style="width:${w}%"/>`).join('');
+    const colAligns = b.colAligns && b.colAligns.length === header.length
+      ? b.colAligns
+      : header.map(() => 'left' as const);
     const rh = b.rowHeight ? `height:${b.rowHeight}mm;` : '';
     const cellPad = b.rowHeight ? `padding:0 5px;vertical-align:middle;` : `padding:3px 5px;`;
     return `<table style="width:100%;border-collapse:collapse;font-size:${tFontSize}pt;table-layout:fixed;${tStyle}">
       <colgroup>${colgroup}</colgroup>
-      <tr style="${rh}">${header.map(h => `<th style="border:1px solid #000;${cellPad}background:#f0f0f0;font-weight:bold;word-break:break-word">${h}</th>`).join('')}</tr>
-      ${body.map(r => `<tr style="${rh}">${r.split(';').map(c => `<td style="border:1px solid #000;${cellPad}word-break:break-word">${c}</td>`).join('')}</tr>`).join('')}
+      <tr style="${rh}">${header.map((h, ci) => `<th style="border:1px solid #000;${cellPad}background:#f0f0f0;font-weight:bold;word-break:break-word;text-align:${colAligns[ci]}">${h}</th>`).join('')}</tr>
+      ${body.map(r => `<tr style="${rh}">${r.split(';').map((c, ci) => `<td style="border:1px solid #000;${cellPad}word-break:break-word;text-align:${colAligns[ci] ?? 'left'}">${c}</td>`).join('')}</tr>`).join('')}
     </table>`;
   }
 

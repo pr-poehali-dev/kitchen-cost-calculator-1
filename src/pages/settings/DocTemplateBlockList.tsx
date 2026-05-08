@@ -100,7 +100,7 @@ export default function DocTemplateBlockList({
     onUpdate({ ...template, blocks });
   };
 
-  const updateBlock = (blockId: string, field: keyof Block, value: string | boolean | number | number[] | undefined) => {
+  const updateBlock = (blockId: string, field: keyof Block, value: string | boolean | number | number[] | string[] | undefined) => {
     onUpdate({
       ...template,
       blocks: template.blocks.map(b => b.id === blockId ? { ...b, [field]: value } : b),

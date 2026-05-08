@@ -12,7 +12,7 @@ interface Props {
   onToggleEnabled: () => void;
   onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
-  onUpdate: (field: keyof Block, value: string | boolean | number | number[] | undefined) => void;
+  onUpdate: (field: keyof Block, value: string | boolean | number | number[] | string[] | undefined) => void;
   onRegisterInsert?: (fn: ((v: string) => void) | null) => void;
 }
 

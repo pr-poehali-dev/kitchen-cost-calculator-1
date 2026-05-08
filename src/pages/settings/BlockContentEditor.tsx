@@ -17,7 +17,7 @@ export const HAS_CONTENT = ['paragraph', 'section', 'header'];
 interface Props {
   block: Block;
   textareaRef: RefObject<HTMLTextAreaElement>;
-  onUpdate: (field: keyof Block, value: string | boolean | number | number[] | undefined) => void;
+  onUpdate: (field: keyof Block, value: string | boolean | number | number[] | string[] | undefined) => void;
   insertVar: (v: string) => void;
 }
 

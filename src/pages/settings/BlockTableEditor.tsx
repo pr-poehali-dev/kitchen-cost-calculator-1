@@ -2,12 +2,19 @@ import Icon from '@/components/ui/icon';
 import type { Block } from './docTemplateTypes';
 import { parseTableContent, serializeTableContent } from './docTemplateTypes';
 
+type Align = 'left' | 'center' | 'right';
+const ALIGN_ICONS: { value: Align; icon: string; title: string }[] = [
+  { value: 'left',   icon: 'AlignLeft',   title: 'По левому краю' },
+  { value: 'center', icon: 'AlignCenter', title: 'По центру' },
+  { value: 'right',  icon: 'AlignRight',  title: 'По правому краю' },
+];
+
 // Рабочая ширина страницы A4 с полями договора (210 - 20 - 10 = 180мм)
 const PAGE_WIDTH_MM = 180;
 
 export default function BlockTableEditor({ block, onUpdate }: {
   block: Block;
-  onUpdate: (field: keyof Block, value: string | boolean | number | number[] | undefined) => void;
+  onUpdate: (field: keyof Block, value: string | boolean | number | number[] | Align[] | undefined) => void;
 }) {
   const rows = parseTableContent(block.content || 'Колонка 1;Колонка 2\nЗначение 1;Значение 2');
   const numCols = Math.max(...rows.map(r => r.length), 1);
@@ -72,6 +79,18 @@ export default function BlockTableEditor({ block, onUpdate }: {
   const totalMm = colWidths.reduce((s, w) => s + pctToMm(w), 0);
   const totalPct = colWidths.reduce((s, w) => s + w, 0);
   const rowHeight = block.rowHeight ?? 0;
+
+  const getColAligns = (): Align[] => {
+    if (block.colAligns && block.colAligns.length === numCols) return block.colAligns;
+    return Array(numCols).fill('left');
+  };
+  const colAligns = getColAligns();
+
+  const setColAlign = (ci: number, align: Align) => {
+    const next = [...colAligns];
+    next[ci] = align;
+    onUpdate('colAligns', next);
+  };
 
   return (
     <div className="space-y-2">
@@ -147,6 +166,34 @@ export default function BlockTableEditor({ block, onUpdate }: {
               className={`h-full ${['bg-emerald-500/40','bg-blue-500/40','bg-orange-500/40','bg-violet-500/40','bg-pink-500/40','bg-yellow-500/40'][ci % 6]}`}
               title={`Колонка ${ci + 1}: ${pctToMm(w)}мм`}
             />
+          ))}
+        </div>
+      </div>
+
+      {/* Выравнивание колонок */}
+      <div className="space-y-1">
+        <p className="text-[10px] text-[hsl(var(--text-muted))]">Выравнивание колонок</p>
+        <div className="flex flex-wrap gap-x-3 gap-y-1.5">
+          {colWidths.map((_, ci) => (
+            <div key={ci} className="flex items-center gap-1">
+              <span className="text-[10px] text-[hsl(var(--text-muted))] shrink-0 w-5">К{ci + 1}</span>
+              <div className="flex gap-0.5">
+                {ALIGN_ICONS.map(({ value, icon, title }) => (
+                  <button
+                    key={value}
+                    title={title}
+                    onClick={() => setColAlign(ci, value)}
+                    className={`w-5 h-5 flex items-center justify-center rounded border transition-all ${
+                      colAligns[ci] === value
+                        ? 'border-emerald-500/60 bg-emerald-500/20 text-emerald-400'
+                        : 'border-border text-[hsl(var(--text-muted))] hover:text-foreground'
+                    }`}
+                  >
+                    <Icon name={icon} size={10} />
+                  </button>
+                ))}
+              </div>
+            </div>
           ))}
         </div>
       </div>

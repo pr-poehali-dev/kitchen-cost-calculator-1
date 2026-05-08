@@ -10,7 +10,7 @@ const HAS_TYPOGRAPHY = ['paragraph', 'section', 'header', 'table', 'two_col'];
 interface BlockEditorPanelsProps {
   block: Block;
   textareaRef: RefObject<HTMLTextAreaElement>;
-  onUpdate: (field: keyof Block, value: string | boolean | number | number[] | undefined) => void;
+  onUpdate: (field: keyof Block, value: string | boolean | number | number[] | string[] | undefined) => void;
   insertVar: (v: string) => void;
 }
 
