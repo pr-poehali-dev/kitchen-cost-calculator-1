@@ -1,8 +1,13 @@
 import { toast } from 'sonner';
 import Icon from '@/components/ui/icon';
 import DocTemplateBlockItem from './DocTemplateBlockItem';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { VARS, VAR_GROUPS, type Block, type Template, DEFAULT_CALC_TABLE_SETTINGS } from './docTemplateTypes';
+import {
+  DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent,
+} from '@dnd-kit/core';
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 
 interface Props {
   template: Template;
@@ -19,6 +24,27 @@ interface Props {
   onEditBlock: (id: string | null) => void;
   onDownloadDocx?: () => void;
   downloadingDocx?: boolean;
+}
+
+function SortableBlockItem({ block, children }: { block: Block; children: ReactNode }) {
+  const { setNodeRef, transform, transition, isDragging, attributes, listeners } = useSortable({ id: block.id });
+  return (
+    <div
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.4 : 1 }}
+      className="flex items-start gap-1"
+    >
+      <div
+        {...attributes}
+        {...listeners}
+        className="cursor-grab active:cursor-grabbing text-[hsl(var(--text-muted))] hover:text-foreground transition-colors px-0.5 mt-2 shrink-0"
+        title="Перетащить блок"
+      >
+        <Icon name="GripVertical" size={13} />
+      </div>
+      <div className="flex-1 min-w-0">{children}</div>
+    </div>
+  );
 }
 
 const ADD_BLOCK_TYPES = [
@@ -186,6 +212,17 @@ export default function DocTemplateEditor({
     if (target < 0 || target >= blocks.length) return;
     [blocks[idx], blocks[target]] = [blocks[target], blocks[idx]];
     onUpdate({ ...template, blocks });
+  };
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const ids = template.blocks.map(b => b.id);
+    const oldIdx = ids.indexOf(active.id as string);
+    const newIdx = ids.indexOf(over.id as string);
+    onUpdate({ ...template, blocks: arrayMove(template.blocks, oldIdx, newIdx) });
   };
 
   const addBlock = (type: string) => {
@@ -445,23 +482,31 @@ export default function DocTemplateEditor({
         </div>
 
         {/* Список блоков */}
-        <div className="space-y-1">
-          {template.blocks.map((block, idx) => (
-            <DocTemplateBlockItem
-              key={block.id}
-              block={block}
-              idx={idx}
-              totalBlocks={template.blocks.length}
-              isEditing={editingBlock === block.id}
-              onToggleEdit={() => onEditBlock(editingBlock === block.id ? null : block.id)}
-              onToggleEnabled={() => updateBlock(block.id, 'enabled', !block.enabled)}
-              onMove={dir => moveBlock(idx, dir)}
-              onRemove={() => removeBlock(block.id)}
-              onUpdate={(field, value) => updateBlock(block.id, field, value)}
-              onRegisterInsert={handleRegisterInsert}
-            />
-          ))}
-        </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={template.blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+            <div className="space-y-1">
+              {template.blocks.map((block, idx) => (
+                <SortableBlockItem
+                  key={block.id}
+                  block={block}
+                >
+                  <DocTemplateBlockItem
+                    block={block}
+                    idx={idx}
+                    totalBlocks={template.blocks.length}
+                    isEditing={editingBlock === block.id}
+                    onToggleEdit={() => onEditBlock(editingBlock === block.id ? null : block.id)}
+                    onToggleEnabled={() => updateBlock(block.id, 'enabled', !block.enabled)}
+                    onMove={dir => moveBlock(idx, dir)}
+                    onRemove={() => removeBlock(block.id)}
+                    onUpdate={(field, value) => updateBlock(block.id, field, value)}
+                    onRegisterInsert={handleRegisterInsert}
+                  />
+                </SortableBlockItem>
+              ))}
+            </div>
+          </SortableContext>
+        </DndContext>
       </div>
     </div>
   );
