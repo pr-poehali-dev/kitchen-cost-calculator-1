@@ -1,4 +1,4 @@
-import { type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import Icon from '@/components/ui/icon';
 import DocTemplateBlockItem from './DocTemplateBlockItem';
 import { type Block, type Template, DEFAULT_CALC_TABLE_SETTINGS } from './docTemplateTypes';
@@ -64,6 +64,7 @@ function SortableBlockItem({ block, children }: { block: Block; children: ReactN
 export default function DocTemplateBlockList({
   template, editingBlock, onUpdate, onEditBlock, onRegisterInsert,
 }: Props) {
+  const [open, setOpen] = useState(true);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
   const handleDragEnd = (event: DragEndEvent) => {
@@ -108,53 +109,64 @@ export default function DocTemplateBlockList({
   };
 
   return (
-    <div className="px-4 pb-4">
-      {/* Заголовок секции */}
-      <div className="flex items-center gap-2 mb-2.5">
-        <span className="text-xs font-semibold text-foreground">Блоки документа</span>
-        <span className="flex items-center justify-center h-4 min-w-[20px] px-1 rounded-full bg-[hsl(220,14%,16%)] border border-border text-[10px] text-[hsl(var(--text-muted))] tabular-nums">
-          {template.blocks.length}
-        </span>
-      </div>
+    <div className="mx-4 mb-4 border border-border rounded-lg overflow-hidden">
+      {/* Заголовок секции — кликабельный */}
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between px-3 py-2.5 bg-[hsl(220,14%,10%)] hover:bg-[hsl(220,14%,12%)] transition-colors"
+      >
+        <div className="flex items-center gap-2">
+          <Icon name="LayoutList" size={13} className="text-[hsl(var(--text-muted))]" />
+          <span className="text-xs font-medium text-foreground">Блоки документа</span>
+          <span className="flex items-center justify-center h-4 min-w-[20px] px-1 rounded-full bg-[hsl(220,14%,16%)] border border-border text-[10px] text-[hsl(var(--text-muted))] tabular-nums">
+            {template.blocks.length}
+          </span>
+        </div>
+        <Icon name={open ? 'ChevronUp' : 'ChevronDown'} size={13} className="text-[hsl(var(--text-muted))]" />
+      </button>
 
-      {/* Кнопки добавления блоков — горизонтальная прокрутка */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1.5 mb-3 scrollbar-none">
-        {ADD_BLOCK_TYPES.map(({ type, label, icon }) => (
-          <button
-            key={type}
-            onClick={() => addBlock(type)}
-            title={`Добавить: ${label}`}
-            className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg border border-border hover:border-emerald-500/40 hover:bg-emerald-500/5 text-[hsl(var(--text-muted))] hover:text-emerald-400 transition-all shrink-0"
-          >
-            <Icon name={icon as Parameters<typeof Icon>[0]['name']} size={14} />
-            <span className="text-[10px] whitespace-nowrap">{label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Список блоков с DnD */}
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={template.blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
-          <div className="space-y-1">
-            {template.blocks.map((block, idx) => (
-              <SortableBlockItem key={block.id} block={block}>
-                <DocTemplateBlockItem
-                  block={block}
-                  idx={idx}
-                  totalBlocks={template.blocks.length}
-                  isEditing={editingBlock === block.id}
-                  onToggleEdit={() => onEditBlock(editingBlock === block.id ? null : block.id)}
-                  onToggleEnabled={() => updateBlock(block.id, 'enabled', !block.enabled)}
-                  onMove={dir => moveBlock(idx, dir)}
-                  onRemove={() => removeBlock(block.id)}
-                  onUpdate={(field, value) => updateBlock(block.id, field, value)}
-                  onRegisterInsert={onRegisterInsert}
-                />
-              </SortableBlockItem>
+      {open && (
+        <div className="border-t border-border bg-[hsl(220,14%,11%)] p-3">
+          {/* Кнопки добавления блоков */}
+          <div className="flex gap-1.5 overflow-x-auto pb-1.5 mb-3 scrollbar-none">
+            {ADD_BLOCK_TYPES.map(({ type, label, icon }) => (
+              <button
+                key={type}
+                onClick={() => addBlock(type)}
+                title={`Добавить: ${label}`}
+                className="flex flex-col items-center gap-0.5 px-3 py-2 rounded-lg border border-border hover:border-emerald-500/40 hover:bg-emerald-500/5 text-[hsl(var(--text-muted))] hover:text-emerald-400 transition-all shrink-0"
+              >
+                <Icon name={icon as Parameters<typeof Icon>[0]['name']} size={14} />
+                <span className="text-[10px] whitespace-nowrap">{label}</span>
+              </button>
             ))}
           </div>
-        </SortableContext>
-      </DndContext>
+
+          {/* Список блоков с DnD */}
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <SortableContext items={template.blocks.map(b => b.id)} strategy={verticalListSortingStrategy}>
+              <div className="space-y-1">
+                {template.blocks.map((block, idx) => (
+                  <SortableBlockItem key={block.id} block={block}>
+                    <DocTemplateBlockItem
+                      block={block}
+                      idx={idx}
+                      totalBlocks={template.blocks.length}
+                      isEditing={editingBlock === block.id}
+                      onToggleEdit={() => onEditBlock(editingBlock === block.id ? null : block.id)}
+                      onToggleEnabled={() => updateBlock(block.id, 'enabled', !block.enabled)}
+                      onMove={dir => moveBlock(idx, dir)}
+                      onRemove={() => removeBlock(block.id)}
+                      onUpdate={(field, value) => updateBlock(block.id, field, value)}
+                      onRegisterInsert={onRegisterInsert}
+                    />
+                  </SortableBlockItem>
+                ))}
+              </div>
+            </SortableContext>
+          </DndContext>
+        </div>
+      )}
     </div>
   );
 }
