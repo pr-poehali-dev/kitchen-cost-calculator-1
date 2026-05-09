@@ -44,13 +44,8 @@ export const defaultSettings: Settings = {
 };
 
 export const initialState: AppState = {
-  manufacturers: [
-    { id: 'mfr4', name: 'Boyard',  contact: '', phone: '', materialTypeIds: ['mt10'] },
-    { id: 'mfr5', name: 'Slotex',  contact: '', phone: '', materialTypeIds: ['mt8', 'mt9', 'mt12'] },
-  ],
-  vendors: [
-    { id: 'v2', name: 'Специалист', contact: '', phone: '', materialTypeIds: ['mt8', 'mt10', 'mt11', 'mt12'] },
-  ],
+  manufacturers: [],
+  vendors: [],
   materials: [
 
     // ══ Slotex / Серия Elga E1 (gid=1989291696) ══════════════════

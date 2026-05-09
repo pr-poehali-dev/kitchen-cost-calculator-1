@@ -82,14 +82,15 @@ export default function App() {
       try {
         await loadCatalog();
         const { getGlobalState } = await import('@/store/stateCore');
-        const catalogEmpty = catalogCache.get().materials.length === 0;
+        const catalog = catalogCache.get();
+        const catalogEmpty = catalog.materials.length === 0 && catalog.manufacturers.length === 0;
         if (catalogEmpty) {
           const currentState = getGlobalState();
-          await syncCatalogFromAppState(
-            currentState.manufacturers,
-            currentState.vendors,
-            currentState.materials,
-          );
+          const mfrsToSync = currentState.manufacturers.filter(m => m.name?.trim());
+          const vendorsToSync = currentState.vendors.filter(v => v.name?.trim());
+          if (mfrsToSync.length > 0 || vendorsToSync.length > 0 || currentState.materials.length > 0) {
+            await syncCatalogFromAppState(mfrsToSync, vendorsToSync, currentState.materials);
+          }
         }
       } catch {
         // каталог недоступен — работаем без него
