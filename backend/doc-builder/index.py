@@ -547,6 +547,10 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
             header_cols = rows_raw[0].split(';')
             body_rows   = [r.split(';') for r in rows_raw[1:]]
             col_widths  = block.get('colWidths') or []
+            if mt:
+                _pt = doc.add_paragraph()
+                _pt.paragraph_format.space_before = Pt(0)
+                _pt.paragraph_format.space_after  = Pt(float(mt) * 2.835)
             t = doc.add_table(rows=1 + len(body_rows), cols=len(header_cols))
             t.style = 'Table Grid'
             if col_widths and len(col_widths) == len(header_cols):
@@ -573,6 +577,10 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
                     r.font.name = _font_name
                     r.font.size = Pt(fsize)
                     r._r.set('{http://www.w3.org/XML/1998/namespace}space', 'preserve')
+            if mb:
+                _pt2 = doc.add_paragraph()
+                _pt2.paragraph_format.space_before = Pt(0)
+                _pt2.paragraph_format.space_after  = Pt(float(mb) * 2.835)
 
         elif btype == 'two_col':
             import re as _re2
@@ -580,9 +588,20 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
             idx = content.find(sep)
             left_text  = content[:idx].strip()  if idx >= 0 else content.strip()
             right_text = content[idx+5:].strip() if idx >= 0 else ''
+
+            # Отступ сверху перед таблицей
+            if mt:
+                _p_before = doc.add_paragraph()
+                _p_before.paragraph_format.space_before = Pt(0)
+                _p_before.paragraph_format.space_after  = Pt(float(mt) * 2.835)
+
             t = doc.add_table(rows=1, cols=2)
             t.style = 'Table Grid'
             total_width_cm = 16.0
+            gap_cm = float(block.get('twoColGap') or 0) / 10.0  # мм → см
+            left_w  = total_width_cm / 2 - gap_cm / 2
+            right_w = total_width_cm / 2 - gap_cm / 2
+
             from docx.oxml.ns import qn as _qn
             from lxml import etree as _etree
             # убираем границы таблицы
@@ -593,7 +612,10 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
                 el = _etree.SubElement(tblBorders, _qn(f'w:{side}'))
                 el.set(_qn('w:val'), 'none')
 
-            right_align = bool(block.get('twoColRightAlign', False))
+            _align_map_col = {'left': WD_ALIGN_PARAGRAPH.LEFT, 'center': WD_ALIGN_PARAGRAPH.CENTER, 'right': WD_ALIGN_PARAGRAPH.RIGHT}
+            left_align_val  = _align_map_col.get(block.get('twoColLeftAlign', 'left'), WD_ALIGN_PARAGRAPH.LEFT)
+            right_align_str = block.get('twoColRightAlignVal') or ('right' if block.get('twoColRightAlign') else 'left')
+            right_align_val = _align_map_col.get(right_align_str, WD_ALIGN_PARAGRAPH.LEFT)
 
             def _fill_cell_multiline(cell, txt, cell_align=WD_ALIGN_PARAGRAPH.LEFT):
                 normalized = _re2.sub(r'\r\n|\r', '\n', txt)
@@ -610,11 +632,17 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
                             p.add_run().add_break()
                         _add_runs_with_bold(p, line, False, False, False, None)
 
-            for ci, txt in enumerate([left_text, right_text]):
-                from docx.shared import Cm as _Cm
-                t.rows[0].cells[ci].width = _Cm(total_width_cm / 2)
-                cell_align = WD_ALIGN_PARAGRAPH.RIGHT if (ci == 1 and right_align) else WD_ALIGN_PARAGRAPH.LEFT
-                _fill_cell_multiline(t.rows[0].cells[ci], txt, cell_align)
+            from docx.shared import Cm as _Cm
+            t.rows[0].cells[0].width = _Cm(left_w)
+            t.rows[0].cells[1].width = _Cm(right_w)
+            _fill_cell_multiline(t.rows[0].cells[0], left_text,  left_align_val)
+            _fill_cell_multiline(t.rows[0].cells[1], right_text, right_align_val)
+
+            # Отступ снизу после таблицы
+            if mb:
+                _p_after = doc.add_paragraph()
+                _p_after.paragraph_format.space_before = Pt(0)
+                _p_after.paragraph_format.space_after  = Pt(float(mb) * 2.835)
 
         elif btype == 'calc_table':
             if not products:
@@ -638,6 +666,10 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
                     elif col == 'manufacturer': row.append(str(prod.get('manufacturer','') or ''))
                 rows_data.append(row)
                 grand_total += float(prod.get('total', prod.get('amount', 0)) or 0)
+            if mt:
+                _pct = doc.add_paragraph()
+                _pct.paragraph_format.space_before = Pt(0)
+                _pct.paragraph_format.space_after  = Pt(float(mt) * 2.835)
             t = doc.add_table(rows=1 + len(rows_data), cols=len(cols))
             t.style = 'Table Grid'
             for ci, h in enumerate(headers):
@@ -662,6 +694,10 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
                 r.bold = True
                 r.font.name = _font_name
                 r.font.size = Pt(fsize)
+            if mb:
+                _pct2 = doc.add_paragraph()
+                _pct2.paragraph_format.space_before = Pt(0)
+                _pct2.paragraph_format.space_after  = Pt(float(mb) * 2.835)
 
         elif btype == 'image':
             url = content.strip()
