@@ -55,9 +55,21 @@ export function useAuth() {
         return;
       }
       const user: AuthUser = await res.json();
+      localStorage.setItem('kuhni_pro_cached_user', JSON.stringify(user));
       setState({ status: 'authenticated', user });
     } catch {
-      setState({ status: 'unauthenticated' });
+      // Сетевая ошибка — не сбрасываем сессию, пробуем восстановить из кэша
+      const cached = localStorage.getItem('kuhni_pro_cached_user');
+      if (cached && token) {
+        try {
+          const user: AuthUser = JSON.parse(cached);
+          setState({ status: 'authenticated', user });
+        } catch {
+          setState({ status: 'unauthenticated' });
+        }
+      } else {
+        setState({ status: 'unauthenticated' });
+      }
     }
   }, []);
 
@@ -86,6 +98,7 @@ export function useAuth() {
 
   const logout = () => {
     clearSession();
+    localStorage.removeItem('kuhni_pro_cached_user');
     invalidateClientsCache();
     setState({ status: 'unauthenticated' });
   };

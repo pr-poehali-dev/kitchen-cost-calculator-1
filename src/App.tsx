@@ -25,14 +25,26 @@ import { API_URLS } from '@/config/api';
 
 type Section = 'home' | 'clients' | 'calc' | 'blocks' | 'services' | 'base' | 'expenses' | 'pdf' | 'settings' | 'users';
 
+const VALID_SECTIONS: Section[] = ['home', 'clients', 'calc', 'blocks', 'services', 'base', 'expenses', 'pdf', 'settings', 'users'];
+
 // Восстанавливаем акцент при старте
 const _savedAccent = localStorage.getItem('kuhni_pro_accent');
 if (_savedAccent && _savedAccent !== 'gold') {
   document.documentElement.setAttribute('data-accent', _savedAccent);
 }
 
+function getSavedSection(): Section {
+  const s = localStorage.getItem('kuhni_pro_section') as Section;
+  return VALID_SECTIONS.includes(s) ? s : 'home';
+}
+
 export default function App() {
-  const [section, setSection] = useState<Section>('home');
+  const [section, setSection] = useState<Section>(getSavedSection);
+
+  const navigateTo = (s: Section) => {
+    setSection(s);
+    localStorage.setItem('kuhni_pro_section', s);
+  };
   const [stateLoading, setStateLoading] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [openClientId, setOpenClientId] = useState<string | null>(null);
@@ -108,7 +120,7 @@ export default function App() {
     return <LoginPage onLogin={login} />;
   }
 
-  if (stateLoading) {
+  if (stateLoading && store.projects.length === 0 && !localStorage.getItem('kuhni-pro-state-v4')) {
     return <AppLoadingSkeleton />;
   }
 
@@ -119,14 +131,14 @@ export default function App() {
       {ConfirmDialogEl}
       <Layout
         active={section}
-        onNav={s => { setSection(s); if (s !== 'clients') setOpenClientId(null); if (s !== 'base') setBaseSearch(null); }}
+        onNav={s => { navigateTo(s); if (s !== 'clients') setOpenClientId(null); if (s !== 'base') setBaseSearch(null); }}
         user={user}
         onLogout={logout}
         onOpenSearch={() => setShowSearch(true)}
       >
-        {section === 'home'     && <HomePage onNav={setSection} />}
-        {section === 'clients'  && <ClientsPage openClientId={openClientId} key={openClientId ?? 'clients'} onOpenCalc={(projectId) => { if (projectId) setStoreState(s => ({ ...s, activeProjectId: projectId })); setSection('calc'); }} />}
-        {section === 'calc'     && <CalcPage onOpenClient={clientId => { setOpenClientId(clientId); setSection('clients'); }} />}
+        {section === 'home'     && <HomePage onNav={navigateTo} />}
+        {section === 'clients'  && <ClientsPage openClientId={openClientId} key={openClientId ?? 'clients'} onOpenCalc={(projectId) => { if (projectId) setStoreState(s => ({ ...s, activeProjectId: projectId })); navigateTo('calc'); }} />}
+        {section === 'calc'     && <CalcPage onOpenClient={clientId => { setOpenClientId(clientId); navigateTo('clients'); }} />}
         {section === 'blocks'   && <BlocksPage />}
         {section === 'services' && <ServicesPage />}
         {section === 'base'     && <BasePage initialSearch={baseSearch?.search} initialTab={baseSearch?.tab} key={baseSearch ? `${baseSearch.tab}-${baseSearch.search}` : 'base'} />}
@@ -134,21 +146,21 @@ export default function App() {
         {section === 'pdf'      && <PdfBuilderPage />}
         {section === 'settings' && <SettingsPage />}
         {section === 'users'    && user.role === 'admin' && <AdminPanel currentUser={user} token={token} inline />}
-        {section === 'users'    && user.role !== 'admin' && <HomePage onNav={setSection} />}
+        {section === 'users'    && user.role !== 'admin' && <HomePage onNav={navigateTo} />}
       </Layout>
 
       {showSearch && (
         <GlobalSearch
           clients={searchClients}
-          onNav={s => setSection(s as Section)}
+          onNav={s => navigateTo(s as Section)}
           onClose={() => setShowSearch(false)}
           onOpenClient={clientId => {
             setOpenClientId(clientId);
-            setSection('clients');
+            navigateTo('clients');
           }}
           onOpenBase={(tab, search) => {
             setBaseSearch({ tab, search });
-            setSection('base');
+            navigateTo('base');
           }}
         />
       )}
