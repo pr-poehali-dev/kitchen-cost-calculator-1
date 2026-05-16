@@ -254,6 +254,7 @@ export interface Block {
   colWidths?: number[];
   colAligns?: ('left' | 'center' | 'right')[];
   rowHeight?: number;
+  headerBg?: string;
   calcTableSettings?: CalcTableSettings;
   imageWidth?: number;
   imageHeight?: number;

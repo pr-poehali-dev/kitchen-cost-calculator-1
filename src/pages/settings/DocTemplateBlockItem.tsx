@@ -13,12 +13,13 @@ interface Props {
   onMove: (dir: -1 | 1) => void;
   onRemove: () => void;
   onUpdate: (field: keyof Block, value: string | boolean | number | number[] | string[] | undefined) => void;
+  onPatch: (patch: Partial<Block>) => void;
   onRegisterInsert?: (fn: ((v: string) => void) | null) => void;
 }
 
 export default function DocTemplateBlockItem({
   block, idx, totalBlocks, isEditing,
-  onToggleEdit, onToggleEnabled, onMove, onRemove, onUpdate, onRegisterInsert,
+  onToggleEdit, onToggleEnabled, onMove, onRemove, onUpdate, onPatch, onRegisterInsert,
 }: Props) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -126,6 +127,7 @@ export default function DocTemplateBlockItem({
           block={block}
           textareaRef={textareaRef}
           onUpdate={onUpdate}
+          onPatch={onPatch}
           insertVar={insertVar}
         />
       )}

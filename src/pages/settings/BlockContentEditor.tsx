@@ -33,10 +33,11 @@ interface Props {
   block: Block;
   textareaRef: RefObject<HTMLTextAreaElement>;
   onUpdate: (field: keyof Block, value: string | boolean | number | number[] | string[] | undefined) => void;
+  onPatch: (patch: Partial<Block>) => void;
   insertVar: (v: string) => void;
 }
 
-export default function BlockContentEditor({ block, textareaRef, onUpdate, insertVar }: Props) {
+export default function BlockContentEditor({ block, textareaRef, onUpdate, onPatch, insertVar }: Props) {
   return (
     <>
       {/* Содержимое текстовых блоков */}
@@ -75,7 +76,7 @@ export default function BlockContentEditor({ block, textareaRef, onUpdate, inser
       {block.type === 'table' && (
         <div>
           <label className="text-[10px] text-[hsl(var(--text-muted))] block mb-1.5">Содержимое таблицы</label>
-          <BlockTableEditor block={block} onUpdate={onUpdate} />
+          <BlockTableEditor block={block} onUpdate={onUpdate} onPatch={onPatch} />
         </div>
       )}
 

@@ -11,10 +11,11 @@ interface BlockEditorPanelsProps {
   block: Block;
   textareaRef: RefObject<HTMLTextAreaElement>;
   onUpdate: (field: keyof Block, value: string | boolean | number | number[] | string[] | undefined) => void;
+  onPatch: (patch: Partial<Block>) => void;
   insertVar: (v: string) => void;
 }
 
-export default function BlockEditorPanels({ block, textareaRef, onUpdate, insertVar }: BlockEditorPanelsProps) {
+export default function BlockEditorPanels({ block, textareaRef, onUpdate, onPatch, insertVar }: BlockEditorPanelsProps) {
   return (
     <div className="px-3 pb-3 space-y-3 border-t border-border pt-3">
       {/* Название блока */}
@@ -55,6 +56,7 @@ export default function BlockEditorPanels({ block, textareaRef, onUpdate, insert
         block={block}
         textareaRef={textareaRef}
         onUpdate={onUpdate}
+        onPatch={onPatch}
         insertVar={insertVar}
       />
     </div>

@@ -12,9 +12,15 @@ const ALIGN_ICONS: { value: Align; icon: string; title: string }[] = [
 // Рабочая ширина страницы A4 с полями договора (210 - 20 - 10 = 180мм)
 const PAGE_WIDTH_MM = 180;
 
-export default function BlockTableEditor({ block, onUpdate }: {
+const PRESET_COLORS = [
+  '#f0f0f0', '#e8f4e8', '#e8f0f8', '#fff8e1', '#fce8e8',
+  '#e8e8fc', '#f5f0e8', '#e0f0f0', '#ffffff', '#d0d0d0',
+];
+
+export default function BlockTableEditor({ block, onUpdate, onPatch }: {
   block: Block;
   onUpdate: (field: keyof Block, value: string | boolean | number | number[] | Align[] | undefined) => void;
+  onPatch: (patch: Partial<Block>) => void;
 }) {
   const rows = parseTableContent(block.content || 'Колонка 1;Колонка 2\nЗначение 1;Значение 2');
   const numCols = Math.max(...rows.map(r => r.length), 1);
@@ -49,11 +55,11 @@ export default function BlockTableEditor({ block, onUpdate }: {
     onUpdate('content', serializeTableContent(next));
   };
 
+  // Батчинг: content + colWidths обновляются атомарно одним вызовом
   const addCol = () => {
     const next = rows.map(r => [...r, '']);
     const newWidths = [...colWidths.map(w => Math.round(w * numCols / (numCols + 1))), Math.round(100 / (numCols + 1))];
-    onUpdate('content', serializeTableContent(next));
-    onUpdate('colWidths', newWidths);
+    onPatch({ content: serializeTableContent(next), colWidths: newWidths });
   };
 
   const removeCol = () => {
@@ -63,8 +69,7 @@ export default function BlockTableEditor({ block, onUpdate }: {
     const newWidths = colWidths.slice(0, -1).map((w, i) =>
       i === colWidths.slice(0, -1).length - 1 ? w + removed : w
     );
-    onUpdate('content', serializeTableContent(next));
-    onUpdate('colWidths', newWidths);
+    onPatch({ content: serializeTableContent(next), colWidths: newWidths });
   };
 
   const addRow = () => {
@@ -91,6 +96,8 @@ export default function BlockTableEditor({ block, onUpdate }: {
     next[ci] = align;
     onUpdate('colAligns', next);
   };
+
+  const headerBg = block.headerBg ?? '#f0f0f0';
 
   return (
     <div className="space-y-2">
@@ -131,6 +138,39 @@ export default function BlockTableEditor({ block, onUpdate }: {
             className="w-14 bg-[hsl(220,14%,12%)] border border-border rounded px-1.5 py-0.5 text-[10px] text-foreground text-center"
           />
           <span className="text-[10px] text-[hsl(var(--text-muted))]">мм</span>
+        </div>
+      </div>
+
+      {/* Цвет фона заголовка */}
+      <div className="space-y-1">
+        <p className="text-[10px] text-[hsl(var(--text-muted))]">Цвет фона заголовка (первая строка)</p>
+        <div className="flex items-center gap-2 flex-wrap">
+          {PRESET_COLORS.map(color => (
+            <button
+              key={color}
+              title={color}
+              onClick={() => onUpdate('headerBg', color)}
+              className={`w-5 h-5 rounded border transition-all shrink-0 ${
+                headerBg === color ? 'border-emerald-500 scale-110' : 'border-border hover:border-foreground/40'
+              }`}
+              style={{ backgroundColor: color }}
+            />
+          ))}
+          <div className="flex items-center gap-1.5 ml-1">
+            <label
+              className="w-5 h-5 rounded border border-border hover:border-foreground/40 cursor-pointer overflow-hidden shrink-0"
+              title="Свой цвет"
+              style={{ backgroundColor: headerBg }}
+            >
+              <input
+                type="color"
+                value={headerBg}
+                onChange={e => onUpdate('headerBg', e.target.value)}
+                className="opacity-0 w-full h-full cursor-pointer"
+              />
+            </label>
+            <span className="text-[10px] text-[hsl(var(--text-muted))] font-mono">{headerBg}</span>
+          </div>
         </div>
       </div>
 
@@ -208,7 +248,11 @@ export default function BlockTableEditor({ block, onUpdate }: {
             {rows.map((row, ri) => (
               <tr key={ri}>
                 {Array.from({ length: numCols }).map((_, ci) => (
-                  <td key={ci} className={`border border-border p-0 ${ri === 0 ? 'bg-[hsl(220,14%,10%)]' : ''}`}>
+                  <td
+                    key={ci}
+                    className="border border-border p-0"
+                    style={ri === 0 ? { backgroundColor: headerBg } : undefined}
+                  >
                     <input
                       value={row[ci] ?? ''}
                       onChange={e => setCell(ri, ci, e.target.value)}

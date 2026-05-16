@@ -559,8 +559,20 @@ def render_blocks_to_docx(blocks: list, doc, font_fn, _base_pt: float, _font_nam
                     col_w = Cm(total_width_cm * w / 100)
                     for row in t.rows:
                         row.cells[ci].width = col_w
+            header_bg = (block.get('headerBg') or '#f0f0f0').lstrip('#')
+            if len(header_bg) == 3:
+                header_bg = ''.join(c * 2 for c in header_bg)
+            from docx.oxml.ns import qn as _qn
+            from docx.oxml import OxmlElement as _OE
             for ci, h in enumerate(header_cols):
                 cell = t.cell(0, ci)
+                tc = cell._tc
+                tcPr = tc.get_or_add_tcPr()
+                shd = _OE('w:shd')
+                shd.set(_qn('w:val'), 'clear')
+                shd.set(_qn('w:color'), 'auto')
+                shd.set(_qn('w:fill'), header_bg.upper())
+                tcPr.append(shd)
                 p = cell.paragraphs[0]
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER
                 r = p.add_run(h.strip())

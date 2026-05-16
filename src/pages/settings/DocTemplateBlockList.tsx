@@ -108,6 +108,13 @@ export default function DocTemplateBlockList({
     });
   };
 
+  const patchBlock = (blockId: string, patch: Partial<Block>) => {
+    onUpdate({
+      ...template,
+      blocks: template.blocks.map(b => b.id === blockId ? { ...b, ...patch } : b),
+    });
+  };
+
   return (
     <div className="mx-4 mb-4 border border-border rounded-lg overflow-hidden">
       {/* Заголовок секции — кликабельный */}
@@ -158,6 +165,7 @@ export default function DocTemplateBlockList({
                       onMove={dir => moveBlock(idx, dir)}
                       onRemove={() => removeBlock(block.id)}
                       onUpdate={(field, value) => updateBlock(block.id, field, value)}
+                      onPatch={(patch) => patchBlock(block.id, patch)}
                       onRegisterInsert={onRegisterInsert}
                     />
                   </SortableBlockItem>
