@@ -86,7 +86,7 @@ export default function LoginPage({ onLogin }: Props) {
               >
                 {remember && <Icon name="Check" size={10} className="text-[hsl(220,16%,8%)]" />}
               </div>
-              <span className="text-xs text-[hsl(var(--text-muted))]">Запомнить меня на 2 дня</span>
+              <span className="text-xs text-[hsl(var(--text-muted))]">Запомнить меня</span>
             </label>
 
             {error && (
