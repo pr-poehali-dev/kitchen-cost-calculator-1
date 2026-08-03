@@ -1,9 +1,9 @@
 export const API_URLS = {
-  clients: 'https://functions.poehali.dev/48534318-9b07-4f30-9a75-98efb43248e7',
-  docBuilder: 'https://functions.poehali.dev/e6efcc9f-d99a-40f2-978e-c94ff60539c7',
-  auth: 'https://functions.poehali.dev/b1d7d64b-25fc-4b8e-96d8-087b2255d942',
-  admin: 'https://functions.poehali.dev/e48c5260-c45a-48c2-be96-d451e6422c7b',
-  appState: 'https://functions.poehali.dev/a257bd1a-a3a1-40e0-95b5-bbd561a371e4',
-  catalog: 'https://functions.poehali.dev/7cc0cfea-ad1b-4c98-8f8e-817b40574ba5',
-  docTemplates: 'https://functions.poehali.dev/27c8e4c1-71fc-4436-a58a-fb8237737701',
+  clients: 'https://functions.poehali.dev/7b2e580f-5ec9-4dc9-9a53-1a2bc4232dfa',
+  docBuilder: 'https://functions.poehali.dev/807dcb13-b869-4463-a5ca-32c02253d5da',
+  auth: 'https://functions.poehali.dev/d45c961a-d611-4a60-9984-2286f3fdaad2',
+  admin: 'https://functions.poehali.dev/00592486-9a72-4abb-839a-7dd08fd6e125',
+  appState: 'https://functions.poehali.dev/e97b2b12-62a3-4510-b041-9c5754be54d0',
+  catalog: 'https://functions.poehali.dev/25e52fe9-8814-485a-8d25-a50f21aa19f5',
+  docTemplates: 'https://functions.poehali.dev/64d3ce12-4541-4147-8ce6-f1994e443176',
 } as const;
